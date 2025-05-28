@@ -1,7 +1,9 @@
+import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
 
 const ForgotPasswordScreen = () => {
+  const navigation = useNavigation();
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, alignItems:'center', backgroundColor: 'white' }}
@@ -20,7 +22,9 @@ const ForgotPasswordScreen = () => {
         
         <Text style={styles.instruction}>* Chúng tôi sẽ gửi cho bạn 1 mã OTP sau đó tiến hành nhập OTP để đổi mật khẩu</Text>
         
-        <TouchableOpacity style={styles.submitButton}>
+        <TouchableOpacity
+        onPress={() =>navigation.navigate('otp')}
+        style={styles.submitButton}>
           <Text style={styles.submitButtonText}>Gửi</Text>
         </TouchableOpacity>
       </View>

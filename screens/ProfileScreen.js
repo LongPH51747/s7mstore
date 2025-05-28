@@ -1,10 +1,13 @@
+import { useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, StatusBar } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 const ProfileScreen = () => {
+  const navigation = useNavigation();
   return (
     <View style={{flex: 1}}>
+      <StatusBar backgroundColor='white' barStyle='dark-content'/>
         <ScrollView style={styles.container}>
         <View style={styles.topBar}>
              <Ionicons name="chevron-back-outline" size={26} color="black" />
@@ -69,7 +72,7 @@ const ProfileScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* COMMUNITY */}
+      {/* Thay đổi địa chỉ */}
       <Text style={styles.sectionTitle}>Địa chỉ</Text>
       <TouchableOpacity style={styles.itemRow}>
         <Feather name="map-pin" size={20} color="black" />
@@ -87,7 +90,7 @@ const ProfileScreen = () => {
           <Feather name="message-circle" size={20} color="black" />
           <Text style={styles.gridText}>Chat with us</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.gridItem}>
+        <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('change')}>
           <Feather name="lock" size={20} color="black" />
           <Text style={styles.gridText}>Đổi mật khẩu</Text>
         </TouchableOpacity>
@@ -105,7 +108,7 @@ const ProfileScreen = () => {
       <Text style={styles.sectionTitle}>Settings</Text>
       <TouchableOpacity style={styles.itemRow}>
         <Feather name="globe" size={20} color="black" />
-        <Text style={styles.itemText}>Location & Language</Text>
+        <Text style={styles.itemText}>Quên mật khẩu</Text>
       </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>Settings</Text>
