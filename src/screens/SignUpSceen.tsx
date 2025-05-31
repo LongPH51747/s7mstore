@@ -14,6 +14,9 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import CustomTextInput from '../components/customTextInput';
 import auth from '@react-native-firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// import bcrypt from 'react-native-bcrypt';
+// import { v4 as uuidv4 } from 'uuid';
 
 type RootStackParamList = {
   Welcome: undefined;
@@ -29,34 +32,90 @@ interface SignUpScreenProps {
 }
 
 const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [confirm, setConfirm] = useState<any>(null);
+  const [showVerification, setShowVerification] = useState<boolean>(false);
 
-  const handleSignUp = async () => {
+  const handleSendCode = async () => {
     try {
-      if (!email || !password || !confirmPassword) {
-        Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email, mật khẩu và xác nhận mật khẩu');
+      if (!phoneNumber) {
+        Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại');
         return;
       }
-      if (password !== confirmPassword) {
-        Alert.alert('Lỗi', 'Mật khẩu và xác nhận mật khẩu không khớp');
-        return;
-      }
-      await auth().createUserWithEmailAndPassword(email, password);
-      Alert.alert('Thành công', 'Đăng ký thành công!');
-      navigation.navigate('Login');
+
+      // Format số điện thoại theo định dạng quốc tế
+      const formattedPhoneNumber = phoneNumber.startsWith('0') 
+        ? `+84${phoneNumber.substring(1)}` 
+        : phoneNumber;
+
+      console.log('Sending verification code to:', formattedPhoneNumber);
+
+      const confirmation = await auth().signInWithPhoneNumber(formattedPhoneNumber);
+      setConfirm(confirmation);
+      setShowVerification(true);
+      Alert.alert('Thành công', 'Mã xác thực đã được gửi đến số điện thoại của bạn');
     } catch (error: any) {
-      let message = 'Đăng ký thất bại';
-      if (error.code === 'auth/invalid-email') {
-        message = 'Email không hợp lệ';
-      } else if (error.code === 'auth/weak-password') {
-        message = 'Mật khẩu quá yếu';
-      } else if (error.code === 'auth/email-already-in-use') {
-        message = 'Email đã được sử dụng';
+      console.error('Lỗi gửi mã:', error);
+      let errorMessage = 'Không thể gửi mã xác thực. Vui lòng thử lại sau.';
+      
+      switch (error.code) {
+        case 'auth/invalid-phone-number':
+          errorMessage = 'Số điện thoại không hợp lệ';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Quá nhiều yêu cầu. Vui lòng thử lại sau';
+          break;
       }
-      Alert.alert('Lỗi', message);
-      console.error('Lỗi đăng ký:', error);
+      
+      Alert.alert('Lỗi', errorMessage);
+    }
+  };
+
+  const handleVerifyAndSignUp = async () => {
+    try {
+      if (!verificationCode) {
+        Alert.alert('Lỗi', 'Vui lòng nhập mã xác thực');
+        return;
+      }
+
+      // Xác thực mã
+      const userCredential = await confirm.confirm(verificationCode);
+      
+      if (userCredential.user) {
+        // Lưu token vào AsyncStorage
+        const token = await userCredential.user.getIdToken();
+        await AsyncStorage.setItem('userToken', token);
+        await AsyncStorage.setItem('userPhone', phoneNumber);
+
+        // Lưu thông tin user vào Firestore (nếu cần)
+        const userData = {
+          phoneNumber: phoneNumber.startsWith('0') 
+            ? `+84${phoneNumber.substring(1)}` 
+            : phoneNumber,
+          createdAt: new Date().toISOString(),
+        };
+
+        // TODO: Implement API call to save user data to backend
+        console.log('New user data:', userData);
+
+        Alert.alert('Thành công', 'Đăng ký thành công!');
+        navigation.navigate('Home');
+      }
+    } catch (error: any) {
+      console.error('Lỗi xác thực:', error);
+      let errorMessage = 'Mã xác thực không đúng. Vui lòng thử lại.';
+      
+      switch (error.code) {
+        case 'auth/invalid-verification-code':
+          errorMessage = 'Mã xác thực không hợp lệ';
+          break;
+        case 'auth/invalid-verification-id':
+          errorMessage = 'Phiên xác thực không hợp lệ';
+          break;
+      }
+      
+      Alert.alert('Lỗi', errorMessage);
     }
   };
 
@@ -67,10 +126,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView>
           <View style={styles.formContainer}>
             <View style={styles.logoContainer}>
               <Image
@@ -80,29 +136,43 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
             </View>
             <View style={styles.formContent}>
               <Text style={styles.title}>Đăng ký tài khoản S7M Store</Text>
-              <CustomTextInput
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Nhập email của bạn"
-              />
-              <CustomTextInput
-                label="Mật khẩu"
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Nhập mật khẩu của bạn"
-                secureTextEntry
-              />
-              <CustomTextInput
-                label="Xác nhận mật khẩu"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Xác nhận mật khẩu"
-                secureTextEntry
-              />
-              <TouchableOpacity onPress={handleSignUp} style={styles.button}>
-                <Text style={styles.buttonText}>Đăng ký</Text>
-              </TouchableOpacity>
+              
+              {!showVerification ? (
+                <>
+                  <CustomTextInput
+                    label="Số điện thoại"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    placeholder="Nhập số điện thoại của bạn"
+                    keyboardType="phone-pad"
+                  />
+                  <TouchableOpacity onPress={handleSendCode} style={styles.button}>
+                    <Text style={styles.buttonText}>Gửi mã xác thực</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <CustomTextInput
+                    label="Mã xác thực"
+                    value={verificationCode}
+                    onChangeText={setVerificationCode}
+                    placeholder="Nhập mã xác thực"
+                    keyboardType="number-pad"
+                  />
+                  <TouchableOpacity onPress={handleVerifyAndSignUp} style={styles.button}>
+                    <Text style={styles.buttonText}>Xác thực và đăng ký</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowVerification(false);
+                      setConfirm(null);
+                    }} 
+                    style={styles.resendButton}
+                  >
+                    <Text style={styles.resendText}>Gửi lại mã</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
               <Text style={styles.loginText}>
@@ -159,7 +229,14 @@ const styles = StyleSheet.create({
   loginText: {
     textAlign: 'center',
     margin: 30,
-  
+  },
+  resendButton: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  resendText: {
+    color: '#3B82F6',
+    fontSize: 14,
   },
 });
 

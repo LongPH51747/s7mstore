@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { StyleSheet, Text, View, TextInput } from 'react-native';
 
 const CustomTextInput = ({ 
-    label, value, onChangeText, secureTextEntry=false, placeholder='', style='' }) => {
+    label, value, onChangeText, secureTextEntry=false, placeholder='', style='', keyboardType='default' }) => {
   return (
     <View style={styles.inputContainer}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -14,6 +13,7 @@ const CustomTextInput = ({
         placeholder={placeholder}
         secureTextEntry={secureTextEntry}
         placeholderTextColor="#999"
+        keyboardType={keyboardType}
         />
     </View>
   );

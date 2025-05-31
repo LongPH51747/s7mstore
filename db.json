@@ -1,0 +1,71 @@
+{
+    "banners": [
+        { "id": 1, "image": "https://i.pinimg.com/236x/16/75/12/167512edefec5b8f9343169f7899b06d.jpg" },
+        { "id": 2, "image": "https://i.pinimg.com/736x/e4/dc/d8/e4dcd8a80475b99cef4d66dc8df94909.jpg" },
+        { "id": 3, "image": "https://i.pinimg.com/236x/75/1d/2b/751d2b30f041d6a7ec336dbdef797311.jpg" }
+      ],
+    "products": [
+      {
+        "id": 1,
+        "name": "Claudette corset shirt dress in white",
+        "price": "79.95$",
+        "image": "https://hthaostudio.com/wp-content/uploads/2021/12/Anh-SP-quan-Jean-11-min.jpg.webp"
+      },
+      {
+        "id": 2,
+        "name": "Strapless corset bustier top in...",
+        "price": "59.95$",
+        "image": "https://hthaostudio.com/wp-content/uploads/2021/12/Anh-SP-quan-Jean-9-min.jpg"
+      },
+      {
+        "id": 3,
+        "name": "Sordec dress in marigold",
+        "price": "119.00$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3PfKVqPZg_Hk_J9AhJjEKdJMwDtP0T_803l6JSxovvma0UECCuujn2Cu8xOjbluL-Cbo&usqp=CAU"
+      },
+      {
+        "id": 4,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      },
+      {
+        "id": 5,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      }, {
+        "id": 6,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      }, {
+        "id": 7,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      }, {
+        "id": 8,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      }, {
+        "id": 9,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      }, {
+        "id": 10,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      }, {
+        "id": 11,
+        "name": "High neck draped mini dress in black",
+        "price": "89.95$",
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1UH3e8T1NGfp5qQQBOu5HebYnoEteknf4xqe7_lRlaSsoc0VgABkVjcUdVhiablOFqjM&usqp=CAU4.jpg"
+      }
+
+    
+    ]
+  }

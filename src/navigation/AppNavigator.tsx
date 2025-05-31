@@ -5,12 +5,14 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpSceen';
 import HomeScreen from '../screens/HomeScreen';
+import ProductDetailScreen from '../screens/ProductDetailScreen';
 
 type RootStackParamList = {
   Welcome: undefined;
   Login: undefined;
   SignUp: undefined;
   Home: undefined;
+  ProductDetail: { product: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -24,6 +26,7 @@ const AppNavigator: React.FC = () => {
           component={WelcomeScreen}
           options={{ headerShown: false }}
         />
+        
         <Stack.Screen
           name="Login"
           component={LoginScreen}
@@ -39,6 +42,11 @@ const AppNavigator: React.FC = () => {
           component={HomeScreen}
           options={{ headerShown: false }}
         />
+        <Stack.Screen
+  name="ProductDetail"
+  component={ProductDetailScreen}
+  options={{ headerShown: true, title: 'Product Detail' }}
+/>
       </Stack.Navigator>
     </NavigationContainer>
   );
