@@ -8,10 +8,12 @@ import {
   SafeAreaView,
   Alert,
   Keyboard,
+  ActivityIndicator, // Thêm để hiển thị loading
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native'; // Cần cài đặt @react-navigation/native
+import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Cần cài đặt react-native-vector-icons
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from 'react-native-vector-icons/Ionicons'; // Cần cài đặt react-native-vector-icons
+
 /**
  * Màn hình "Đổi Mật khẩu" (Change Password Screen).
  * Người dùng đã đăng nhập và muốn thay đổi mật khẩu hiện tại của họ.
@@ -19,6 +21,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
  */
 const ChangePasswordScreen = () => {
   const navigation = useNavigation();
+
+  // GIẢ ĐỊNH EMAIL CỦA NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP (Chỉ cho DEMO)
+  // Trong ứng dụng thật, bạn sẽ lấy email/ID người dùng từ ngữ cảnh đăng nhập (context, redux, auth state)
+  const loggedEmail = 'bao@gmail.com'; // Đảm bảo email này tồn tại trong db.json của bạn
 
   // States cho các trường nhập mật khẩu
   const [currentPassword, setCurrentPassword] = useState('');
@@ -29,11 +35,14 @@ const ChangePasswordScreen = () => {
   const [currentPasswordError, setCurrentPasswordError] = useState('');
   const [newPasswordError, setNewPasswordError] = useState('');
   const [confirmNewPasswordError, setConfirmNewPasswordError] = useState('');
-  const [forgot, setForgot] = useState('');
+  // const [forgot, setForgot] = useState(''); // Không cần state này nữa, thay bằng error message
+
   // States để quản lý trạng thái ẩn/hiện mật khẩu
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(false); // Thêm state cho loading
 
   /**
    * Hàm kiểm tra độ mạnh của mật khẩu mới.
@@ -71,15 +80,14 @@ const ChangePasswordScreen = () => {
     setCurrentPasswordError('');
     setNewPasswordError('');
     setConfirmNewPasswordError('');
+    // setForgot(''); // Reset state này
 
     let hasError = false;
 
-    // 1. Kiểm tra mật khẩu cũ (không thể xác thực phía client, chỉ kiểm tra rỗng)
+    // 1. Kiểm tra mật khẩu cũ có được nhập không
     if (!currentPassword.trim()) {
       setCurrentPasswordError('Vui lòng nhập mật khẩu cũ.');
       hasError = true;
-    }else if(currentPassword !== 'bao160805'){
-       setForgot("Bạn quên mật khẩu?")
     }
 
     // 2. Kiểm tra mật khẩu mới
@@ -103,46 +111,56 @@ const ChangePasswordScreen = () => {
       return;
     }
 
-    // --- LOGIC GỌI API ĐỔI MẬT KHẨU ---
-    // Trong thực tế, bạn sẽ gửi `currentPassword` và `newPassword` đến backend.
-    // Backend sẽ:
-    // 1. Xác minh mật khẩu cũ của người dùng (từ token xác thực của người dùng hoặc gửi trực tiếp)
-    // 2. Hash mật khẩu mới và cập nhật vào cơ sở dữ liệu.
-
-    console.log('Mật khẩu cũ:', currentPassword);
-    console.log('Mật khẩu mới:', newPassword);
+    setIsLoading(true); // Bắt đầu loading
 
     try {
-      // Giả lập cuộc gọi API thành công
-      // Thay thế bằng fetch/axios call đến API của bạn
-      // const response = await fetch('YOUR_BACKEND_API_FOR_CHANGE_PASSWORD', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer YOUR_AUTH_TOKEN`, // Gửi token xác thực người dùng
-      //   },
-      //   body: JSON.stringify({
-      //     currentPassword: currentPassword,
-      //     newPassword: newPassword,
-      //   }),
-      // });
+      // --- Bước 1: Lấy thông tin người dùng từ JSON Server ---
+      // (Giả sử chúng ta tìm người dùng theo email)
+      // Đảm bảo URL này khớp với địa chỉ JSON Server của bạn
+      // Ví dụ: 'http://10.0.2.2:3000' cho Android emulator, 'http://localhost:3000' cho iOS simulator
+      const JSON_SERVER_URL = 'http://192.168.100.92:3000'; // IP thực tế của bạn
 
-      // const data = await response.json();
+      const userResponse = await fetch(`${JSON_SERVER_URL}/users?email=${loggedEmail}`);
+      const users = await userResponse.json();
 
-      // if (response.ok) {
-        Alert.alert(
-          'Thành công',
-          'Mật khẩu của bạn đã được đổi thành công.'
-        );
-        // Có thể quay lại màn hình cài đặt hoặc trang cá nhân
-        navigation.goBack();
-      // } else {
-      //   // Xử lý lỗi từ backend (ví dụ: mật khẩu cũ không đúng)
-      //   Alert.alert('Lỗi', data.message || 'Không thể đổi mật khẩu. Vui lòng thử lại.');
-      // }
+      if (users.length === 0) {
+        Alert.alert('Lỗi', 'Không tìm thấy tài khoản người dùng với email này.');
+        return;
+      }
+
+      const user = users[0]; // Lấy người dùng đầu tiên tìm thấy
+
+      // --- Bước 2: Xác minh mật khẩu cũ (DEMO: SO SÁNH PLAIN TEXT) ---
+      // CẢNH BÁO: KHÔNG LÀM NHƯ NÀY TRONG PRODUCTION THẬT SỰ VÌ LÝ DO BẢO MẬT
+      if (user.password !== currentPassword) {
+        setCurrentPasswordError('Mật khẩu cũ không đúng.');
+        // setForgot("Bạn quên mật khẩu?"); // Có thể thêm lại nếu muốn, nhưng không nên.
+        return; // Dừng lại nếu mật khẩu cũ không đúng
+      }
+
+      // --- Bước 3: Cập nhật mật khẩu mới trong db.json thông qua JSON Server ---
+      const updatedUser = { ...user, password: newPassword }; // Tạo đối tượng người dùng đã cập nhật
+
+      const updateResponse = await fetch(`${JSON_SERVER_URL}/users/${user.id}`, { // Dùng user.id để PUT vào đúng người dùng
+        method: 'PUT', // Dùng PUT để cập nhật toàn bộ resource
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedUser),
+      });
+
+      if (updateResponse.ok) {
+        Alert.alert('Thành công', 'Mật khẩu của bạn đã được đổi thành công.');
+        navigation.navigate('profile'); // Chuyển về màn hình profile (đảm bảo route 'profile' tồn tại)
+      } else {
+        Alert.alert('Lỗi', 'Không thể đổi mật khẩu. Vui lòng thử lại sau.');
+      }
+
     } catch (error) {
       console.error('Lỗi khi đổi mật khẩu:', error);
-      Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+      Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ demo. Vui lòng kiểm tra JSON Server và kết nối mạng.');
+    } finally {
+      setIsLoading(false); // Kết thúc loading
     }
   };
 
@@ -190,9 +208,10 @@ const ChangePasswordScreen = () => {
         </View>
         {currentPasswordError ? <Text style={styles.errorText}>{currentPasswordError}</Text> : null}
 
-        <Text
-        onPress={() =>navigation.navigate('forgot')}
-         style={{color: 'blue', fontWeight: '500'}}>{forgot}</Text>
+        {/* <Text // Không cần dòng này nếu bạn đã xử lý lỗi mật khẩu cũ bằng currentPasswordError
+          onPress={() =>navigation.navigate('forgot')}
+          style={{color: 'blue', fontWeight: '500'}}>{forgot}
+        </Text> */}
       </View>
 
       {/* Ô nhập Mật khẩu mới */}
@@ -258,8 +277,13 @@ const ChangePasswordScreen = () => {
       <TouchableOpacity
         style={styles.changePasswordButton}
         onPress={handleChangePassword}
+        disabled={isLoading} // Vô hiệu hóa nút khi đang loading
       >
-        <Text style={styles.changePasswordButtonText}>Đổi Mật khẩu</Text>
+        {isLoading ? (
+          <ActivityIndicator color="#fff" /> // Hiển thị vòng xoay loading
+        ) : (
+          <Text style={styles.changePasswordButtonText}>Đổi Mật khẩu</Text>
+        )}
       </TouchableOpacity>
     </SafeAreaView>
   );
