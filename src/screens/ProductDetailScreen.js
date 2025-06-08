@@ -1,26 +1,25 @@
+/**
+ * Màn hình Chi tiết sản phẩm (Product Detail Screen)
+ * 
+ * Màn hình này hiển thị thông tin chi tiết của sản phẩm với các chức năng:
+ * - Hiển thị hình ảnh sản phẩm
+ * - Hiển thị thông tin sản phẩm (tên, giá, đánh giá)
+ * - Chọn màu sắc và kích thước
+ * - Chọn số lượng
+ * - Thêm vào giỏ hàng
+ * - Xem mô tả sản phẩm
+ */
+
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput } from 'react-native';
-import { RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 
-type RootStackParamList = {
-  ProductDetail: { product: any };
-  
-};
-
-type ProductDetailScreenRouteProp = RouteProp<RootStackParamList, 'ProductDetail'>;
-type ProductDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ProductDetail'>;
-
-interface Props {
-  route: ProductDetailScreenRouteProp;
-  navigation: ProductDetailScreenNavigationProp;
-}
-
+// Các tùy chọn màu sắc và kích thước
 const COLORS = ['Black', 'White', 'Red'];
 const SIZES = ['XS', 'S', 'M', 'L', 'XL'];
 
-const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
+const ProductDetailScreen = ({ route, navigation }) => {
   const { product } = route.params;
+  // State quản lý lựa chọn của người dùng
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedSize, setSelectedSize] = useState(SIZES[2]);
   const [quantity, setQuantity] = useState(1);
@@ -29,25 +28,28 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <ScrollView>
+        {/* Hình ảnh sản phẩm */}
         <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
         <View style={styles.content}>
+          {/* Tên sản phẩm và nút yêu thích */}
           <View style={styles.row}>
             <Text style={styles.name}>{product.name}</Text>
             <TouchableOpacity>
               <Text style={styles.heart}>♡</Text>
             </TouchableOpacity>
           </View>
+          {/* Đánh giá và giá */}
           <View style={styles.row}>
             <Text style={styles.rating}>★★★★★ <Text style={styles.ratingValue}>5.0</Text></Text>
             <Text style={styles.oldPrice}>79.95$</Text>
             <Text style={styles.newPrice}>65.00$</Text>
           </View>
-          {/* Color */}
+          {/* Chọn màu sắc */}
           <Text style={styles.label}>Color</Text>
           <View style={styles.selectBox}>
             <Text>{selectedColor}</Text>
           </View>
-          {/* Size */}
+          {/* Chọn kích thước */}
           <Text style={styles.label}>Size</Text>
           <View style={styles.sizeRow}>
             {SIZES.map(size => (
@@ -65,7 +67,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             <TouchableOpacity style={styles.sizeBox}><Text>More...</Text></TouchableOpacity>
           </View>
           <Text style={styles.sizeGuide}>Size guide</Text>
-          {/* Quantity & Add to cart */}
+          {/* Chọn số lượng và thêm vào giỏ hàng */}
           <View style={styles.cartRow}>
             <TouchableOpacity style={styles.qtyBtn} onPress={() => setQuantity(q => Math.max(1, q - 1))}>
               <Text style={styles.qtyBtnText}>-</Text>
@@ -78,7 +80,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               <Text style={styles.addCartText}>Add to cart</Text>
             </TouchableOpacity>
           </View>
-          {/* Description */}
+          {/* Mô tả sản phẩm */}
           <TouchableOpacity style={styles.descHeader} onPress={() => setDescOpen(o => !o)}>
             <Text style={styles.label}>Description</Text>
             <Text>{descOpen ? '▲' : '▼'}</Text>
@@ -96,8 +98,9 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   );
 };
 
+// Styles cho màn hình
 const styles = StyleSheet.create({
-  image: { width: '100%', height: 320, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
+  image: { width: '100%', height: 400, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
   content: { padding: 16 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   name: { fontSize: 18, fontWeight: 'bold', flex: 1 },
@@ -124,4 +127,4 @@ const styles = StyleSheet.create({
   desc: { color: '#222', marginTop: 4, fontSize: 14 },
 });
 
-export default ProductDetailScreen;
+export default ProductDetailScreen; 

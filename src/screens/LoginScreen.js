@@ -1,4 +1,16 @@
+/**
+ * Màn hình Đăng nhập (Login Screen)
+ * 
+ * Màn hình này cho phép người dùng đăng nhập với các chức năng:
+ * - Đăng nhập bằng số điện thoại và OTP
+ * - Đăng nhập bằng Google
+ * - Xác thực người dùng
+ * - Lưu thông tin đăng nhập
+ * - Chuyển hướng đến màn hình Home sau khi đăng nhập thành công
+ */
+
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   View,
   Text,
@@ -8,30 +20,14 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import CustomTextInput from '../components/customTextInput';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type RootStackParamList = {
-  Welcome: undefined;
-  Login: undefined;
-  SignUp: undefined;
-  Home: undefined;
-  ProductDetail: { product: any };
-};
-
-type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
-
-interface LoginScreenProps {
-  navigation: LoginScreenNavigationProp;
-}
-
-const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  // Cấu hình Google Sign-In
+const LoginScreen = ({ navigation }) => {
+  // Cấu hình Google Sign-In khi component mount
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: '649260662561-3l4i52uibivtvf20ioed5g6f98ps24o5.apps.googleusercontent.com',
@@ -40,36 +36,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     });
   }, []);
 
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const [verificationCode, setVerificationCode] = useState<string>('');
-  const [confirm, setConfirm] = useState<any>(null);
-  const [showVerification, setShowVerification] = useState<boolean>(false);
+  // State quản lý thông tin đăng nhập
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [confirm, setConfirm] = useState(null);
+  const [showVerification, setShowVerification] = useState(false);
 
-  // Kiểm tra token khi màn hình được load
-  useEffect(() => {
-    checkUserToken();
-  }, []);
-
-  const checkUserToken = async () => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (token) {
-        // Kiểm tra token còn hợp lệ không
-        const user = auth().currentUser;
-        if (user) {
-          // Token còn hợp lệ, chuyển đến màn hình Home
-          navigation.replace('Home');
-        } else {
-          // Token không hợp lệ, xóa token
-          await AsyncStorage.removeItem('userToken');
-          await AsyncStorage.removeItem('userPhone');
-        }
-      }
-    } catch (error) {
-      console.error('Lỗi kiểm tra token:', error);
-    }
-  };
-
+  /**
+   * Hàm gửi mã xác thực OTP
+   * - Kiểm tra số điện thoại
+   * - Format số điện thoại theo định dạng quốc tế
+   * - Gửi mã xác thực qua Firebase
+   */
   const handleSendCode = async () => {
     try {
       if (!phoneNumber) {
@@ -88,7 +66,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setConfirm(confirmation);
       setShowVerification(true);
       Alert.alert('Thành công', 'Mã xác thực đã được gửi đến số điện thoại của bạn');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Lỗi gửi mã:', error);
       let errorMessage = 'Không thể gửi mã xác thực. Vui lòng thử lại sau.';
       
@@ -105,6 +83,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
+  /**
+   * Hàm xác thực mã OTP và đăng nhập
+   * - Kiểm tra mã xác thực
+   * - Xác thực với Firebase
+   * - Lưu thông tin đăng nhập
+   * - Chuyển hướng đến màn hình Home
+   */
   const handleVerifyAndLogin = async () => {
     try {
       if (!verificationCode) {
@@ -120,11 +105,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         const token = await userCredential.user.getIdToken();
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userPhone', phoneNumber);
+        await AsyncStorage.setItem('shouldAutoLogin', 'true');
 
         Alert.alert('Thành công', 'Đăng nhập thành công!');
         navigation.replace('Home');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Lỗi xác thực:', error);
       let errorMessage = 'Mã xác thực không đúng. Vui lòng thử lại.';
       
@@ -141,7 +127,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  // Xử lý đăng nhập bằng Google
+  /**
+   * Hàm xử lý đăng nhập bằng Google
+   * - Xác thực với Google
+   * - Lấy thông tin người dùng
+   * - Xác thực với backend
+   * - Lưu thông tin đăng nhập
+   */
   const handleGoogleLogin = async () => {
     try {
       console.log('Bắt đầu đăng nhập Google...');
@@ -165,21 +157,84 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       console.log('User Credential:', userCredential);
       
       if (userCredential.user) {
-        // Lưu token và thông tin người dùng vào AsyncStorage
-        const token = await userCredential.user.getIdToken();
-        await AsyncStorage.setItem('userToken', token);
-        await AsyncStorage.setItem('userInfo', JSON.stringify({
-          displayName: userCredential.user.displayName,
-          email: userCredential.user.email,
-          photoURL: userCredential.user.photoURL,
-          uid: userCredential.user.uid
-        }));
+        // Gọi API backend để xác thực
+        try {
+          console.log('Đang gọi API backend...');
+          // Generate username from email (remove @gmail.com and any special characters)
+          const email = userCredential.user.email;
+          if (!email) {
+            throw new Error('Không nhận được email từ tài khoản Google');
+          }
+          const username = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+          
+          const requestData = {
+            idToken: idToken,
+            user: {
+              email: userCredential.user.email,
+              username: username, // Add username
+              fullname: userCredential.user.displayName,
+              avatar: userCredential.user.photoURL,
+              googleId: userCredential.user.uid
+            }
+          };
+          console.log('Request data:', requestData);
 
-        console.log('Đã lưu token và thông tin người dùng');
-        Alert.alert('Thành công', 'Đăng nhập bằng Google thành công!');
-        navigation.replace('Home');
+          const response = await axios.post('http://192.168.1.117:3000/api/auth/login-google', 
+            requestData,
+            {
+              timeout: 1000,
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            }
+          );
+
+          console.log('API Response:', response.data);
+
+          // Lưu token từ backend và thông tin người dùng vào AsyncStorage
+          if (response.data && response.data.access_token) {
+            await AsyncStorage.setItem('userToken', response.data.access_token);
+            await AsyncStorage.setItem('shouldAutoLogin', 'true');
+            await AsyncStorage.setItem('userInfo', JSON.stringify(response.data.user));
+            console.log('Đã lưu token và thông tin người dùng từ backend');
+            Alert.alert('Thành công', 'Đăng nhập bằng Google thành công!');
+            navigation.replace('Home');
+          } else {
+            throw new Error('Không nhận được token từ server');
+          }
+        } catch (apiError) {
+          console.error('Lỗi API chi tiết:', {
+            message: apiError.message,
+            response: apiError.response?.data,
+            status: apiError.response?.status,
+            code: apiError.code,
+            requestData: apiError.config?.data
+          });
+
+          // Fallback: Nếu không thể kết nối đến backend, sử dụng Firebase token
+          console.log('Sử dụng Firebase token làm fallback...');
+          try {
+            const firebaseToken = await userCredential.user.getIdToken();
+            await AsyncStorage.setItem('userToken', firebaseToken);
+            await AsyncStorage.setItem('shouldAutoLogin', 'true');
+            await AsyncStorage.setItem('userInfo', JSON.stringify({
+              displayName: userCredential.user.displayName,
+              email: userCredential.user.email,
+              photoURL: userCredential.user.photoURL,
+              uid: userCredential.user.uid
+            }));
+
+            console.log('Đã lưu thông tin người dùng từ Firebase');
+            Alert.alert('Thành công', 'Đăng nhập bằng Google thành công!');
+            navigation.replace('Home');
+          } catch (storageError) {
+            console.error('Lỗi lưu thông tin:', storageError);
+            Alert.alert('Lỗi', 'Không thể lưu thông tin đăng nhập');
+          }
+        }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Lỗi chi tiết:', error.code, error.message);
       let message = 'Đăng nhập Google thất bại';
       
@@ -206,6 +261,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.formContainer}>
+        {/* Logo Container */}
         <View style={styles.logoContainer}>
           <Image
             source={require('../assets/LogoS7MStore.png')}
@@ -215,6 +271,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         <View style={styles.formContent}>
           <Text style={styles.title}>Chào mừng đến với S7M Store</Text>
           
+          {/* Form đăng nhập */}
           {!showVerification ? (
             <>
               <CustomTextInput
@@ -252,6 +309,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </>
           )}
 
+          {/* Đăng nhập bằng Google */}
           <Text style={{ textAlign: 'center', marginVertical: 10 }}>
             Hoặc đăng nhập bằng
           </Text>
@@ -263,6 +321,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
           </TouchableOpacity>
 
+          {/* Link chuyển đến màn hình đăng ký */}
           <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
             <Text style={styles.signupText}>
               Chưa có tài khoản? <Text style={{ color: '#3B82F6' }}>Đăng ký</Text>
@@ -274,6 +333,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   );
 };
 
+// Styles cho màn hình
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -347,4 +407,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default LoginScreen; 
