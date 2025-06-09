@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'http://192.168.1.117:3000/api';
+export const API_BASE_URL = 'https://059f-2405-4802-4b2-2810-c455-f308-457-aa78.ngrok-free.app/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -22,6 +22,20 @@ export const API_ENDPOINTS = {
   CATEGORIES: {
     GET_ALL: `${API_BASE_URL}/categories/get-all-categories`,
     GET_BY_ID: (id) => `${API_BASE_URL}/categories/get-category/${id}`,
+  },
+  
+  // Cart endpoints
+  CART: {
+    GET_BY_USER_ID: `${API_BASE_URL}/cart/getByUserId`,
+    ADD_TO_CART: `${API_BASE_URL}/cart/addToCart`,
+    UPDATE_QUANTITY: (id) => `${API_BASE_URL}/cart/updateQuantity/cartItemId/${id}`,
+    DELETE_CART_ITEM: (id) => `${API_BASE_URL}/cart/deleteCartItem/${id}`,
+  },
+  
+  // Order endpoints
+  ORDERS: {
+    GET_BY_USER_ID: `${API_BASE_URL}/order/getByUserId`,
+    GET_ORDER_DETAIL: `${API_BASE_URL}/order/getOrderDetail`,
   },
   
   // Banner endpoints

@@ -29,23 +29,32 @@ const WelcomeScreen = ({ navigation }) => {
     try {
       console.log('Kiểm tra token người dùng...');
       const token = await AsyncStorage.getItem('userToken');
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      let userInfo = null;
+      if (userInfoString) {
+        try {
+          userInfo = JSON.parse(userInfoString);
+        } catch (parseError) {
+          console.error('Lỗi phân tích userInfo từ AsyncStorage:', parseError);
+        }
+      }
       
       // Tạo timer trước khi kiểm tra token
       const timer = setTimeout(() => {
-        if (token) {
-          console.log('Tìm thấy token, kiểm tra tính hợp lệ...');
-          // Kiểm tra token còn hợp lệ không
+        if (token && userInfo && userInfo.uid) {
+          console.log('Tìm thấy token và thông tin người dùng, kiểm tra tính hợp lệ...');
           const user = auth().currentUser;
-          if (user) {
-            console.log('Token hợp lệ, chuyển đến màn hình Home');
-            // Token còn hợp lệ, chuyển đến màn hình Home
+          if (user && user.uid === userInfo.uid) {
+            console.log('Token và người dùng hợp lệ, chuyển đến màn hình Home');
             navigation.replace('Home');
             return;
           } else {
-            console.log('Token không hợp lệ, xóa thông tin đăng nhập');
-            // Token không hợp lệ, xóa token và thông tin người dùng
-            AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone']);
+            console.log('Token hoặc người dùng không hợp lệ, xóa thông tin đăng nhập');
+            AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
           }
+        } else {
+          console.log('Không tìm thấy token hoặc thông tin người dùng hợp lệ, chuyển đến màn hình Login');
+          AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']); // Ensure all related data is cleared
         }
         
         // Nếu không có token hoặc token không hợp lệ, chuyển đến màn hình Login

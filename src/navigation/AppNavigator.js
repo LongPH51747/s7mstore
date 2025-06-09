@@ -8,6 +8,9 @@ import HomeScreen from '../screens/HomeScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SearchResultsScreen from '../screens/SearchResultsScreen';
+import CartScreen from '../screens/CartScreen';
+import OrderScreen from '../screens/OrderScreen';
+import OrderDetailScreen from '../screens/OrderDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -43,6 +46,13 @@ const AppNavigator = () => {
         <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
         {/* Màn hình chi tiết sản phẩm */}
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+        
+        {/* Màn hình giỏ hàng */}
+        <Stack.Screen name="Cart" component={CartScreen} />
+        
+        {/* Màn hình đơn hàng */}
+        <Stack.Screen name="Orders" component={OrderScreen} />
+        <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

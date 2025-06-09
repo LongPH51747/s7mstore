@@ -25,6 +25,7 @@ import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
 
 const LoginScreen = ({ navigation }) => {
   // Cấu hình Google Sign-In khi component mount
@@ -106,6 +107,7 @@ const LoginScreen = ({ navigation }) => {
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userPhone', phoneNumber);
         await AsyncStorage.setItem('shouldAutoLogin', 'true');
+        await AsyncStorage.setItem('userInfo', JSON.stringify(userCredential.user));
 
         Alert.alert('Thành công', 'Đăng nhập thành công!');
         navigation.replace('Home');
@@ -179,24 +181,33 @@ const LoginScreen = ({ navigation }) => {
           };
           console.log('Request data:', requestData);
 
-          const response = await axios.post('http://192.168.1.117:3000/api/auth/login-google', 
+          const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN_GOOGLE, 
             requestData,
             {
-              timeout: 1000,
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              }
+              timeout: API_TIMEOUT,
+              headers: API_HEADERS,
             }
           );
 
-          console.log('API Response:', response.data);
+          console.log('API Response (raw data from backend):', response.data);
 
           // Lưu token từ backend và thông tin người dùng vào AsyncStorage
-          if (response.data && response.data.access_token) {
-            await AsyncStorage.setItem('userToken', response.data.access_token);
+          if (response.data && response.data.data && response.data.data.access_token) {
+            const backendResponseData = response.data.data; // Access the nested data object
+            const backendUser = backendResponseData.user || {};
+            const userInfoToStore = {
+              displayName: backendUser.fullname || userCredential.user.displayName,
+              email: backendUser.email || userCredential.user.email,
+              photoURL: backendUser.avatar || userCredential.user.photoURL,
+              uid: userCredential.user.uid, // Keep Firebase UID as a reference
+              _id: backendUser._id, // Add MongoDB _id from backend
+              // Add other fields from backendUser if necessary, e.g., phone, address
+              ...backendUser
+            };
+
+            await AsyncStorage.setItem('userToken', backendResponseData.access_token);
             await AsyncStorage.setItem('shouldAutoLogin', 'true');
-            await AsyncStorage.setItem('userInfo', JSON.stringify(response.data.user));
+            await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
             console.log('Đã lưu token và thông tin người dùng từ backend');
             Alert.alert('Thành công', 'Đăng nhập bằng Google thành công!');
             navigation.replace('Home');

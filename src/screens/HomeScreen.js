@@ -45,11 +45,12 @@ const HomeScreen = ({ navigation }) => {
           throw new Error(`Failed to fetch products: ${productsResponse.status}`);
         }
         const productsData = await productsResponse.json();
-        console.log('Products response:', productsData);
+        // console.log('Products response:', productsData);
         if (productsData && Array.isArray(productsData)) {
           setProducts(productsData);
+          // console.log('Products state after fetch:', productsData.map(p => ({ id: p._id, image: p.product_image })));
         } else {
-          console.error('Invalid products data format:', productsData);
+          // console.error('Invalid products data format:', productsData);
           setProducts([]);
         }
 
@@ -69,40 +70,59 @@ const HomeScreen = ({ navigation }) => {
         }
         const categoriesData = await categoriesResponse.json();
         if (categoriesData && Array.isArray(categoriesData)) {
-          setCategories(categoriesData);
+          // Transform category data to ensure valid image URLs
+          const transformedCategories = categoriesData.map(category => ({
+            ...category,
+            category_image: (category.category_image && (category.category_image.startsWith('http://') || category.category_image.startsWith('https://')))
+              ? category.category_image 
+              : null
+          }));
+          setCategories(transformedCategories);
+          // console.log('Categories state after fetch:', transformedCategories.map(c => ({ id: c._id, image: c.category_image })));
         } else {
-          console.error('Invalid categories data format:', categoriesData);
+          // console.error('Invalid categories data format:', categoriesData);
           setCategories([]);
         }
 
         // Fetch banners
         console.log('Fetching banners...');
-        const bannersController = new AbortController();
-        const bannersTimeout = setTimeout(() => bannersController.abort(), API_TIMEOUT);
-        
-        const bannersResponse = await fetch(API_ENDPOINTS.BANNERS.GET_ALL, {
-          headers: API_HEADERS,
-          signal: bannersController.signal,
-        });
-        clearTimeout(bannersTimeout);
-        
-        if (!bannersResponse.ok) {
-          throw new Error(`Failed to fetch banners: ${bannersResponse.status}`);
-        }
-        const bannersData = await bannersResponse.json();
-        if (bannersData && Array.isArray(bannersData)) {
-          const transformedBanners = bannersData.map(banner => ({
-            ...banner,
-            image: banner.banner_image_url || null
-          }));
-          setBanners(transformedBanners);
-        } else {
-          console.error('Invalid banners data format:', bannersData);
+        try {
+          const bannersController = new AbortController();
+          const bannersTimeout = setTimeout(() => bannersController.abort(), API_TIMEOUT);
+          
+          const bannersResponse = await fetch(API_ENDPOINTS.BANNERS.GET_ALL, {
+            headers: API_HEADERS,
+            signal: bannersController.signal,
+          });
+          clearTimeout(bannersTimeout);
+          
+          if (!bannersResponse.ok) {
+            throw new Error(`Failed to fetch banners: ${bannersResponse.status}`);
+          }
+          const bannersData = await bannersResponse.json();
+          // console.log('Banners response:', bannersData);
+          
+          if (bannersData && Array.isArray(bannersData)) {
+            const transformedBanners = bannersData.map(banner => ({
+              ...banner,
+              image: banner.banner_image_url || banner.banner_image || null
+            })).filter(banner => banner.image !== null);
+            
+            // console.log('Transformed banners:', transformedBanners);
+            setBanners(transformedBanners);
+            // console.log('Banners state after fetch:', transformedBanners.map(b => ({ id: b._id, image: b.image }))); // Removed for long base64
+          } else {
+            // console.error('Invalid banners data format:', bannersData);
+            setBanners([]);
+          }
+        } catch (bannerError) {
+          // console.error('Error fetching banners:', bannerError);
+          setBanners([]);
         }
 
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        // console.error('Error fetching data:', error);
         setLoading(false);
       }
     };
@@ -128,29 +148,39 @@ const HomeScreen = ({ navigation }) => {
     ? products
     : products.filter(product => product.product_category.includes(selectedCategory));
 
-  console.log('Filtered products:', filteredProducts);
+  // console.log('Filtered products:', filteredProducts);
   console.log('Selected category:', selectedCategory);
 
   /**
    * Render item sản phẩm trong grid
    */
   const renderItem = ({ item }) => {
-    console.log('Rendering product:', item);
+    // console.log('Rendering product:', item);
+    // console.log('Product Image URL before validation:', item.product_image);
+    const productImageSource = (typeof item.product_image === 'string' && (item.product_image.startsWith('http://') || item.product_image.startsWith('https://') || item.product_image.startsWith('data:image')))
+      ? { uri: item.product_image }
+      : require('../assets/LogoGG.png');
+
     return (
       <TouchableOpacity 
         style={styles.card}
         onPress={() => navigation.navigate('ProductDetail', { product: item })}
       >
         <Image 
-          source={item.product_image ? { uri: item.product_image } : require('../assets/LogoGG.png')} 
+          source={productImageSource} 
           style={styles.image} 
           resizeMode="cover"
-          onError={(e) => console.error('Image loading error:', e.nativeEvent.error)}
+          onError={(e) => {
+            console.error('Product image loading error:', e.nativeEvent.error, 'for URL:', item.product_image);
+            e.target.setNativeProps({
+              source: require('../assets/LogoGG.png')
+            });
+          }}
         />
         <Text style={styles.price}>{item.product_price?.toLocaleString('vi-VN')}đ</Text>
         <Text style={styles.name} numberOfLines={2}>{item.product_name}</Text>
         <TouchableOpacity style={styles.heart}>
-          <Text>♡</Text>
+          <Text style={styles.heartIcon}>♡</Text>
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -180,13 +210,25 @@ const HomeScreen = ({ navigation }) => {
       </View>
       <ScrollView>
         {/* Banner quảng cáo */}
-        {banners.length > 0 && banners[bannerIndex] && banners[bannerIndex].image && (
+        {banners.length > 0 && banners[bannerIndex] && (
           <View style={styles.bannerImgWrap}>
             <Image
-              source={{ uri: banners[bannerIndex].image }}
+              source={(() => {
+                const bannerImg = banners[bannerIndex].image;
+                // console.log('Banner Image URL before validation:', bannerImg); // Removed for long base64
+                if (typeof bannerImg === 'string' && (bannerImg.startsWith('data:image') || bannerImg.startsWith('http://') || bannerImg.startsWith('https://'))) {
+                  return { uri: bannerImg };
+                } else {
+                  // If it's not a valid URL or base64, fallback to default image
+                  return require('../assets/LogoGG.png'); 
+                }
+              })()}
               style={styles.bannerImg}
               resizeMode="cover"
-              onError={(e) => console.error('Banner image loading error:', e.nativeEvent.error)}
+              onError={(e) => {
+                console.error('Banner image loading error:', e.nativeEvent.error, 'for URL:', banners[bannerIndex].image);
+                setBannerIndex((prevIndex) => (prevIndex + 1) % banners.length); // Try next banner on error
+              }}
             />
           </View>
         )}
@@ -199,52 +241,54 @@ const HomeScreen = ({ navigation }) => {
           >
             <TouchableOpacity
               style={[
-                styles.categoryCard,
-                selectedCategory === 'All' && styles.categoryCardActive
+                styles.categoryTab,
+                selectedCategory === 'All' && styles.selectedCategoryTab
               ]}
               onPress={() => setSelectedCategory('All')}
             >
               <View style={styles.categoryImageContainer}>
-                <Image 
+                <Image
                   source={require('../assets/LogoGG.png')}
                   style={styles.categoryImage}
-                  resizeMode="cover"
                 />
               </View>
               <Text style={[
-                styles.categoryName,
-                selectedCategory === 'All' && styles.categoryNameActive
-              ]}>
-                Tất cả
-              </Text>
+                styles.categoryText,
+                selectedCategory === 'All' && styles.selectedCategoryText
+              ]}>Tất cả</Text>
             </TouchableOpacity>
-            {categories.map(category => (
+            {categories.map((category) => (
               <TouchableOpacity
                 key={category._id}
                 style={[
-                  styles.categoryCard,
-                  category.category_name === selectedCategory && styles.categoryCardActive
+                  styles.categoryTab,
+                  selectedCategory === category.category_name && styles.selectedCategoryTab
                 ]}
                 onPress={() => setSelectedCategory(category.category_name)}
               >
                 <View style={styles.categoryImageContainer}>
-                  <Image 
-                    source={
-                      category.category_image 
-                        ? { uri: `data:image/jpeg;base64,${category.category_image}` }
-                        : require('../assets/LogoGG.png')
-                    }
+                  <Image
+                    source={(() => {
+                      const categoryImg = category.category_image;
+                      // console.log('Category Image URL before validation:', categoryImg); // Removed for long base64
+                      if (typeof categoryImg === 'string' && (categoryImg.startsWith('http://') || categoryImg.startsWith('https://'))) {
+                        return { uri: categoryImg };
+                      }
+                      return require('../assets/LogoGG.png');
+                    })()}
                     style={styles.categoryImage}
-                    resizeMode="cover"
-                    onError={(e) => console.error('Category image loading error:', e.nativeEvent.error)}
+                    onError={(e) => {
+                      console.error('Category image loading error:', e.nativeEvent.error, 'for URL:', category.category_image);
+                      e.target.setNativeProps({
+                        source: require('../assets/LogoGG.png')
+                      });
+                    }}
                   />
                 </View>
                 <Text style={[
-                  styles.categoryName,
-                  category.category_name === selectedCategory && styles.categoryNameActive
-                ]}>
-                  {category.category_name}
-                </Text>
+                  styles.categoryText,
+                  selectedCategory === category.category_name && styles.selectedCategoryText
+                ]}>{category.category_name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -264,7 +308,9 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.bottomNav}>
         <Text style={styles.bottomIcon}>🏠</Text>
         <Text style={styles.bottomIcon}>🔍</Text>
-        <Text style={styles.bottomIcon}>🛒</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
+          <Text style={styles.bottomIcon}>🛒</Text>
+        </TouchableOpacity>
         <Text style={styles.bottomIcon}>♡</Text>
         <Text style={styles.bottomIcon}>👤</Text>
       </View>
@@ -335,7 +381,7 @@ const styles = StyleSheet.create({
   categoriesScrollContent: {
     paddingHorizontal: 12,
   },
-  categoryCard: {
+  categoryTab: {
     width: 100,
     marginRight: 12,
     alignItems: 'center',
@@ -343,10 +389,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#f8f8f8',
   },
-  categoryCardActive: {
+  selectedCategoryTab: {
     backgroundColor: '#f0f0f0',
     borderWidth: 1,
     borderColor: '#ddd',
+  },
+  categoryText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  selectedCategoryText: {
+    color: '#000',
+    fontWeight: 'bold',
   },
   categoryImageContainer: {
     width: 80,
@@ -355,25 +411,41 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 8,
     backgroundColor: '#fff',
-    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 2,
   },
   categoryImage: {
     width: '100%',
     height: '100%',
   },
-  categoryName: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 4,
+  heartIcon: {
+    fontSize: 20,
   },
-  categoryNameActive: {
-    color: '#000',
-    fontWeight: 'bold',
+  variantContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 5,
+  },
+  variantButton: {
+    padding: 5,
+    margin: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  selectedVariant: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  variantText: {
+    fontSize: 12,
+    color: '#333',
   },
 });
 
