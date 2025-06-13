@@ -16,18 +16,20 @@ export default function CheckoutScreen() {
   const [totalAmount, setTotalAmount] = useState(0);
 
   useEffect(() => {
+    console.log('Route Params:', route.params);
+  }, [route.params]);
+
+  useEffect(() => {
     if (route.params?.cartItems) {
       setCartItems(route.params.cartItems);
-    } else if (route.params?.product && route.params?.quantity) { // For direct checkout of a single product
-      // Assuming product passed here would have variant info within it for display
+    } else if (route.params?.product && route.params?.quantity) {
       const singleProduct = {
         ...route.params.product,
         quantity: route.params.quantity,
-        // Assume price comes from selected variant in ProductDetailScreen
         unit_price_item: route.params.product.selectedVariant?.variant_price || route.params.product.product_price,
         color: route.params.product.selectedVariant?.variant_color || '',
         size: route.params.product.selectedVariant?.variant_size || '',
-        image: route.params.product.selectedVariant?.variant_image_url || route.params.product.product_image, // Or base64
+        image: route.params.product.selectedVariant?.variant_image_url || route.params.product.product_image,
         name_product: route.params.product.product_name,
       };
       setCartItems([singleProduct]);
@@ -35,26 +37,20 @@ export default function CheckoutScreen() {
   }, [route.params]);
 
   useEffect(() => {
-    // Calculate subtotal
     let subTotal = 0;
     cartItems.forEach(item => {
       subTotal += (item.unit_price_item || item.price) * item.quantity;
     });
     setSubTotalPrice(subTotal);
-
-    // For simplicity, fixed voucher and shipping for now. Integrate real logic later.
-    setVoucherAmount(30000); // Example fixed voucher
-    setShippingFee(20000); // Example fixed shipping
-
-    // Calculate total
-    let calculatedTotal = subTotal - voucherAmount + shippingFee;
-    setTotalAmount(calculatedTotal);
-  }, [cartItems, voucherAmount, shippingFee]);
+    setVoucherAmount(30000);
+    setShippingFee(20000);
+    setTotalAmount(subTotal - 30000 + 20000);
+  }, [cartItems]);
 
   const handleQuantity = (type, itemId) => {
-    setCartItems(prevItems => 
+    setCartItems(prevItems =>
       prevItems.map(item => {
-        if (item.id_variant === itemId || item._id === itemId) { // Use _id for product if not a variant
+        if (item.id_variant === itemId || item._id === itemId) {
           let newQuantity = item.quantity;
           if (type === 'plus') newQuantity++;
           if (type === 'minus' && newQuantity > 1) newQuantity--;
@@ -72,16 +68,10 @@ export default function CheckoutScreen() {
     }
 
     try {
-      // This is a placeholder for actual order placement API call
-      // You would send cartItems, totalAmount, shippingAddress, paymentMethod, etc.
       console.log('Placing order with:', { cartItems, totalAmount, paymentMethod });
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
-
+      await new Promise(resolve => setTimeout(resolve, 1000));
       Alert.alert('Đặt hàng thành công!', 'Đơn hàng của bạn đã được đặt.');
       navigation.navigate('PaymentSuccess');
-
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');
@@ -89,109 +79,249 @@ export default function CheckoutScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Checkout</Text>
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+        <Text style={styles.title}>Checkout</Text>
 
-      {/* Địa chỉ giao hàng */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
-        <TouchableOpacity style={styles.editBtn}><Text style={styles.editText}>Sửa</Text></TouchableOpacity>
-        <Text style={styles.text}>Dmitriy Divnov</Text> {/* Placeholder */}
-        <Text style={styles.text}>Brest, Belarus</Text> {/* Placeholder */}
-        <Text style={styles.text}>+375 (29) 749-19-24</Text> {/* Placeholder */}
-      </View>
+        {/* Địa chỉ giao hàng */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
+          <TouchableOpacity style={styles.editBtn}><Text style={styles.editText}>Sửa</Text></TouchableOpacity>
+          <Text style={styles.text}>Dmitriy Divnov</Text>
+          <Text style={styles.text}>Brest, Belarus</Text>
+          <Text style={styles.text}>+375 (29) 749-19-24</Text>
+        </View>
 
-      {/* Sản phẩm */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sản phẩm</Text>
-        <TouchableOpacity style={styles.editBtn}><Text style={styles.editText}>Sửa</Text></TouchableOpacity>
-        {cartItems.map((item, index) => (
-          <View key={item.id_variant || item._id || index} style={styles.productRow}>
-            <Image 
-              source={{
-                uri: item.image && (item.image.startsWith('http') ? item.image : `data:image/jpeg;base64,${item.image}`)
-              }}
-              style={styles.image}
-            />
-            <View style={styles.productDetails}>
-              <Text style={styles.productName}>{item.name_product || item.product_name}</Text>
-              <Text>Color: {item.color}</Text>
-              <Text>Size: {item.size}</Text>
-              <Text style={styles.price}>{item.unit_price_item?.toLocaleString('vi-VN')}đ</Text>
-              <View style={styles.quantityContainer}>
-                <TouchableOpacity onPress={() => handleQuantity('minus', item.id_variant || item._id)}><Text style={styles.qBtn}>-</Text></TouchableOpacity>
-                <Text style={styles.quantity}>{item.quantity}</Text>
-                <TouchableOpacity onPress={() => handleQuantity('plus', item.id_variant || item._id)}><Text style={styles.qBtn}>+</Text></TouchableOpacity>
+        {/* Sản phẩm */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sản phẩm</Text>
+          <TouchableOpacity style={styles.editBtn}><Text style={styles.editText}>Sửa</Text></TouchableOpacity>
+          {cartItems.map((item, index) => {
+            const productImageSource = (
+              item.image && 
+              (item.image.startsWith('http://') || 
+               item.image.startsWith('https://') || 
+               item.image.startsWith('data:image'))
+            )
+              ? { uri: item.image }
+              : require('../assets/LogoGG.png');
+
+            return (
+              <View key={item.id_variant || item._id || index} style={styles.productRow}>
+                <Image
+                  source={productImageSource}
+                  style={styles.image}
+                  onError={(e) => {
+                    console.error('Product image loading error:', e.nativeEvent.error);
+                    e.target.setNativeProps({
+                      source: require('../assets/LogoGG.png')
+                    });
+                  }}
+                />
+                <View style={styles.productDetails}>
+                  <Text style={styles.productName}>{item.name_product || item.product_name}</Text>
+                  <Text>Color: {item.color}</Text>
+                  <Text>Size: {item.size}</Text>
+                  <Text style={styles.price}>
+                    {(item.unit_price_item || item.price)?.toLocaleString('vi-VN')}đ
+                  </Text>
+                  <View style={styles.quantityContainer}>
+                    <TouchableOpacity onPress={() => handleQuantity('minus', item.id_variant || item._id)}>
+                      <Text style={styles.qBtn}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.quantity}>{item.quantity}</Text>
+                    <TouchableOpacity onPress={() => handleQuantity('plus', item.id_variant || item._id)}>
+                      <Text style={styles.qBtn}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
-            </View>
+            );
+          })}
+        </View>
+
+        {/* Voucher */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>S7M Voucher</Text>
+          <TouchableOpacity><Text style={styles.editText}>Chọn voucher </Text></TouchableOpacity>
+        </View>
+
+        {/* Chi tiết thanh toán */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
+          <Text>Tổng tiền hàng: {subTotalPrice?.toLocaleString('vi-VN')}đ</Text>
+          <Text>Voucher: -{voucherAmount?.toLocaleString('vi-VN')}đ</Text>
+          <Text>Vận chuyển: {shippingFee?.toLocaleString('vi-VN')}đ</Text>
+        </View>
+
+        {/* Phương thức thanh toán */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
+          <View style={styles.radioRow}>
+            <RadioButton
+              value="cod"
+              status={paymentMethod === 'cod' ? 'checked' : 'unchecked'}
+              onPress={() => setPaymentMethod('cod')}
+            />
+            <Text>Thanh toán khi nhận hàng</Text>
           </View>
-        ))}
-      </View>
-
-      {/* Voucher */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>S7M Voucher</Text>
-        <TouchableOpacity><Text style={styles.editText}>Chọn voucher </Text></TouchableOpacity>
-      </View>
-
-      {/* Chi tiết thanh toán */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
-        <Text>Tổng tiền hàng: {subTotalPrice?.toLocaleString('vi-VN')}đ</Text>
-        <Text>Voucher: -{voucherAmount?.toLocaleString('vi-VN')}đ</Text>
-        <Text>Vận chuyển: {shippingFee?.toLocaleString('vi-VN')}đ</Text>
-        <Text style={styles.total}>Total: {totalAmount?.toLocaleString('vi-VN')}đ</Text>
-      </View>
-
-      {/* Phương thức thanh toán */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
-        <View style={styles.radioRow}>
-          <RadioButton
-            value="cod"
-            status={paymentMethod === 'cod' ? 'checked' : 'unchecked'}
-            onPress={() => setPaymentMethod('cod')}
-          />
-          <Text>Thanh toán khi nhận hàng</Text>
+          <View style={styles.radioRow}>
+            <RadioButton
+              value="momo"
+              status={paymentMethod === 'momo' ? 'checked' : 'unchecked'}
+              onPress={() => setPaymentMethod('momo')}
+            />
+            <Text>Thanh toán qua Momo</Text>
+          </View>
         </View>
-        <View style={styles.radioRow}>
-          <RadioButton
-            value="momo"
-            status={paymentMethod === 'momo' ? 'checked' : 'unchecked'}
-            onPress={() => setPaymentMethod('momo')}
-          />
-          <Text>Thanh toán qua Momo</Text>
-        </View>
-      </View>
+      </ScrollView>
 
-      {/* Đặt hàng */}
-      <View style={styles.footer}>
-        <Text style={styles.total}>Tổng: {totalAmount?.toLocaleString('vi-VN')}đ</Text>
-        <TouchableOpacity style={styles.orderBtn} onPress={handlePlaceOrder}><Text style={styles.orderText}>Đặt hàng</Text></TouchableOpacity>
+      {/* Footer cố định */}
+      <View style={styles.fixedFooter}>
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalLabel}>Tổng:</Text>
+          <Text style={styles.totalValue}>{totalAmount?.toLocaleString('vi-VN')}đ</Text>
+        </View>
+        <TouchableOpacity style={styles.orderBtn} onPress={handlePlaceOrder}>
+          <Text style={styles.orderText}>Đặt hàng</Text>
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold' },
-  editBtn: { position: 'absolute', right: 0, top: 0 },
-  editText: { color: '#007AFF' },
-  text: { marginTop: 4 },
-  productRow: { flexDirection: 'row', marginTop: 12 },
-  image: { width: 100, height: 120, borderRadius: 8, marginRight: 12 },
-  productDetails: { flex: 1 },
-  productName: { fontWeight: 'bold', marginBottom: 4 },
-  price: { color: 'green', marginTop: 8 },
-  quantityContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  qBtn: { fontSize: 20, paddingHorizontal: 8 },
-  quantity: { marginHorizontal: 8 },
-  total: { fontWeight: 'bold', marginTop: 8, fontSize: 16 },
-  radioRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
-  orderBtn: { backgroundColor: 'black', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
-  orderText: { color: '#fff', fontWeight: 'bold' }
+  container: { 
+    flex: 1,
+    backgroundColor: '#fff' 
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    padding: 12,
+    paddingBottom: 100,
+  },
+  title: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    marginBottom: 12 
+  },
+  section: { 
+    marginBottom: 16 
+  },
+  sectionTitle: { 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
+  editBtn: { 
+    position: 'absolute', 
+    right: 0, 
+    top: 0 
+  },
+  editText: { 
+    color: '#007AFF',
+    fontSize: 14
+  },
+  text: { 
+    marginTop: 2,
+    fontSize: 14
+  },
+  productRow: { 
+    flexDirection: 'row', 
+    marginTop: 8,
+    backgroundColor: '#F6F8F9',
+    padding: 8,
+    borderRadius: 8
+  },
+  image: { 
+    width: 80, 
+    height: 100, 
+    borderRadius: 6, 
+    marginRight: 8 
+  },
+  productDetails: { 
+    flex: 1 
+  },
+  productName: { 
+    fontWeight: 'bold', 
+    marginBottom: 2,
+    fontSize: 14
+  },
+  price: { 
+    color: 'green', 
+    marginTop: 4,
+    fontSize: 14,
+    fontWeight: 'bold'
+  },
+  quantityContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#E3E4E5',
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 4
+  },
+  qBtn: { 
+    fontSize: 16, 
+    paddingHorizontal: 6,
+    color: '#000'
+  },
+  quantity: { 
+    marginHorizontal: 6,
+    fontSize: 14
+  },
+  radioRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginTop: 4 
+  },
+  fixedFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E3E4E5',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  totalContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  totalValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#D3180C',
+  },
+  orderBtn: { 
+    backgroundColor: 'black', 
+    paddingVertical: 10, 
+    paddingHorizontal: 20, 
+    borderRadius: 6 
+  },
+  orderText: { 
+    color: '#fff', 
+    fontWeight: 'bold',
+    fontSize: 14
+  }
 });

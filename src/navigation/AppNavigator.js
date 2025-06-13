@@ -11,6 +11,7 @@ import SearchResultsScreen from '../screens/SearchResultsScreen';
 import CartScreen from '../screens/CartScreen';
 import OrderScreen from '../screens/OrderScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import CheckoutScreen from '../screens/CheckoutScreen';
 
 const Stack = createStackNavigator();
 
@@ -49,6 +50,7 @@ const AppNavigator = () => {
         
         {/* Màn hình giỏ hàng */}
         <Stack.Screen name="Cart" component={CartScreen} />
+        <Stack.Screen name="Checkout" component={CheckoutScreen}/>
         
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="Orders" component={OrderScreen} />

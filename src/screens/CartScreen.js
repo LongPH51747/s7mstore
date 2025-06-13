@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { Checkbox } from 'react-native-paper';
 
 import { 
   SafeAreaView, 
@@ -18,10 +19,10 @@ import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Impo
 // Main component
 const CartScreen = (props) => {
   const navigation = useNavigation();
-  const url = "https://0185-2405-4802-21f-72d0-c451-84e5-9b5b-457a.ngrok-free.app/api/cart/getByUserId/"
   const [idUser, setIdUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [cartItem, setCartItem] = useState(null);
+  const [selectedItems, setSelectedItems] = useState({});
   const [totalPrice, setTotalPrice] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
@@ -115,19 +116,35 @@ const CartScreen = (props) => {
 
   useEffect(() => {
     if (cartItem && cartItem.length > 0) {
+      // Initialize selected items when cart is loaded
+      const initialSelected = {};
+      cartItem.forEach(item => {
+        initialSelected[item.id_variant] = true;
+      });
+      setSelectedItems(initialSelected);
+    }
+  }, [cartItem]);
+
+  useEffect(() => {
+    if (cartItem && cartItem.length > 0) {
       console.log("Số phần tử trong mảng cartItem:", cartItem.length);
       let subTotal = 0;
       cartItem.forEach(item => {
-        subTotal += (item.unit_price_item || item.price || 0) * (item.quantity || 0);
+        if (selectedItems[item.id_variant]) {
+          subTotal += (item.unit_price_item || item.price || 0) * (item.quantity || 0);
+        }
       });
       setTotalPrice(subTotal);
 
       // Tính toán discount và shipping fee
       const calculatedDiscount = Math.min(subTotal * 0.1, 14950); // 10% discount, max 14950đ
       setDiscount(calculatedDiscount);
-      setShippingFee(subTotal > 500000 ? 0 : 30000); // Free shipping for orders over 500k
+      
+      // Chỉ tính phí vận chuyển nếu có sản phẩm được chọn
+      const hasSelectedItems = Object.values(selectedItems).some(value => value);
+      setShippingFee(hasSelectedItems ? (subTotal > 500000 ? 0 : 30000) : 0);
 
-      setFinalTotal(subTotal - calculatedDiscount + (subTotal > 500000 ? 0 : 30000));
+      setFinalTotal(subTotal - calculatedDiscount + (hasSelectedItems ? (subTotal > 500000 ? 0 : 30000) : 0));
     } else {
       console.log("CartItem is empty or null.");
       setTotalPrice(0);
@@ -135,7 +152,7 @@ const CartScreen = (props) => {
       setShippingFee(0);
       setFinalTotal(0);
     }
-  }, [cartItem]);
+  }, [cartItem, selectedItems]);
 
   const handleQuantityChange = async (type, itemId) => {
     const currentItem = cartItem.find(item => item.id_variant === itemId);
@@ -263,12 +280,26 @@ const CartScreen = (props) => {
     }
   };
 
+  const toggleItemSelection = (itemId) => {
+    setSelectedItems(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
+
   const handleCheckout = () => {
-    if (cartItem.length === 0) {
-      Alert.alert('Giỏ hàng trống', 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán.');
+    const selectedProducts = cartItem.filter(item => selectedItems[item.id_variant]);
+    
+    if (selectedProducts.length === 0) {
+      Alert.alert(
+        'Thông báo',
+        'Vui lòng chọn ít nhất một sản phẩm để thanh toán.',
+        [{ text: 'OK' }]
+      );
       return;
     }
-    navigation.navigate('Checkout', { cartItems: cartItem });
+    
+    navigation.navigate('Checkout', { cartItems: selectedProducts });
   };
 
   const renderDivider = () => (
@@ -287,6 +318,11 @@ const CartScreen = (props) => {
 
     return (
       <View style={styles.productContainer}>
+        <Checkbox
+          status={selectedItems[product.id_variant] ? 'checked' : 'unchecked'}
+          onPress={() => toggleItemSelection(product.id_variant)}
+          style={styles.checkbox}
+        />
         <Image 
           source={productImageSource} 
           style={styles.productImage}
@@ -336,27 +372,27 @@ const CartScreen = (props) => {
       </View>
     ) : (
       <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Image 
-                source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/3d932128-0328-4607-bacf-7a9ced0de013" }} 
-                style={styles.headerIcon} 
-              />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{"Cart"}</Text>
-            <TouchableOpacity onPress={() => alert('More Options Pressed!')}>
-              <Image 
-                source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c5d652d4-87eb-4bb4-8eaf-62b26c7c040b" }} 
-                style={styles.headerIcon}
-              />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.cartTextContainer}>
-            <Text style={styles.cartText}>
-              {"You have"} {cartItem.length} {"products in your Cart"}
-            </Text>
-          </View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Image 
+              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/3d932128-0328-4607-bacf-7a9ced0de013" }} 
+              style={styles.headerIcon} 
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{"Cart"}</Text>
+          <TouchableOpacity onPress={() => alert('More Options Pressed!')}>
+            <Image 
+              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c5d652d4-87eb-4bb4-8eaf-62b26c7c040b" }} 
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.cartTextContainer}>
+          <Text style={styles.cartText}>
+            {"You have"} {cartItem.length} {"products in your Cart"}
+          </Text>
+        </View>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
           {cartItem.map(product => (
             <View key={product.id_variant}>
               {renderProductItem(product)}
@@ -368,7 +404,7 @@ const CartScreen = (props) => {
           <View style={styles.summaryContainer}>
             <SummaryItem label="Total Price" value={`${totalPrice?.toLocaleString('vi-VN')}đ`} />
             <SummaryItem label="Discount" value={`-${discount?.toLocaleString('vi-VN')}đ`} />
-            <SummaryItem label="Estimated delivery fees" value={shippingFee === 0 ? "Free" : `${shippingFee?.toLocaleString('vi-VN')}đ`} />
+            <SummaryItem label="Delivery" value={shippingFee === 0 ? "Free" : `${shippingFee?.toLocaleString('vi-VN')}đ`} />
           </View>
           <View style={styles.totalContainer}>
             <Text style={styles.totalLabel}>{"Total:"}</Text>
@@ -377,10 +413,10 @@ const CartScreen = (props) => {
           <TouchableOpacity 
             style={[
               styles.checkoutButton,
-              cartItem.length === 0 && styles.checkoutButtonDisabled
+              Object.values(selectedItems).every(value => !value) && styles.checkoutButtonDisabled
             ]} 
             onPress={handleCheckout}
-            disabled={cartItem.length === 0}
+            disabled={Object.values(selectedItems).every(value => !value)}
           >
             <Image 
               source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e4f67212-d4f1-4513-bc97-88e16a24676d" }} 
@@ -409,9 +445,12 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollViewContent: {
+    paddingBottom: 180, // Add padding to account for fixed bottom section
+  },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     backgroundColor: "#FFFFFF",
     paddingBottom: 4,
     paddingHorizontal: 12,
@@ -425,16 +464,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    alignItems: "center",
-    paddingVertical: 10,
-    marginRight: 8,
+    textAlign: "center",
     fontSize: 18,
     fontWeight: "bold",
     color: "#272728",
   },
   cartTextContainer: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 16,
   },
   cartText: {
     color: "#000000",
@@ -443,16 +480,16 @@ const styles = StyleSheet.create({
   divider: {
     height: 2,
     backgroundColor: "#F2F3F4",
-    marginBottom: 32,
+    marginBottom: 16,
   },
   productContainer: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     backgroundColor: "#F6F8F9",
     paddingVertical: 8,
     paddingHorizontal: 24,
-    marginBottom: 32,
-    position: 'relative', // Added for delete button positioning
+    marginBottom: 16,
+    position: 'relative',
   },
   productImage: {
     width: 98,
@@ -479,11 +516,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 16,
   },
-  colorImage: {
-    width: 20,
-    height: 20,
-    marginRight: 24,
-  },
   productSizeLabel: {
     color: "#000000",
     fontSize: 14,
@@ -497,12 +529,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 5,
-  },
-  originalPrice: {
-    color: "#979C9E",
-    fontSize: 14,
-    fontWeight: "bold",
-    marginRight: 46,
   },
   discountedPrice: {
     color: "#D3180C",
@@ -529,46 +555,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
+  fixedCheckoutContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E3E4E5',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+  },
   summaryContainer: {
-    marginBottom: 61,
+    marginBottom: 8,
   },
   summaryItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
-    marginHorizontal: 24,
+    marginBottom: 2,
   },
   summaryLabel: {
     color: "#979C9E",
-    fontSize: 16,
+    fontSize: 14,
     marginRight: 4,
     flex: 1,
   },
   summaryValue: {
     color: "#979C9E",
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "right",
     flex: 1,
   },
   totalContainer: {
     backgroundColor: "#F2F3F4",
-    paddingVertical: 8,
-    marginBottom: 16,
-    marginHorizontal: 24,
+    paddingVertical: 6,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   totalLabel: {
     color: "#090A0A",
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "bold",
-    marginRight: 4,
-    flex: 1,
+    marginLeft: 8,
   },
   totalValue: {
     color: "#090A0A",
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "bold",
-    textAlign: "right",
-    flex: 1,
+    marginRight: 8,
   },
   checkoutButton: {
     flexDirection: "row",
@@ -576,35 +619,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#090A0A",
     borderRadius: 8,
-    paddingVertical: 14,
-    marginHorizontal: 25,
+    paddingVertical: 10,
   },
   checkoutButtonDisabled: {
     backgroundColor: '#cccccc',
     opacity: 0.7,
   },
-  fixedCheckoutContainer: {
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  backgroundColor: '#FFFFFF',
-  padding: 10,
-  borderTopWidth: 1,
-  borderTopColor: '#E3E4E5',
-},
   checkoutIcon: {
     borderRadius: 8,
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     marginRight: 8,
   },
   checkoutText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
   },
-  deleteButton: { // New style for delete button
+  deleteButton: {
     position: 'absolute',
     top: 5,
     right: 5,
@@ -619,6 +651,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  checkbox: {
+    marginRight: 8,
   },
 });
 export default CartScreen;
