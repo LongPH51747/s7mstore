@@ -11,8 +11,8 @@ export default function CheckoutScreen() {
   const [cartItems, setCartItems] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [subTotalPrice, setSubTotalPrice] = useState(0);
-  const [voucherAmount, setVoucherAmount] = useState(0); // Placeholder for voucher logic
-  const [shippingFee, setShippingFee] = useState(0); // Placeholder for shipping logic
+  const [voucherAmount, setVoucherAmount] = useState(0);
+  const [shippingFee, setShippingFee] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
 
   useEffect(() => {
@@ -46,20 +46,6 @@ export default function CheckoutScreen() {
     setShippingFee(20000);
     setTotalAmount(subTotal - 30000 + 20000);
   }, [cartItems]);
-
-  const handleQuantity = (type, itemId) => {
-    setCartItems(prevItems =>
-      prevItems.map(item => {
-        if (item.id_variant === itemId || item._id === itemId) {
-          let newQuantity = item.quantity;
-          if (type === 'plus') newQuantity++;
-          if (type === 'minus' && newQuantity > 1) newQuantity--;
-          return { ...item, quantity: newQuantity };
-        }
-        return item;
-      })
-    );
-  };
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
@@ -125,15 +111,7 @@ export default function CheckoutScreen() {
                   <Text style={styles.price}>
                     {(item.unit_price_item || item.price)?.toLocaleString('vi-VN')}đ
                   </Text>
-                  <View style={styles.quantityContainer}>
-                    <TouchableOpacity onPress={() => handleQuantity('minus', item.id_variant || item._id)}>
-                      <Text style={styles.qBtn}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.quantity}>{item.quantity}</Text>
-                    <TouchableOpacity onPress={() => handleQuantity('plus', item.id_variant || item._id)}>
-                      <Text style={styles.qBtn}>+</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text style={styles.quantity}>Số lượng: {item.quantity}</Text>
                 </View>
               </View>
             );
@@ -254,24 +232,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold'
   },
-  quantityContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  quantity: {
     marginTop: 4,
-    borderWidth: 1,
-    borderColor: '#E3E4E5',
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 4
-  },
-  qBtn: { 
-    fontSize: 16, 
-    paddingHorizontal: 6,
-    color: '#000'
-  },
-  quantity: { 
-    marginHorizontal: 6,
-    fontSize: 14
+    fontSize: 14,
+    color: '#666'
   },
   radioRow: { 
     flexDirection: 'row', 
