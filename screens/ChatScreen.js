@@ -85,7 +85,7 @@ const UserChatScreen = () => {
     };
 
     return (
-        <KeyboardAvoidingViewgit style={styles.safeArea}>
+        <KeyboardAvoidingView style={styles.safeArea}>
             <KeyboardAvoidingView
                 style={styles.keyboardAvoidingView}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
