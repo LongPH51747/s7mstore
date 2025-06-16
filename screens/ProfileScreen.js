@@ -86,7 +86,9 @@ const ProfileScreen = () => {
           <Feather name="video" size={20} color="black" />
           <Text style={styles.gridText}>LiveStream</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.gridItem}>
+        <TouchableOpacity
+        onPress={() => navigation.navigate('chat')}
+        style={styles.gridItem}>
           <Feather name="message-circle" size={20} color="black" />
           <Text style={styles.gridText}>Chat with us</Text>
         </TouchableOpacity>
