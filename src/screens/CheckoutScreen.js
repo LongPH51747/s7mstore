@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } fr
 import { RadioButton } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CheckoutScreen() {
   const route = useRoute();
@@ -14,6 +15,50 @@ export default function CheckoutScreen() {
   const [voucherAmount, setVoucherAmount] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [defaultAddress, setDefaultAddress] = useState(null);
+  const [hasAddresses, setHasAddresses] = useState(false);
+
+  useEffect(() => {
+    if (route.params?.selectedAddress) {
+      setSelectedAddress(route.params.selectedAddress);
+    }
+  }, [route.params?.selectedAddress]);
+
+  useEffect(() => {
+    const fetchDefaultAddress = async () => {
+      try {
+        const userInfoString = await AsyncStorage.getItem('userInfo');
+        const userInfo = JSON.parse(userInfoString);
+        
+        if (!userInfo || !userInfo._id) {
+          throw new Error('User information not found');
+        }
+
+        const response = await fetch(
+          API_ENDPOINTS.ADDRESS.GET_BY_USER_ID(userInfo._id)
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch addresses');
+        }
+
+        const addresses = await response.json();
+        setHasAddresses(addresses.length > 0);
+        const defaultAddr = addresses.find(addr => addr.is_default);
+        setDefaultAddress(defaultAddr);
+        
+        // If no address is selected yet, use the default address
+        if (!selectedAddress && defaultAddr) {
+          setSelectedAddress(defaultAddr);
+        }
+      } catch (error) {
+        console.error('Error fetching default address:', error);
+      }
+    };
+
+    fetchDefaultAddress();
+  }, []);
 
   useEffect(() => {
     console.log('Route Params:', route.params);
@@ -53,9 +98,54 @@ export default function CheckoutScreen() {
       return;
     }
 
+    if (!selectedAddress) {
+      Alert.alert('Thiếu địa chỉ', 'Vui lòng chọn địa chỉ giao hàng.');
+      return;
+    }
+
     try {
-      console.log('Placing order with:', { cartItems, totalAmount, paymentMethod });
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      const userInfo = JSON.parse(userInfoString);
+      
+      if (!userInfo || !userInfo._id) {
+        throw new Error('User information not found');
+      }
+
+      // Format order items
+      const orderItems = cartItems.map(item => ({
+        id_product: item.id_product,
+        id_variant: item.id_variant || '',
+        quantity: item.quantity
+      }));
+
+      // Prepare order data
+      const orderData = {
+        orderItems,
+        id_address: selectedAddress._id,
+        payment_method: paymentMethod
+      };
+
+
+      // Call create order API
+      const response = await fetch(
+        `https://5858-2405-4802-478-8280-513c-6fd1-1481-f232.ngrok-free.app/api/order/create/userId/${userInfo._id}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderData)
+        }
+      );
+      console.log(JSON.stringify(orderData));
+
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const result = await response.json();
+      console.log('Order created:', result);
+      
       Alert.alert('Đặt hàng thành công!', 'Đơn hàng của bạn đã được đặt.');
       navigation.navigate('PaymentSuccess');
     } catch (error) {
@@ -66,22 +156,55 @@ export default function CheckoutScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Image 
+            source={require('../assets/back.png')} 
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Checkout</Text>
+        <View style={styles.headerRight} />
+      </View>
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
-        <Text style={styles.title}>Checkout</Text>
 
         {/* Địa chỉ giao hàng */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
-          <TouchableOpacity style={styles.editBtn}><Text style={styles.editText}>Sửa</Text></TouchableOpacity>
-          <Text style={styles.text}>Dmitriy Divnov</Text>
-          <Text style={styles.text}>Brest, Belarus</Text>
-          <Text style={styles.text}>+375 (29) 749-19-24</Text>
+          <TouchableOpacity 
+            style={styles.addressContainer}
+            onPress={() => navigation.navigate('Address')}
+          >
+            {selectedAddress ? (
+              <>
+                <View style={styles.addressHeader}>
+                  <Text style={styles.nameText}>{selectedAddress.fullName}</Text>
+                  <Text style={styles.phoneText}> | {selectedAddress.phone_number}</Text>
+                </View>
+                <Text style={styles.addressText}>{selectedAddress.addressDetail}</Text>
+              </>
+            ) : defaultAddress ? (
+              <>
+                <View style={styles.addressHeader}>
+                  <Text style={styles.nameText}>{defaultAddress.fullName}</Text>
+                  <Text style={styles.phoneText}> | {defaultAddress.phone_number}</Text>
+                </View>
+                <Text style={styles.addressText}>{defaultAddress.addressDetail}</Text>
+              </>
+            ) : !hasAddresses ? (
+              <Text style={styles.addAddressText}>Thêm địa chỉ giao hàng</Text>
+            ) : null}
+          </TouchableOpacity>
         </View>
 
         {/* Sản phẩm */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
-          <TouchableOpacity style={styles.editBtn}><Text style={styles.editText}>Sửa</Text></TouchableOpacity>
           {cartItems.map((item, index) => {
             const productImageSource = (
               item.image && 
@@ -172,6 +295,30 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1,
     backgroundColor: '#fff' 
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3E4E5',
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  headerRight: {
+    width: 40,
   },
   scrollView: {
     flex: 1,
@@ -287,5 +434,33 @@ const styles = StyleSheet.create({
     color: '#fff', 
     fontWeight: 'bold',
     fontSize: 14
-  }
+  },
+  addressContainer: {
+    backgroundColor: '#F6F8F9',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  addAddressText: {
+    color: '#007AFF',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  addressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  phoneText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  addressText: {
+    fontSize: 14,
+    color: '#333',
+  },
 });

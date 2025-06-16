@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://594a-2405-4802-1cdd-790-876-b023-142b-8053.ngrok-free.app/api';
+export const API_BASE_URL = 'https://5858-2405-4802-478-8280-513c-6fd1-1481-f232.ngrok-free.app/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -47,6 +47,14 @@ export const API_ENDPOINTS = {
   USERS: {
     GET_PROFILE: `${API_BASE_URL}/users/profile`,
     UPDATE_PROFILE: `${API_BASE_URL}/users/update-profile`,
+  },
+
+  // Address endpoints
+  ADDRESS: {
+    GET_BY_USER_ID: (userId) => `${API_BASE_URL}/address/getAddressByUserId/${userId}`,
+    CREATE: (userId) => `${API_BASE_URL}/address/create/userId/${userId}`,
+    DELETE: (addressId) => `${API_BASE_URL}/address/deleteAddress/${addressId}`,
+    UPDATE: (addressId) => `${API_BASE_URL}/address/update/${addressId}`,
   },
 };
 

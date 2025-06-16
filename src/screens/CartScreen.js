@@ -345,11 +345,11 @@ const CartScreen = (props) => {
           </View>
           <View style={styles.quantityContainer}>
             <TouchableOpacity onPress={() => handleQuantityChange('minus', product.id_variant)}>
-              <Image source={require('../images/minus.png')} style={styles.quantityIcon} />
+              <Image source={require('../assets/minus.png')} style={styles.quantityIcon} />
             </TouchableOpacity>
             <Text style={styles.quantityText}>{product.quantity}</Text>
             <TouchableOpacity onPress={() => handleQuantityChange('plus', product.id_variant)}>
-              <Image source={require('../images/plus.png')} style={styles.quantityIcon} />
+              <Image source={require('../assets/plus.png')} style={styles.quantityIcon} />
             </TouchableOpacity>
           </View>
         </View>
@@ -380,7 +380,7 @@ const CartScreen = (props) => {
             />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{"Cart"}</Text>
-          <TouchableOpacity onPress={() => alert('More Options Pressed!')}>
+          <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
             <Image 
               source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c5d652d4-87eb-4bb4-8eaf-62b26c7c040b" }} 
               style={styles.headerIcon}
@@ -451,23 +451,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#FFFFFF",
-    paddingBottom: 4,
-    paddingHorizontal: 12,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3E4E5',
   },
   headerIcon: {
     width: 24,
     height: 24,
-    marginVertical: 12,
-    marginLeft: 12,
-    marginRight: 20,
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 18,
     fontWeight: "bold",
-    color: "#272728",
+    color: "#000",
   },
   cartTextContainer: {
     alignItems: "center",
