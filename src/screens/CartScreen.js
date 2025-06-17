@@ -18,10 +18,11 @@ import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Impo
 // Main component
 const CartScreen = (props) => {
   const navigation = useNavigation();
-  const url = "https://0185-2405-4802-21f-72d0-c451-84e5-9b5b-457a.ngrok-free.app/api/cart/getByUserId/"
+  const url = "https://82ab-2405-4802-4b2-2810-c468-2961-3771-9afb.ngrok-free.app/api/cart/getByUserId/"
   const [idUser, setIdUser] = useState(null);
   const [cart, setCart] = useState([]);
-  const [cartItem, setCartItem] = useState(null);
+  const [cartItem
+    , setCartItem] = useState(null);
   const [totalPrice, setTotalPrice] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
@@ -309,11 +310,11 @@ const CartScreen = (props) => {
           </View>
           <View style={styles.quantityContainer}>
             <TouchableOpacity onPress={() => handleQuantityChange('minus', product.id_variant)}>
-              <Image source={require('../images/minus.png')} style={styles.quantityIcon} />
+              <Image source={require('../assets/minus.png')} style={styles.quantityIcon} />
             </TouchableOpacity>
             <Text style={styles.quantityText}>{product.quantity}</Text>
             <TouchableOpacity onPress={() => handleQuantityChange('plus', product.id_variant)}>
-              <Image source={require('../images/plus.png')} style={styles.quantityIcon} />
+              <Image source={require('../assets/plus.png')} style={styles.quantityIcon} />
             </TouchableOpacity>
           </View>
         </View>

@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://059f-2405-4802-4b2-2810-c455-f308-457-aa78.ngrok-free.app/api';
+export const API_BASE_URL = 'https://d236-2405-4802-1cdd-790-876-b023-142b-8053.ngrok-free.app/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -14,8 +14,10 @@ export const API_ENDPOINTS = {
   // Product endpoints
   PRODUCTS: {
     GET_ALL: `${API_BASE_URL}/products/get-all-products`,
+    GET_ALL_LIMIT: `${API_BASE_URL}/products/get-all-products-limit`,
     GET_BY_ID: (id) => `${API_BASE_URL}/products/get-product/${id}`,
     GET_BY_CATEGORY: (category) => `${API_BASE_URL}/products/get-products-by-category/${category}`,
+    SEARCH: `${API_BASE_URL}/products/search-product`,
   },
   
   // Category endpoints
