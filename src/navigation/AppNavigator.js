@@ -53,9 +53,13 @@ const AppNavigator = () => {
         
         {/* Màn hình giỏ hàng */}
         <Stack.Screen name="Cart" component={CartScreen} />
+        {/* Màn hình đặt hàng */}
         <Stack.Screen name="Checkout" component={CheckoutScreen}/>
+        {/* Màn hình chọn địa chỉ */}
         <Stack.Screen name="Address" component={AddressScreen} />
+        {/* Màn hình thêm địa chỉ */}
         <Stack.Screen name="AddAddress" component={AddAddressScreen} />
+        {/* Màn hình sửa địa chỉ */}
         <Stack.Screen name="UpdateAddress" component={UpdateAddressScreen} />
         
         {/* Màn hình đơn hàng */}

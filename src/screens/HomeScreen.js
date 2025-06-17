@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, SafeAreaView, Text, FlatList, TouchableOpacity, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const numColumns = 2;
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width / numColumns - 24;
+const PRODUCTS_PER_PAGE = 2;
 
 /**
  * Màn hình Trang chủ (Home Screen)
@@ -23,19 +25,97 @@ const HomeScreen = ({ navigation }) => {
   const [bannerIndex, setBannerIndex] = useState(0);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalPages, setTotalPages] = useState(0);
+  const [activeTab, setActiveTab] = useState('Home');
 
-  /**
-   * Fetch dữ liệu khi component mount
-   */
   useEffect(() => {
-    const fetchData = async () => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchMoreProducts();
+    }
+  }, [page]);
+
+  const fetchMoreProducts = async () => {
       try {
-        // Fetch products
-        console.log('Fetching products...');
+      setLoadingMore(true);
+      console.log('Fetching more products - Page:', page);
+      
+      const productsController = new AbortController();
+      const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
+      
+      const url = `${API_ENDPOINTS.PRODUCTS.GET_ALL_LIMIT}?page=${page}&limit=${PRODUCTS_PER_PAGE}`;
+      console.log('API URL:', url);
+      
+      const productsResponse = await fetch(url, {
+        headers: API_HEADERS,
+        signal: productsController.signal,
+      });
+      clearTimeout(productsTimeout);
+      
+      if (!productsResponse.ok) {
+        throw new Error(`Failed to fetch products: ${productsResponse.status}`);
+      }
+      
+      let responseData;
+      try {
+        responseData = await productsResponse.json();
+      } catch (e) {
+        console.error('Error parsing JSON from response:', e);
+        setHasMore(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      console.log('Parsed API Response for page', page, ':', responseData);
+      console.log('Type of responseData:', typeof responseData);
+      console.log('Is responseData truthy?', !!responseData);
+      console.log('Does responseData have data property?', 'data' in responseData);
+      if ('data' in responseData) {
+        console.log('Is responseData.data an array?', Array.isArray(responseData.data));
+      }
+      
+      console.log('Condition check - responseData:', !!responseData, 'responseData.data truthy:', !!responseData.data, 'Array.isArray(responseData.data):', Array.isArray(responseData.data));
+
+      if (responseData && responseData.data && Array.isArray(responseData.data)) {
+        console.log('Number of products received:', responseData.data.length);
+        setProducts(prevProducts => {
+          const newProducts = [...prevProducts, ...responseData.data];
+          console.log('Total products after update:', newProducts.length);
+          return newProducts;
+        });
+        
+        setTotalPages(responseData.totalPages);
+        setHasMore(page < responseData.totalPages);
+        console.log('Has more:', page < responseData.totalPages, 'Total pages:', responseData.totalPages);
+      } else {
+        console.log('Condition failed: No products received or invalid data format');
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error fetching more products:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      console.log('Initial fetch - Page:', 1);
+      
         const productsController = new AbortController();
         const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
         
-        const productsResponse = await fetch(API_ENDPOINTS.PRODUCTS.GET_ALL, {
+      const url = `${API_ENDPOINTS.PRODUCTS.GET_ALL_LIMIT}?page=1&limit=${PRODUCTS_PER_PAGE}`;
+      console.log('Initial API URL:', url);
+      
+      const productsResponse = await fetch(url, {
           headers: API_HEADERS,
           signal: productsController.signal,
         });
@@ -44,14 +124,38 @@ const HomeScreen = ({ navigation }) => {
         if (!productsResponse.ok) {
           throw new Error(`Failed to fetch products: ${productsResponse.status}`);
         }
-        const productsData = await productsResponse.json();
-        // console.log('Products response:', productsData);
-        if (productsData && Array.isArray(productsData)) {
-          setProducts(productsData);
-          // console.log('Products state after fetch:', productsData.map(p => ({ id: p._id, image: p.product_image })));
+      
+      let responseData;
+      try {
+        responseData = await productsResponse.json();
+      } catch (e) {
+        console.error('Error parsing JSON from initial response:', e);
+        setProducts([]);
+        setHasMore(false);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Parsed Initial API Response:', responseData);
+      console.log('Type of responseData:', typeof responseData);
+      console.log('Is responseData truthy?', !!responseData);
+      console.log('Does responseData have data property?', 'data' in responseData);
+      if ('data' in responseData) {
+        console.log('Is responseData.data an array?', Array.isArray(responseData.data));
+      }
+
+      console.log('Condition check - responseData:', !!responseData, 'responseData.data truthy:', !!responseData.data, 'Array.isArray(responseData.data):', Array.isArray(responseData.data));
+
+      if (responseData && responseData.data && Array.isArray(responseData.data)) {
+        console.log('Initial number of products:', responseData.data.length);
+        setProducts(responseData.data);
+        setTotalPages(responseData.totalPages);
+        setHasMore(1 < responseData.totalPages);
+        console.log('Initial has more:', 1 < responseData.totalPages, 'Total pages:', responseData.totalPages);
         } else {
-          // console.error('Invalid products data format:', productsData);
+        console.log('Condition failed: No initial products or invalid data format');
           setProducts([]);
+        setHasMore(false);
         }
 
         // Fetch categories
@@ -73,14 +177,15 @@ const HomeScreen = ({ navigation }) => {
           // Transform category data to ensure valid image URLs
           const transformedCategories = categoriesData.map(category => ({
             ...category,
-            category_image: (category.category_image && (category.category_image.startsWith('http://') || category.category_image.startsWith('https://')))
+            category_image: (category.category_image && 
+              (category.category_image.startsWith('http://') || 
+               category.category_image.startsWith('https://') || 
+               category.category_image.startsWith('data:image')))
               ? category.category_image 
               : null
           }));
           setCategories(transformedCategories);
-          // console.log('Categories state after fetch:', transformedCategories.map(c => ({ id: c._id, image: c.category_image })));
         } else {
-          // console.error('Invalid categories data format:', categoriesData);
           setCategories([]);
         }
 
@@ -100,7 +205,6 @@ const HomeScreen = ({ navigation }) => {
             throw new Error(`Failed to fetch banners: ${bannersResponse.status}`);
           }
           const bannersData = await bannersResponse.json();
-          // console.log('Banners response:', bannersData);
           
           if (bannersData && Array.isArray(bannersData)) {
             const transformedBanners = bannersData.map(banner => ({
@@ -108,27 +212,22 @@ const HomeScreen = ({ navigation }) => {
               image: banner.banner_image_url || banner.banner_image || null
             })).filter(banner => banner.image !== null);
             
-            // console.log('Transformed banners:', transformedBanners);
             setBanners(transformedBanners);
-            // console.log('Banners state after fetch:', transformedBanners.map(b => ({ id: b._id, image: b.image }))); // Removed for long base64
           } else {
-            // console.error('Invalid banners data format:', bannersData);
             setBanners([]);
           }
         } catch (bannerError) {
-          // console.error('Error fetching banners:', bannerError);
           setBanners([]);
         }
 
         setLoading(false);
       } catch (error) {
-        // console.error('Error fetching data:', error);
+      console.error('Error fetching initial data:', error);
+      setLoading(false);
+    } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
-  }, []);
 
   /**
    * Tự động chuyển banner sau mỗi 3s
@@ -146,10 +245,43 @@ const HomeScreen = ({ navigation }) => {
    */
   const filteredProducts = selectedCategory === 'All'
     ? products
-    : products.filter(product => product.product_category.includes(selectedCategory));
+    : products.filter(product => {
+        if (!product.product_category || !Array.isArray(product.product_category)) {
+          return false;
+        }
+        return product.product_category.some(category => 
+          category && category.category_name === selectedCategory
+        );
+      });
+
+  // Add error handling for filtering
+  useEffect(() => {
+    if (selectedCategory !== 'All') {
+      console.log('Filtering products for category:', selectedCategory);
+      console.log('Filtered products count:', filteredProducts.length);
+    }
+  }, [selectedCategory, products]);
 
   // console.log('Filtered products:', filteredProducts);
   console.log('Selected category:', selectedCategory);
+
+  const loadMoreProducts = () => {
+    if (!loadingMore && hasMore && page < totalPages) {
+      console.log('Loading more products - Current page:', page, 'Total pages:', totalPages);
+      setPage(prevPage => prevPage + 1);
+    } else {
+      console.log('Not loading more - Loading:', loadingMore, 'Has more:', hasMore, 'Page:', page, 'Total pages:', totalPages);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.loadingMore}>
+        <ActivityIndicator size="small" color="#000" />
+      </View>
+    );
+  };
 
   /**
    * Render item sản phẩm trong grid
@@ -159,7 +291,9 @@ const HomeScreen = ({ navigation }) => {
     // console.log('Product Image URL before validation:', item.product_image);
     const productImageSource = (typeof item.product_image === 'string' && (item.product_image.startsWith('http://') || item.product_image.startsWith('https://') || item.product_image.startsWith('data:image')))
       ? { uri: item.product_image }
-      : require('../assets/LogoGG.png');
+      : require('../assets/errorimg.webp'
+
+      );
 
     return (
       <TouchableOpacity 
@@ -173,7 +307,7 @@ const HomeScreen = ({ navigation }) => {
           onError={(e) => {
             console.error('Product image loading error:', e.nativeEvent.error, 'for URL:', item.product_image);
             e.target.setNativeProps({
-              source: require('../assets/LogoGG.png')
+              source: require('../assets/errorimg.webp')
             });
           }}
         />
@@ -220,7 +354,7 @@ const HomeScreen = ({ navigation }) => {
                   return { uri: bannerImg };
                 } else {
                   // If it's not a valid URL or base64, fallback to default image
-                  return require('../assets/LogoGG.png'); 
+                  return require('../assets/errorimg.webp'); 
                 }
               })()}
               style={styles.bannerImg}
@@ -248,7 +382,7 @@ const HomeScreen = ({ navigation }) => {
             >
               <View style={styles.categoryImageContainer}>
                 <Image
-                  source={require('../assets/LogoGG.png')}
+                  source={require('../assets/errorimg.webp')}
                   style={styles.categoryImage}
                 />
               </View>
@@ -270,17 +404,19 @@ const HomeScreen = ({ navigation }) => {
                   <Image
                     source={(() => {
                       const categoryImg = category.category_image;
-                      // console.log('Category Image URL before validation:', categoryImg); // Removed for long base64
-                      if (typeof categoryImg === 'string' && (categoryImg.startsWith('http://') || categoryImg.startsWith('https://'))) {
+                      if (typeof categoryImg === 'string' && 
+                          (categoryImg.startsWith('http://') || 
+                           categoryImg.startsWith('https://') || 
+                           categoryImg.startsWith('data:image'))) {
                         return { uri: categoryImg };
                       }
-                      return require('../assets/LogoGG.png');
+                      return require('../assets/errorimg.webp');
                     })()}
                     style={styles.categoryImage}
                     onError={(e) => {
                       console.error('Category image loading error:', e.nativeEvent.error, 'for URL:', category.category_image);
                       e.target.setNativeProps({
-                        source: require('../assets/LogoGG.png')
+                        source: require('../assets/errorimg.webp')
                       });
                     }}
                   />
@@ -295,24 +431,50 @@ const HomeScreen = ({ navigation }) => {
         </View>
         {/* Grid sản phẩm */}
         <FlatList
-          scrollEnabled={false}
           data={filteredProducts}
           renderItem={renderItem}
           keyExtractor={item => item._id}
           numColumns={numColumns}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          onEndReached={loadMoreProducts}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+          scrollEnabled={true}
         />
       </ScrollView>
       {/* Bottom Navigation: các icon điều hướng nhanh */}
       <View style={styles.bottomNav}>
-        <Text style={styles.bottomIcon}>🏠</Text>
-        <Text style={styles.bottomIcon}>🔍</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-          <Text style={styles.bottomIcon}>🛒</Text>
+        <TouchableOpacity onPress={() => {
+          setActiveTab('Home');
+          navigation.navigate('Home');
+        }}>
+          <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.bottomIcon}>♡</Text>
-        <Text style={styles.bottomIcon}>👤</Text>
+        <TouchableOpacity onPress={() => {
+          setActiveTab('Search');
+          navigation.navigate('Search');
+        }}>
+          <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => {
+          setActiveTab('Cart');
+          navigation.navigate('Cart');
+        }}>
+          <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => {
+          setActiveTab('Favorites');
+          navigation.navigate('Favorites');
+        }}>
+          <Icon name={activeTab === 'Favorites' ? 'heart' : 'heart-outline'} size={24} color="#000" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => {
+          setActiveTab('Profile');
+          navigation.navigate('Profile');
+        }}>
+          <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#000" />
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -367,8 +529,8 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
     backgroundColor: '#fff',
   },
-  bottomIcon: {
-    fontSize: 32,
+  heartIcon: {
+    fontSize: 20,
   },
   bannerImgWrap: { width: '100%', height: 180, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   bannerImg: { width: '95%', height: 180, borderRadius: 12 },
@@ -424,28 +586,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  heartIcon: {
-    fontSize: 20,
-  },
-  variantContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 5,
-  },
-  variantButton: {
-    padding: 5,
-    margin: 2,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  selectedVariant: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  variantText: {
-    fontSize: 12,
-    color: '#333',
+  loadingMore: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });
 

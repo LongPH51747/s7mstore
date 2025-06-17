@@ -14,8 +14,10 @@ export const API_ENDPOINTS = {
   // Product endpoints
   PRODUCTS: {
     GET_ALL: `${API_BASE_URL}/products/get-all-products`,
+    GET_ALL_LIMIT: `${API_BASE_URL}/products/get-all-products-limit`,
     GET_BY_ID: (id) => `${API_BASE_URL}/products/get-product/${id}`,
     GET_BY_CATEGORY: (category) => `${API_BASE_URL}/products/get-products-by-category/${category}`,
+    SEARCH: `${API_BASE_URL}/products/search-product`,
   },
   
   // Category endpoints
