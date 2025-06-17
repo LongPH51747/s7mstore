@@ -299,7 +299,7 @@ const CartScreen = (props) => {
       return;
     }
     
-    navigation.navigate('Checkout', { cartItems: selectedProducts });
+    navigation.navigate('Checkout', { cartItems: selectedProducts, cartId: cart._id });
   };
 
   const renderDivider = () => (

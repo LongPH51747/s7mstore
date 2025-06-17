@@ -440,7 +440,7 @@ const HomeScreen = ({ navigation }) => {
           onEndReached={loadMoreProducts}
           onEndReachedThreshold={0.5}
           ListFooterComponent={renderFooter}
-          scrollEnabled={true}
+          scrollEnabled={false}
         />
       </ScrollView>
       {/* Bottom Navigation: các icon điều hướng nhanh */}

@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://5858-2405-4802-478-8280-513c-6fd1-1481-f232.ngrok-free.app/api';
+export const API_BASE_URL = 'https://b8d7-2405-4802-478-8280-6db1-e074-143e-83de.ngrok-free.app/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -38,6 +38,7 @@ export const API_ENDPOINTS = {
   ORDERS: {
     GET_BY_USER_ID: `${API_BASE_URL}/order/getByUserId`,
     GET_ORDER_DETAIL: `${API_BASE_URL}/order/getOrderDetail`,
+    CREATE_ORDER: (userId) => `${API_BASE_URL}/order/create/userId/${userId}`,
   },
   
   // Banner endpoints

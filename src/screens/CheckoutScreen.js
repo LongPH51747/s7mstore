@@ -5,6 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
 export default function CheckoutScreen() {
   const route = useRoute();
   const navigation = useNavigation();
@@ -122,13 +123,14 @@ export default function CheckoutScreen() {
       const orderData = {
         orderItems,
         id_address: selectedAddress._id,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        id_cart: route.params?.cartId || null
       };
 
 
       // Call create order API
       const response = await fetch(
-        `https://5858-2405-4802-478-8280-513c-6fd1-1481-f232.ngrok-free.app/api/order/create/userId/${userInfo._id}`,
+        `${API_ENDPOINTS.ORDERS.CREATE_ORDER(userInfo._id)}`,
         {
           method: 'POST',
           headers: {
@@ -151,6 +153,7 @@ export default function CheckoutScreen() {
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');
+
     }
   };
 
