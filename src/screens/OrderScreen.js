@@ -69,8 +69,20 @@ const OrdersScreen = () => {
         }
 
         const data = await response.json();
+        
+        // Debug logs for image data
+        data.forEach(order => {
+          console.log('Order ID:', order._id);
+          order.orderItems.forEach((item, index) => {
+            console.log(`Item ${index + 1} image data:`, {
+              hasImage: !!item.image,
+              imageType: item.image ? item.image.substring(0, 50) + '...' : 'no image',
+              imageLength: item.image ? item.image.length : 0
+            });
+          });
+        });
+
         setOrders(data);
-        console.log('Fetched orders:', data);
       } catch (error) {
         console.error('Lỗi khi lấy danh sách đơn hàng:', error);
         if (error.name === 'AbortError') {
@@ -144,32 +156,37 @@ const OrdersScreen = () => {
             <Text style={styles.noOrdersText}>Không có đơn hàng nào trong trạng thái này.</Text>
           ) : (
             filteredOrders.map((order) => {
-              const orderItems = order.orderItems || [];
               const isExpanded = expandedOrders[order._id];
 
               return (
                 <View key={order._id} style={styles.cardWrapper}>
                   <Text style={styles.status}>{order.status}</Text>
-                  {orderItems.length > 0 && (
+                  {order.orderItems.length > 0 && (
                     <View style={styles.card}>
                       <Image
                         source={(() => {
-                          const item = orderItems[0];
-                          const imageUrl = item.product?.product_image ||
-                                           item.product_variant?.variant_image_url ||
-                                           item.product_variant?.variant_image_base64;
-                          if (typeof imageUrl === 'string' &&
-                            (imageUrl.startsWith('http://') ||
-                              imageUrl.startsWith('https://') ||
-                              imageUrl.startsWith('data:image'))
+                          const item = order.orderItems[0];
+                          console.log('Rendering image for item:', {
+                            hasImage: !!item.image,
+                            imageType: item.image ? item.image.substring(0, 50) + '...' : 'no image'
+                          });
+                          if (item.image && 
+                            (item.image.startsWith('http://') ||
+                             item.image.startsWith('https://') ||
+                             item.image.startsWith('data:image'))
                           ) {
-                            return { uri: imageUrl };
+                            return { uri: item.image };
                           }
+                          console.log('Using default image for item');
                           return require('../assets/LogoGG.png');
                         })()}
                         style={styles.productImageInOrder}
                         resizeMode="cover"
                         onError={(e) => {
+                          console.log('Image loading error:', {
+                            error: e.nativeEvent.error,
+                            item: order.orderItems[0].name_product
+                          });
                           e.target.setNativeProps({
                             source: require('../assets/LogoGG.png')
                           });
@@ -177,31 +194,26 @@ const OrdersScreen = () => {
                       />
                       <View style={styles.productInfoInOrder}>
                         <Text style={styles.productTitle} numberOfLines={2}>
-                          {orderItems[0].product?.product_name ||
-                           orderItems[0].product_variant?.variant_name ||
-                           'Không rõ tên sản phẩm'}
+                          {order.orderItems[0].name_product || 'Không rõ tên sản phẩm'}
                         </Text>
-                        <Text style={styles.quantity}>x{orderItems[0].quantity}</Text>
+                        <Text style={styles.quantity}>x{order.orderItems[0].quantity}</Text>
                         <View style={styles.priceRow}>
-                          <Text style={styles.price}>{orderItems[0].unit_price_item?.toLocaleString('vi-VN')}đ</Text>
+                          <Text style={styles.price}>{order.orderItems[0].unit_price_item?.toLocaleString('vi-VN')}đ</Text>
                         </View>
                       </View>
                     </View>
                   )}
 
-                  {isExpanded && orderItems.slice(1).map((orderItem, index) => (
-                    <View key={orderItem._id || `item-${index}`} style={styles.card}>
+                  {isExpanded && order.orderItems.slice(1).map((orderItem, index) => (
+                    <View key={orderItem.id_variant || `item-${index}`} style={styles.card}>
                       <Image
                         source={(() => {
-                          const imageUrl = orderItem.product?.product_image ||
-                                           orderItem.product_variant?.variant_image_url ||
-                                           orderItem.product_variant?.variant_image_base64;
-                          if (typeof imageUrl === 'string' &&
-                            (imageUrl.startsWith('http://') ||
-                              imageUrl.startsWith('https://') ||
-                              imageUrl.startsWith('data:image'))
+                          if (orderItem.image && 
+                            (orderItem.image.startsWith('http://') ||
+                             orderItem.image.startsWith('https://') ||
+                             orderItem.image.startsWith('data:image'))
                           ) {
-                            return { uri: imageUrl };
+                            return { uri: orderItem.image };
                           }
                           return require('../assets/LogoGG.png');
                         })()}
@@ -215,9 +227,7 @@ const OrdersScreen = () => {
                       />
                       <View style={styles.productInfoInOrder}>
                         <Text style={styles.productTitle} numberOfLines={2}>
-                          {orderItem.product?.product_name ||
-                           orderItem.product_variant?.variant_name ||
-                           'Không rõ tên sản phẩm'}
+                          {orderItem.name_product || 'Không rõ tên sản phẩm'}
                         </Text>
                         <Text style={styles.quantity}>x{orderItem.quantity}</Text>
                         <View style={styles.priceRow}>
@@ -227,7 +237,7 @@ const OrdersScreen = () => {
                     </View>
                   ))}
 
-                  {orderItems.length > 1 && ( // Only show toggle if there's more than 1 item
+                  {order.orderItems.length > 1 && (
                     <TouchableOpacity onPress={() => toggleExpanded(order._id)}>
                       <Text style={styles.toggleBtn}>
                         {isExpanded ? 'Ẩn bớt ▲' : 'Hiện thêm ▼'}
@@ -236,19 +246,21 @@ const OrdersScreen = () => {
                   )}
 
                   <Text style={styles.total}>
-                    Tổng số tiền ({orderItems.length} sản phẩm): {order.total_amount?.toLocaleString('vi-VN')}đ
+                    Tổng số tiền ({order.orderItems.length} sản phẩm): {order.total_amount?.toLocaleString('vi-VN')}đ
                   </Text>
 
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
                       style={styles.button}
-                      onPress={() => navigation.navigate('OrderDetail', { order: order })} // Pass the whole order object
+                      onPress={() => navigation.navigate('OrderDetail', { order: order })}
                     >
                       <Text style={styles.buttonText}>Xem chi tiết đơn hàng</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.button}>
-                      <Text style={styles.buttonText}>Mua lại</Text>
-                    </TouchableOpacity>
+                    {order.status === 'Đã giao' && (
+                      <TouchableOpacity style={styles.button}>
+                        <Text style={styles.buttonText}>Mua lại</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               );

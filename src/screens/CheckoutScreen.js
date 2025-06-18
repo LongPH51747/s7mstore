@@ -147,13 +147,10 @@ export default function CheckoutScreen() {
 
       const result = await response.json();
       console.log('Order created:', result);
-      
-      Alert.alert('Đặt hàng thành công!', 'Đơn hàng của bạn đã được đặt.');
       navigation.navigate('PaymentSuccess');
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');
-
     }
   };
 
@@ -253,9 +250,9 @@ export default function CheckoutScreen() {
         {/* Chi tiết thanh toán */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
-          <Text>Tổng tiền hàng: {subTotalPrice?.toLocaleString('vi-VN')}đ</Text>
-          <Text>Voucher: -{voucherAmount?.toLocaleString('vi-VN')}đ</Text>
-          <Text>Vận chuyển: {shippingFee?.toLocaleString('vi-VN')}đ</Text>
+          <Text style={styles.paymentText}>Tổng tiền hàng: {subTotalPrice?.toLocaleString('vi-VN')}đ</Text>
+          <Text style={styles.paymentText}>Voucher: -{voucherAmount?.toLocaleString('vi-VN')}đ</Text>
+          <Text style={styles.paymentText}>Vận chuyển: {shippingFee?.toLocaleString('vi-VN')}đ</Text>
         </View>
 
         {/* Phương thức thanh toán */}
@@ -267,7 +264,7 @@ export default function CheckoutScreen() {
               status={paymentMethod === 'cod' ? 'checked' : 'unchecked'}
               onPress={() => setPaymentMethod('cod')}
             />
-            <Text>Thanh toán khi nhận hàng</Text>
+            <Text style={styles.paymentMethodText}>Thanh toán khi nhận hàng</Text>
           </View>
           <View style={styles.radioRow}>
             <RadioButton
@@ -275,7 +272,7 @@ export default function CheckoutScreen() {
               status={paymentMethod === 'momo' ? 'checked' : 'unchecked'}
               onPress={() => setPaymentMethod('momo')}
             />
-            <Text>Thanh toán qua Momo</Text>
+            <Text style={styles.paymentMethodText}>Thanh toán qua Momo</Text>
           </View>
         </View>
       </ScrollView>
@@ -333,14 +330,16 @@ const styles = StyleSheet.create({
   title: { 
     fontSize: 20, 
     fontWeight: 'bold', 
-    marginBottom: 12 
+    marginBottom: 12,
+    color: '#000'
   },
   section: { 
     marginBottom: 16 
   },
   sectionTitle: { 
     fontSize: 16, 
-    fontWeight: 'bold' 
+    fontWeight: 'bold',
+    color: '#000'
   },
   editBtn: { 
     position: 'absolute', 
@@ -353,7 +352,8 @@ const styles = StyleSheet.create({
   },
   text: { 
     marginTop: 2,
-    fontSize: 14
+    fontSize: 14,
+    color: '#000'
   },
   productRow: { 
     flexDirection: 'row', 
@@ -374,7 +374,8 @@ const styles = StyleSheet.create({
   productName: { 
     fontWeight: 'bold', 
     marginBottom: 2,
-    fontSize: 14
+    fontSize: 14,
+    color: '#000'
   },
   price: { 
     color: 'green', 
@@ -421,6 +422,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginRight: 8,
+    color: '#000'
   },
   totalValue: {
     fontSize: 14,
@@ -457,6 +459,7 @@ const styles = StyleSheet.create({
   nameText: {
     fontSize: 14,
     fontWeight: 'bold',
+    color: '#000'
   },
   phoneText: {
     fontSize: 14,
@@ -465,5 +468,14 @@ const styles = StyleSheet.create({
   addressText: {
     fontSize: 14,
     color: '#333',
+  },
+  paymentText: {
+    fontSize: 14,
+    color: '#000',
+    marginVertical: 2
+  },
+  paymentMethodText: {
+    fontSize: 14,
+    color: '#000'
   },
 });
