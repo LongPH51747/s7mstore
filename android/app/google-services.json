@@ -1,0 +1,56 @@
+{
+  "project_info": {
+    "project_number": "649260662561",
+    "firebase_url": "https://s7m-a48ec-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "s7m-a48ec",
+    "storage_bucket": "s7m-a48ec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:649260662561:android:0b865aecaf4193329c4860",
+        "android_client_info": {
+          "package_name": "com.s7mstore"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "649260662561-db2hj442dc9jh0j9qdj8dcjj8v1kb6pc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.s7mstore",
+            "certificate_hash": "49791aa468dc722f6c6b58e0965fb707c3bb104f"
+          }
+        },
+        {
+          "client_id": "649260662561-r8akmreqpbt0hlko4nbipri10bjvd3p6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.s7mstore",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "649260662561-3l4i52uibivtvf20ioed5g6f98ps24o5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJZ9wowQJAfYahOgoJvuMOEdxabgnty4w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "649260662561-3l4i52uibivtvf20ioed5g6f98ps24o5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
