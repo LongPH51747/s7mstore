@@ -277,6 +277,8 @@ const CartScreen = (props) => {
   );
   // Function to render a product item
   const renderProductItem = (product) => {
+    // console.log('Rendering product item:', product);
+    // Update image source logic to properly handle variant images
     const productImageSource = (
       product.image && 
       (product.image.startsWith('http://') || 
@@ -289,10 +291,11 @@ const CartScreen = (props) => {
     return (
       <View style={styles.productContainer}>
         <Image 
+          key={product.image}
           source={productImageSource} 
           style={styles.productImage}
           onError={(e) => {
-            console.error('Product image loading error:', e.nativeEvent.error);
+            console.error('Product image loading error in CartScreen:', e.nativeEvent.error, 'for product:', product.name_product);
             e.target.setNativeProps({
               source: require('../assets/LogoGG.png')
             });
@@ -301,9 +304,15 @@ const CartScreen = (props) => {
         <View style={styles.productDetails}>
           <Text style={styles.productName}>{product.name_product}</Text>
           <View style={styles.productInfo}>
-            <Text style={styles.productColorLabel}>{"Color:"} {product.color}</Text>
-            <Text style={styles.productSizeLabel}>{"Size:"}</Text>
-            <Text style={styles.productSize}>{product.size}</Text>
+            {product.color && (
+              <Text style={styles.productColorLabel}>{"Màu:"} {product.color}</Text>
+            )}
+            {product.size && (
+              <>
+                <Text style={styles.productSizeLabel}>{"Size:"}</Text>
+                <Text style={styles.productSize}>{product.size}</Text>
+              </>
+            )}
           </View>
           <View style={styles.productPriceContainer}>
             <Text style={styles.discountedPrice}>{product.price?.toLocaleString('vi-VN')}đ</Text>
@@ -318,7 +327,6 @@ const CartScreen = (props) => {
             </TouchableOpacity>
           </View>
         </View>
-        {/* Delete Button */}
         <TouchableOpacity 
           onPress={() => handleRemoveItem(product.id_variant)} 
           style={styles.deleteButton}
