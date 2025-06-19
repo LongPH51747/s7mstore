@@ -291,9 +291,7 @@ const HomeScreen = ({ navigation }) => {
     // console.log('Product Image URL before validation:', item.product_image);
     const productImageSource = (typeof item.product_image === 'string' && (item.product_image.startsWith('http://') || item.product_image.startsWith('https://') || item.product_image.startsWith('data:image')))
       ? { uri: item.product_image }
-      : require('../assets/errorimg.webp'
-
-      );
+      : require('../assets/errorimg.webp');
 
     return (
       <TouchableOpacity 
@@ -440,7 +438,7 @@ const HomeScreen = ({ navigation }) => {
           onEndReached={loadMoreProducts}
           onEndReachedThreshold={0.5}
           ListFooterComponent={renderFooter}
-          scrollEnabled={true}
+          scrollEnabled={false}
         />
       </ScrollView>
       {/* Bottom Navigation: các icon điều hướng nhanh */}

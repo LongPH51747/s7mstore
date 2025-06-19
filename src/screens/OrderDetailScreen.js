@@ -1,258 +1,228 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { List } from 'react-native-paper';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import React from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
-const OrderDetailScreen = ({ route, navigation }) => {
+const OrderDetailScreen = ({ route }) => {
+  const navigation = useNavigation();
   const { order } = route.params;
-  const [orderDetails, setOrderDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchOrderDetails = async () => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-
-        const response = await fetch(`${API_ENDPOINTS.ORDERS.GET_ORDER_DETAIL}/${order._id}`, {
-          headers: API_HEADERS,
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Failed to fetch order details: ${response.status} - ${errorData.message || response.statusText}`);
-        }
-
-        const data = await response.json();
-        setOrderDetails(data);
-      } catch (error) {
-        console.error('Error fetching order details:', error);
-        if (error.name === 'AbortError') {
-          Alert.alert('Lỗi', 'Thời gian yêu cầu chi tiết đơn hàng đã hết. Vui lòng thử lại.');
-        } else {
-          Alert.alert('Lỗi', `Không thể tải chi tiết đơn hàng: ${error.message}`);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrderDetails();
-  }, [order._id]);
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
-  }
-
-  if (!orderDetails) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load order details</Text>
-      </View>
-    );
-  }
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <Text style={styles.header}>Chi tiết đơn hàng</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Image 
+            source={require('../assets/back.png')} 
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Chi tiết đơn hàng</Text>
+        <View style={styles.headerRight} />
+      </View>
 
-      {/* Trạng thái */}
-      <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Trạng thái</Text>
-        <View style={styles.statusContainer}>
-          <Text style={styles.statusText}>Đang giao</Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={true}
+      >
+        {/* Trạng thái đơn hàng */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trạng thái đơn hàng</Text>
+          <Text style={styles.statusText}>{order.status}</Text>
         </View>
-      </View>
 
-      {/* Thông tin đơn hàng */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
-        <Text style={styles.orderId}>Order ID: {orderDetails._id}</Text>
-        <Text style={styles.orderDate}>
-          Date: {new Date(orderDetails.createdAt).toLocaleDateString()}
-        </Text>
-        <Text style={styles.orderStatus}>
-          Status: {orderDetails.order_status}
-        </Text>
-      </View>
+        {/* Thông tin đơn hàng */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
+          <Text style={styles.infoText}>Mã đơn hàng: {order._id}</Text>
+          <Text style={styles.infoText}>Ngày đặt: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</Text>
+          <Text style={styles.infoText}>Phương thức thanh toán: {order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
+          <Text style={styles.infoText}>Trạng thái thanh toán: {order.payment_status}</Text>
+        </View>
 
-      {/* Sản phẩm */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sản phẩm</Text>
-        {orderDetails.order_items.map((item) => (
-          <View key={item._id} style={styles.productItem}>
-            <Image
-              source={(() => {
-                const imageUrl = item.product_variant?.variant_image_url || 
-                                 item.product_variant?.variant_image_base64 || 
-                                 item.product?.product_image; 
-                if (typeof imageUrl === 'string' && 
-                    (imageUrl.startsWith('http://') || 
-                     imageUrl.startsWith('https://') || 
-                     imageUrl.startsWith('data:image'))
-                ) {
-                  return { uri: imageUrl };
-                }
-                return require('../assets/LogoGG.png'); // Fallback image
-              })()}
-              style={styles.productImage}
-              onError={(e) => {
-                console.error('Order item image loading error:', e.nativeEvent.error, 'for URL:', item.product_variant?.variant_image_url || item.product_variant?.variant_image_base64 || item.product?.product_image);
-                e.target.setNativeProps({
-                  source: require('../assets/LogoGG.png')
-                });
-              }}
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>{item.product.product_name}</Text>
-              <Text style={styles.variantInfo}>
-                {item.product_variant.variant_color} - {item.product_variant.variant_size}
-              </Text>
-              <Text style={styles.quantity}>Quantity: {item.quantity}</Text>
-              <Text style={styles.price}>
-                {item.product_variant.variant_price.toLocaleString('vi-VN')}đ
-              </Text>
+        {/* Thông tin người nhận */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Thông tin người nhận</Text>
+          <Text style={styles.infoText}>Họ tên: {order.id_address.fullName}</Text>
+          <Text style={styles.infoText}>Số điện thoại: {order.id_address.phone_number}</Text>
+          <Text style={styles.infoText}>Địa chỉ: {order.id_address.addressDetail}</Text>
+        </View>
+
+        {/* Sản phẩm */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sản phẩm</Text>
+          {order.orderItems.map((item, index) => (
+            <View key={item.id_variant || index} style={styles.productItem}>
+              <Image
+                source={(() => {
+                  if (item.image && 
+                    (item.image.startsWith('http://') ||
+                     item.image.startsWith('https://') ||
+                     item.image.startsWith('data:image'))
+                  ) {
+                    return { uri: item.image };
+                  }
+                  return require('../assets/LogoGG.png');
+                })()}
+                style={styles.productImage}
+                resizeMode="cover"
+                onError={(e) => {
+                  e.target.setNativeProps({
+                    source: require('../assets/LogoGG.png')
+                  });
+                }}
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{item.name_product}</Text>
+                <Text style={styles.productDetail}>Màu: {item.color}</Text>
+                <Text style={styles.productDetail}>Size: {item.size}</Text>
+                <Text style={styles.productDetail}>Số lượng: {item.quantity}</Text>
+                <Text style={styles.productPrice}>{item.unit_price_item?.toLocaleString('vi-VN')}đ</Text>
+              </View>
             </View>
+          ))}
+        </View>
+
+        {/* Tổng tiền */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tổng tiền</Text>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Tạm tính:</Text>
+            <Text style={styles.totalValue}>{order.sub_total_amount?.toLocaleString('vi-VN')}đ</Text>
           </View>
-        ))}
-      </View>
-
-      {/* Thông tin khách hàng */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
-        <Text style={styles.shippingInfo}>{orderDetails.shipping_address}</Text>
-        <Text style={styles.shippingInfo}>{orderDetails.shipping_phone}</Text>
-      </View>
-
-      {/* Chi tiết thanh toán */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
-        <Text style={styles.paymentInfo}>
-          Total: {orderDetails.total_amount.toLocaleString('vi-VN')}đ
-        </Text>
-        <Text style={styles.paymentInfo}>
-          Payment Method: {orderDetails.payment_method}
-        </Text>
-      </View>
-    </ScrollView>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Phí vận chuyển:</Text>
+            <Text style={styles.totalValue}>{order.shipping?.toLocaleString('vi-VN')}đ</Text>
+          </View>
+          <View style={[styles.totalRow, styles.finalTotal]}>
+            <Text style={styles.totalLabel}>Tổng cộng:</Text>
+            <Text style={styles.totalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#fff',
   },
   header: {
-    fontSize: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3E4E5',
+    backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    zIndex: 1,
+  },
+  backButton: {
+    padding: 8,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
+    color: '#000',
+  },
+  headerRight: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 20,
   },
   section: {
-    marginBottom: 16,
-    borderTopWidth: 8,
-    borderTopColor: '#eee',
-    paddingTop: 12,
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    borderTopWidth: 8,
-    borderTopColor: '#eee',
-    paddingTop: 12,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3E4E5',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  orderId: {
-    color: '#888',
-    marginBottom: 4,
-  },
-  orderDate: {
-    color: '#888',
-    marginBottom: 4,
-  },
-  orderStatus: {
-    color: '#888',
-    marginBottom: 4,
-  },
-  statusContainer: {
-    backgroundColor: '#009688',
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    marginBottom: 12,
+    color: '#000',
   },
   statusText: {
-    color: '#fff',
-    fontWeight: '600',
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '500',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
   },
   productItem: {
     flexDirection: 'row',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginBottom: 16,
+    backgroundColor: '#F6F8F9',
+    padding: 12,
+    borderRadius: 8,
   },
   productImage: {
     width: 80,
-    height: 80,
+    height: 100,
     borderRadius: 8,
+    marginRight: 12,
   },
   productInfo: {
-    marginLeft: 10,
     flex: 1,
   },
   productName: {
-    fontWeight: '600',
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000',
     marginBottom: 4,
   },
-  variantInfo: {
+  productDetail: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginBottom: 2,
   },
-  quantity: {
-    color: '#888',
-    marginTop: 4,
-  },
-  price: {
-    color: 'red',
+  productPrice: {
+    fontSize: 14,
     fontWeight: 'bold',
+    color: '#D3180C',
     marginTop: 4,
   },
-  shippingInfo: {
-    color: '#888',
-    marginBottom: 4,
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  paymentInfo: {
-    color: '#888',
-    marginBottom: 4,
+  totalLabel: {
+    fontSize: 14,
+    color: '#666',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  totalValue: {
+    fontSize: 14,
+    color: '#000',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 16,
+  finalTotal: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E3E4E5',
   },
 });
 
