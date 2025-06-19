@@ -53,6 +53,7 @@ const AppNavigator = () => {
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="Orders" component={OrderScreen} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+        
       </Stack.Navigator>
     </NavigationContainer>
   );

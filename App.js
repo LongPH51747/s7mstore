@@ -13,9 +13,9 @@ import RefundReturnScreen from './screens/TraHangScreen';
 import AddAddressScreen from './screens/AddAddress';
 import RegisterScreen from './screens/RegisterScreen';
 import LoginScreen from './screens/LoginScreen';
-import UserChatScreen from './screens/ChatScreen'; // Đảm bảo tên import là UserChatScreen
+import UserChatScreen from './screens/ChatScreen';
 
-// Import các Context
+
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext'; // Import SocketProvider
 

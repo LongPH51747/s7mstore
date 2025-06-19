@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, SafeAreaView, Text, FlatList, TouchableOpacity, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
-import Icon from 'react-native-vector-icons/Ionicons';
+
+import CustomNavBottom from '../components/CustomNavBottom';
 
 const numColumns = 2;
 const { width } = Dimensions.get('window');
@@ -444,38 +445,7 @@ const HomeScreen = ({ navigation }) => {
         />
       </ScrollView>
       {/* Bottom Navigation: các icon điều hướng nhanh */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Home');
-          navigation.navigate('Home');
-        }}>
-          <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Search');
-          navigation.navigate('Search');
-        }}>
-          <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Cart');
-          navigation.navigate('Cart');
-        }}>
-          <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Favorites');
-          navigation.navigate('Favorites');
-        }}>
-          <Icon name={activeTab === 'Favorites' ? 'heart' : 'heart-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Profile');
-          navigation.navigate('Profile');
-        }}>
-          <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
+      <CustomNavBottom/>
     </SafeAreaView>
   );
 };

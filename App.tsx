@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { SafeAreaView, StatusBar, useColorScheme } from 'react-native';
-import AppNavigator from './src/navigation/AppNavigator'
+import AppNavigator from './src/navigation/AppNavigator.js'
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
 import { initializeSdks } from './src/utils/initializeSdks';

@@ -13,12 +13,12 @@ import {
   ActivityIndicator,
   Alert
 } from "react-native";
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import {API_BASE_URL, API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
 
 // Main component
 const CartScreen = (props) => {
   const navigation = useNavigation();
-  const url = "https://82ab-2405-4802-4b2-2810-c468-2961-3771-9afb.ngrok-free.app/api/cart/getByUserId/"
+  const url = `${API_BASE_URL}/cart/getByUserId/`
   const [idUser, setIdUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [cartItem
