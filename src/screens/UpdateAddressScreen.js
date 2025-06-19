@@ -241,7 +241,7 @@ const UpdateAddressScreen = () => {
             resizeMode="contain"
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cập nhật địa chỉ</Text>
+        <Text style={[styles.headerTitle, {color: '#000'}]}>Cập nhật địa chỉ</Text>
         <View style={styles.headerRight} />
       </View>
 

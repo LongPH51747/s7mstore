@@ -229,8 +229,8 @@ export default function CheckoutScreen() {
                 />
                 <View style={styles.productDetails}>
                   <Text style={styles.productName}>{item.name_product || item.product_name}</Text>
-                  <Text>Color: {item.color}</Text>
-                  <Text>Size: {item.size}</Text>
+                  <Text style={styles.productColor}>Color: {item.color}</Text>
+                  <Text style={styles.productSize}>Size: {item.size}</Text>
                   <Text style={styles.price}>
                     {(item.unit_price_item || item.price)?.toLocaleString('vi-VN')}đ
                   </Text>
@@ -347,7 +347,15 @@ const styles = StyleSheet.create({
     top: 0 
   },
   editText: { 
-    color: '#007AFF',
+    color: '#000',
+    fontSize: 14
+  },
+  productColor: {
+    color: '#444',
+    fontSize: 14
+  },
+  productSize: {
+    color: '#444',
     fontSize: 14
   },
   text: { 

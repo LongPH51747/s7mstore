@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://480b-2405-4802-492-4fb0-8dad-c240-2e60-f214.ngrok-free.app/api';
+export const API_BASE_URL = 'https://6615-2405-4802-492-4fb0-6c1e-c2c0-ca0b-a103.ngrok-free.app/api';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -58,6 +58,14 @@ export const API_ENDPOINTS = {
     CREATE: (userId) => `${API_BASE_URL}/address/create/userId/${userId}`,
     DELETE: (addressId) => `${API_BASE_URL}/address/deleteAddress/${addressId}`,
     UPDATE: (addressId) => `${API_BASE_URL}/address/update/${addressId}`,
+  },
+
+  RATINGS: {
+    CREATE: `${API_BASE_URL}/review/create-review`,
+    GET_BY_PRODUCT: (productId) => `${API_BASE_URL}/ratings/product/${productId}`,
+    GET_BY_USER: (userId) => `${API_BASE_URL}/ratings/user/${userId}`,
+    UPDATE: (ratingId) => `${API_BASE_URL}/ratings/update/${ratingId}`,
+    DELETE: (ratingId) => `${API_BASE_URL}/ratings/delete/${ratingId}`,
   },
 };
 

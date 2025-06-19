@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
+import { Animated, LayoutAnimation, Platform, UIManager } from 'react-native';
 
 import { 
   SafeAreaView, 
@@ -27,6 +29,8 @@ const CartScreen = (props) => {
   const [discount, setDiscount] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
   const [finalTotal, setFinalTotal] = useState(0);
+  const [selectAll, setSelectAll] = useState(false);
+  const [animatedValues, setAnimatedValues] = useState({});
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -39,17 +43,17 @@ const CartScreen = (props) => {
           console.log('User ID from AsyncStorage on focus (MongoDB _id):', userInfo._id);
         } else {
           console.log('userInfo found but _id is missing on focus:', userInfo);
-          Alert.alert('Lỗi', 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại.');
+          Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại.' });
           navigation.replace('Login');
         }
       } else {
         console.log('No userInfo found in AsyncStorage on focus.');
-        Alert.alert('Lỗi', 'Chưa đăng nhập. Vui lòng đăng nhập để xem giỏ hàng.');
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Chưa đăng nhập. Vui lòng đăng nhập để xem giỏ hàng.' });
         navigation.replace('Login');
       }
     } catch (error) {
       console.error('Lỗi khi lấy thông tin người dùng từ AsyncStorage on focus:', error);
-      Alert.alert('Lỗi', 'Không thể lấy thông tin người dùng. Vui lòng thử lại.');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể lấy thông tin người dùng. Vui lòng thử lại.' });
     }
   }, [navigation]);
 
@@ -102,7 +106,7 @@ const CartScreen = (props) => {
       }
     } catch (error) {
       console.error('Lỗi khi lấy giỏ hàng:', error);
-      Alert.alert('Lỗi', 'Không thể tải giỏ hàng. Vui lòng thử lại sau.');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể tải giỏ hàng. Vui lòng thử lại sau.' });
       setCart({ cartItem: [] });
       setCartItem([]);
     }
@@ -118,10 +122,13 @@ const CartScreen = (props) => {
     if (cartItem && cartItem.length > 0) {
       // Initialize selected items when cart is loaded
       const initialSelected = {};
+      const initialAnimated = {};
       cartItem.forEach(item => {
-        initialSelected[item.id_variant] = true;
+        initialSelected[item.id_variant] = false; // Mặc định không chọn
+        initialAnimated[item.id_variant] = new Animated.Value(0); // 0 là vị trí ban đầu
       });
       setSelectedItems(initialSelected);
+      setAnimatedValues(initialAnimated);
     }
   }, [cartItem]);
 
@@ -214,11 +221,7 @@ const CartScreen = (props) => {
 
     } catch (error) {
       console.error('Error updating quantity:', error);
-      Alert.alert(
-        'Lỗi',
-        error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại sau.',
-        [{ text: 'OK' }]
-      );
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại sau.' });
     }
   };
 
@@ -229,55 +232,58 @@ const CartScreen = (props) => {
       return;
     }
 
-    try {
-      console.log('Removing item with data:', {
-        cartItemId,
-        userId: idUser,
-        cartId: cart._id,
-        currentItem
-      });
+    // Animation: trượt sang trái
+    Animated.timing(animatedValues[cartItemId], {
+      toValue: -400, // trượt sang trái 400px
+      duration: 100,
+      useNativeDriver: true,
+    }).start(async () => {
+      // Thêm LayoutAnimation để các item còn lại dồn lên mượt mà
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      // Xóa khỏi state cartItem trước để có hiệu ứng
+      setCartItem(prev => prev.filter(item => item.id_variant !== cartItemId));
+      Toast.show({ type: 'success', text1: 'Thành công', text2: 'Sản phẩm đã được xóa khỏi giỏ hàng.' });
+      setCart(prev => ({
+        ...prev,
+        cartItem: prev.cartItem.filter(item => item.id_variant !== cartItemId)
+      }));
+      // Sau đó mới gọi API xóa thật và đồng bộ lại dữ liệu
+      try {
+        const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
+          method: 'DELETE',
+          headers: {
+            ...API_HEADERS,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            userId: idUser,
+            cartItemId: currentItem._id,
+            cartId: cart._id
+          }),
+        });
 
-      const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
-        method: 'DELETE',
-        headers: {
-          ...API_HEADERS,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userId: idUser,
-          cartItemId: currentItem._id,
-          cartId: cart._id
-        }),
-      });
+        let responseData;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          throw new Error('Server returned non-JSON response');
+        }
 
-      let responseData;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        responseData = await response.json();
-      } else {
-        throw new Error('Server returned non-JSON response');
+        if (!response.ok) {
+          throw new Error(responseData.message || `Failed to remove item: ${response.status}`);
+        }
+
+        
+        // Đồng bộ lại dữ liệu sau một chút (nếu muốn)
+        setTimeout(() => { getCart(); }, 400);
+      } catch (error) {
+        console.error('Error removing item:', error);
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Có lỗi khi xóa sản phẩm khỏi giỏ hàng' });
+        // Nếu lỗi, có thể reload lại cart
+        setTimeout(() => { getCart(); }, 2000);
       }
-
-      if (!response.ok) {
-        throw new Error(responseData.message || `Failed to remove item: ${response.status}`);
-      }
-
-      console.log('Item removed successfully:', responseData);
-      Alert.alert(
-        'Thành công',
-        'Sản phẩm đã được xóa khỏi giỏ hàng.',
-        [{ text: 'OK' }]
-      );
-      getCart(); // Re-fetch cart to update UI
-
-    } catch (error) {
-      console.error('Error removing item:', error);
-      Alert.alert(
-        'Lỗi',
-        'Không thể xóa sản phẩm. Vui lòng thử lại sau.',
-        [{ text: 'OK' }]
-      );
-    }
+    });
   };
 
   const toggleItemSelection = (itemId) => {
@@ -291,15 +297,23 @@ const CartScreen = (props) => {
     const selectedProducts = cartItem.filter(item => selectedItems[item.id_variant]);
     
     if (selectedProducts.length === 0) {
-      Alert.alert(
-        'Thông báo',
-        'Vui lòng chọn ít nhất một sản phẩm để thanh toán.',
-        [{ text: 'OK' }]
-      );
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Vui lòng chọn ít nhất một sản phẩm để thanh toán.' });
       return;
     }
     
     navigation.navigate('Checkout', { cartItems: selectedProducts, cartId: cart._id });
+  };
+
+  const handleSelectAll = () => {
+    const newValue = !selectAll;
+    setSelectAll(newValue);
+    const newSelected = {};
+    if (cartItem && cartItem.length > 0) {
+      cartItem.forEach(item => {
+        newSelected[item.id_variant] = newValue;
+      });
+    }
+    setSelectedItems(newSelected);
   };
 
   const renderDivider = () => (
@@ -317,7 +331,7 @@ const CartScreen = (props) => {
       : require('../assets/LogoGG.png');
 
     return (
-      <View style={styles.productContainer}>
+      <Animated.View style={[styles.productContainer, { transform: [{ translateX: animatedValues[product.id_variant] || new Animated.Value(0) }] }]}>
         <Checkbox
           status={selectedItems[product.id_variant] ? 'checked' : 'unchecked'}
           onPress={() => toggleItemSelection(product.id_variant)}
@@ -336,7 +350,7 @@ const CartScreen = (props) => {
         <View style={styles.productDetails}>
           <Text style={styles.productName}>{product.name_product}</Text>
           <View style={styles.productInfo}>
-            <Text style={styles.productColorLabel}>{"Color:"} {product.color}</Text>
+            <Text style={styles.productColorLabel}>{"Color:"}  {product.color}</Text>
             <Text style={styles.productSizeLabel}>{"Size:"}</Text>
             <Text style={styles.productSize}>{product.size}</Text>
           </View>
@@ -358,11 +372,18 @@ const CartScreen = (props) => {
           onPress={() => handleRemoveItem(product.id_variant)} 
           style={styles.deleteButton}
         >
-          <Text style={styles.deleteButtonText}>X</Text>
+          <Image source={require('../assets/x.png')} style={styles.deleteIcon} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     );
   };
+
+  // Enable LayoutAnimation on Android
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   return (
     !cartItem ? (
@@ -375,14 +396,14 @@ const CartScreen = (props) => {
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Image 
-              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/3d932128-0328-4607-bacf-7a9ced0de013" }} 
+              source={require('../assets/back.png')} 
               style={styles.headerIcon} 
             />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{"Cart"}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
             <Image 
-              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c5d652d4-87eb-4bb4-8eaf-62b26c7c040b" }} 
+              source={require('../assets/search.png')} 
               style={styles.headerIcon}
             />
           </TouchableOpacity>
@@ -392,6 +413,15 @@ const CartScreen = (props) => {
             {"You have"} {cartItem.length} {"products in your Cart"}
           </Text>
         </View>
+        {cartItem.length >= 2 && (
+          <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 16, marginBottom: 4}}>
+            <Checkbox
+              status={selectAll ? 'checked' : 'unchecked'}
+              onPress={handleSelectAll}
+            />
+            <Text style={{color: '#222', fontSize: 14}}>Chọn tất cả</Text>
+          </View>
+        )}
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
           {cartItem.map(product => (
             <View key={product.id_variant}>
@@ -425,6 +455,7 @@ const CartScreen = (props) => {
             <Text style={styles.checkoutText}>{"Checkout"}</Text>
           </TouchableOpacity>
         </View>
+        <Toast />
       </SafeAreaView>
     )   
   );
@@ -501,27 +532,29 @@ const styles = StyleSheet.create({
   },
   productName: {
     color: "#202325",
-    fontSize: 14,
+    fontSize: 16,
     marginRight: 36,
     flex: 1,
+    fontWeight: 'bold',
   },
   productInfo: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 5,
+    color: '#444',
   },
   productColorLabel: {
-    color: "#000000",
+    color: "#444",
     fontSize: 14,
     marginRight: 16,
   },
   productSizeLabel: {
-    color: "#000000",
+    color: "#444",
     fontSize: 14,
-    marginRight: 20,
+    marginRight: 5,
   },
   productSize: {
-    color: "#000000",
+    color: "#444",
     fontSize: 14,
   },
   productPriceContainer: {
@@ -639,17 +672,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    backgroundColor: '#FF0000',
     borderRadius: 15,
     width: 30,
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+  deleteIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#000',
   },
   checkbox: {
     marginRight: 8,

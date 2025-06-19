@@ -190,7 +190,7 @@ const AddAddressScreen = () => {
             resizeMode="contain"
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thêm địa chỉ mới</Text>
+        <Text style={[styles.headerTitle, {color: '#000'}]}>Thêm địa chỉ mới</Text>
         <View style={styles.headerRight} />
       </View>
 

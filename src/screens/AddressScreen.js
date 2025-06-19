@@ -9,16 +9,23 @@ import {
   Alert,
   SafeAreaView,
   Image,
+  Button,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import Toast from 'react-native-toast-message';
 
 const AddressScreen = () => {
   const navigation = useNavigation();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [animatedValues, setAnimatedValues] = useState({});
 
   const fetchAddresses = async () => {
     try {
@@ -43,7 +50,7 @@ const AddressScreen = () => {
       setAddresses(data);
     } catch (err) {
       setError(err.message);
-      Alert.alert('Error', 'Failed to load addresses. Please try again.');
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể tải danh sách địa chỉ. Vui lòng thử lại.' });
     } finally {
       setLoading(false);
     }
@@ -61,6 +68,21 @@ const AddressScreen = () => {
     return unsubscribe;
   }, [navigation]);
 
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Khởi tạo animatedValues cho từng địa chỉ
+    const initialAnimated = {};
+    addresses.forEach(item => {
+      initialAnimated[item._id] = new Animated.Value(0);
+    });
+    setAnimatedValues(initialAnimated);
+  }, [addresses]);
+
   const handleDeleteAddress = async (addressId) => {
     Alert.alert(
       'Xóa địa chỉ',
@@ -74,24 +96,31 @@ const AddressScreen = () => {
           text: 'Xóa',
           style: 'destructive',
           onPress: async () => {
-            try {
-              const response = await fetch(
-                API_ENDPOINTS.ADDRESS.DELETE(addressId),
-                {
-                  method: 'DELETE',
-                }
-              );
-
-              if (!response.ok) {
-                throw new Error('Failed to delete address');
+            // Animation: trượt sang trái
+            Animated.timing(animatedValues[addressId], {
+              toValue: -400,
+              duration: 300,
+              useNativeDriver: true,
+            }).start(async () => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              // Xóa khỏi state trước để có hiệu ứng
+              setAddresses(prev => prev.filter(item => item._id !== addressId));
+              // Hiển thị toast
+              Toast.show({ type: 'success', text1: 'Thành công', text2: 'Địa chỉ đã được xóa' });
+              // Gọi API xóa, nhưng KHÔNG fetchAddresses lại ngay
+              try {
+                const response = await fetch(
+                  API_ENDPOINTS.ADDRESS.DELETE(addressId),
+                  { method: 'DELETE' }
+                );
+                if (!response.ok) throw new Error('Failed to delete address');
+                // Không fetchAddresses ở đây!
+              } catch (err) {
+                Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể xóa địa chỉ. Vui lòng thử lại.' });
+                // Nếu lỗi, có thể fetchAddresses lại để đồng bộ
+                setTimeout(() => { fetchAddresses(); }, 2000);
               }
-
-              // Refresh addresses after deletion
-              fetchAddresses();
-              Alert.alert('Thành công', 'Địa chỉ đã được xóa');
-            } catch (err) {
-              Alert.alert('Lỗi', 'Không thể xóa địa chỉ. Vui lòng thử lại.');
-            }
+            });
           },
         },
       ]
@@ -103,22 +132,24 @@ const AddressScreen = () => {
   };
 
   const renderAddressItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.addressItem}
-      onPress={() => handleSelectAddress(item)}
-    >
-      <View style={styles.addressContent}>
-        <View style={styles.addressHeader}>
-          <Text style={styles.name}>{item.fullName}</Text>
-          <Text style={styles.phone}> | {item.phone_number}</Text>
-          {item.is_default && (
-            <View style={styles.defaultBadge}>
-              <Text style={styles.defaultText}>Default</Text>
-            </View>
-          )}
+    <Animated.View style={[styles.addressItem, { transform: [{ translateX: animatedValues[item._id] || new Animated.Value(0) }] }]}>
+      <TouchableOpacity
+        style={{ flex: 1 }}
+        onPress={() => handleSelectAddress(item)}
+      >
+        <View style={styles.addressContent}>
+          <View style={styles.addressHeader}>
+            <Text style={styles.name}>{item.fullName}</Text>
+            <Text style={styles.phone}> | {item.phone_number}</Text>
+            {item.is_default && (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultText}>Default</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.addressDetail}>{item.addressDetail}</Text>
         </View>
-        <Text style={styles.addressDetail}>{item.addressDetail}</Text>
-      </View>
+      </TouchableOpacity>
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={styles.actionButton}
@@ -141,7 +172,7 @@ const AddressScreen = () => {
           />
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </Animated.View>
   );
 
   if (loading) {
@@ -206,6 +237,7 @@ const AddressScreen = () => {
           </View>
         }
       />
+      <Toast />
     </SafeAreaView>
   );
 };
@@ -233,6 +265,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#444',
   },
   addButton: {
     padding: 8,
@@ -262,6 +295,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#444',
   },
   phone: {
     fontSize: 16,
