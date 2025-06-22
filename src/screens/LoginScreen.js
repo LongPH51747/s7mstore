@@ -147,7 +147,8 @@ const LoginScreen = ({ navigation }) => {
       const userInfo = await GoogleSignin.signIn();
       console.log('User Info:', userInfo);
 
-      const { idToken } = await GoogleSignin.getTokens();
+      // Lấy idToken đúng cách, hỗ trợ cả hai kiểu trả về
+      const idToken = userInfo?.idToken || userInfo?.data?.idToken;
       console.log('ID Token:', idToken);
 
       if (!idToken) {
@@ -208,8 +209,7 @@ const LoginScreen = ({ navigation }) => {
             await AsyncStorage.setItem('userToken', backendResponseData.access_token);
             await AsyncStorage.setItem('shouldAutoLogin', 'true');
             await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
-            console.log('Đã lưu token và thông tin người dùng từ backend');
-            Alert.alert('Thành công', 'Đăng nhập bằng Google thành công!');
+            console.log('Đã lưu token và thông tin người dùng từ backend, chuẩn bị chuyển màn hình Home');
             navigation.replace('Home');
           } else {
             throw new Error('Không nhận được token từ server');
@@ -226,8 +226,9 @@ const LoginScreen = ({ navigation }) => {
           // Fallback: Nếu không thể kết nối đến backend, sử dụng Firebase token
           console.log('Sử dụng Firebase token làm fallback...');
           try {
-            const firebaseToken = await userCredential.user.getIdToken();
-            await AsyncStorage.setItem('userToken', firebaseToken);
+            const firebaseIdToken = await userCredential.user.getIdToken();
+            console.log('Firebase ID Token:', firebaseIdToken);
+            await AsyncStorage.setItem('userToken', firebaseIdToken);
             await AsyncStorage.setItem('shouldAutoLogin', 'true');
             await AsyncStorage.setItem('userInfo', JSON.stringify({
               displayName: userCredential.user.displayName,
@@ -236,8 +237,7 @@ const LoginScreen = ({ navigation }) => {
               uid: userCredential.user.uid
             }));
 
-            console.log('Đã lưu thông tin người dùng từ Firebase');
-            Alert.alert('Thành công', 'Đăng nhập bằng Google thành công!');
+            console.log('Đã lưu thông tin người dùng từ Firebase, chuẩn bị chuyển màn hình Home');
             navigation.replace('Home');
           } catch (storageError) {
             console.error('Lỗi lưu thông tin:', storageError);

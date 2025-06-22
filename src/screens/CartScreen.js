@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
   Alert
 } from "react-native";
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api'; // Import API config
 
 // Main component
 const CartScreen = (props) => {
@@ -425,13 +425,14 @@ const CartScreen = (props) => {
     // console.log('Rendering product item:', product);
     // Update image source logic to properly handle variant images
     const productImageSource = (
-      product.image && 
-      (product.image.startsWith('http://') || 
-       product.image.startsWith('https://') || 
-       product.image.startsWith('data:image'))
+      product.image && product.image.startsWith('/uploads_product/')
     )
-      ? { uri: product.image }
-      : require('../assets/LogoGG.png');
+      ? { uri: `${API_BASE_URL}${product.image}` }
+      : (product.image && (product.image.startsWith('http://') || product.image.startsWith('https://') || product.image.startsWith('data:image')))
+        ? { uri: product.image }
+        : require('../assets/erorrimg.png');
+    console.log('CartScreen - product.image:', product.image);
+    console.log('CartScreen - productImageSource:', productImageSource);
 
     // Check stock status
     const stockQuantity = product.variant_stock || product.variant_quantity || product.stock || product.quantity || product.inventory || 0;
@@ -472,7 +473,7 @@ const CartScreen = (props) => {
           onError={(e) => {
             console.error('Product image loading error in CartScreen:', e.nativeEvent.error, 'for product:', product.name_product);
             e.target.setNativeProps({
-              source: require('../assets/LogoGG.png')
+              source: require('../assets/erorrimg.png')
             });
           }}
         />

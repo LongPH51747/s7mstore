@@ -13,7 +13,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -80,9 +80,9 @@ const ProductDetailScreen = () => {
           });
         });
         
-        // Tìm biến thể đầu tiên có hàng tồn kho - try multiple field names
+        // Chỉ chọn biến thể còn hàng đầu tiên
         const availableVariant = fetchedProduct.product_variant.find(variant => {
-          const stockQuantity = variant.variant_quantity || variant.stock || variant.quantity || variant.inventory || 0;
+          const stockQuantity = variant.variant_stock || variant.variant_quantity || variant.stock || variant.quantity || variant.inventory || 0;
           console.log('=== PRODUCT DETAIL: Checking variant stock ===', {
             variantId: variant._id,
             variant_quantity: variant.variant_quantity,
@@ -115,10 +115,31 @@ const ProductDetailScreen = () => {
           } : 'No variants available'
         });
         
-        setSelectedVariant(availableVariant || fetchedProduct.product_variant[0]);
-      }
-      if (fetchedProduct.product_image) {
-        setCurrentDisplayImage(fetchedProduct.product_image);
+        setSelectedVariant(availableVariant || null); // Nếu không có biến thể nào còn hàng thì null
+        // Set image for the available variant if exists
+        if (availableVariant) {
+          if (availableVariant.variant_image_url) {
+            if (typeof availableVariant.variant_image_url === 'string' && availableVariant.variant_image_url.startsWith('/uploads_product/')) {
+              setCurrentDisplayImage(`${API_BASE_URL}${availableVariant.variant_image_url}`);
+            } else {
+              setCurrentDisplayImage(availableVariant.variant_image_url);
+            }
+          } else if (availableVariant.variant_image_base64 && availableVariant.variant_image_type) {
+            setCurrentDisplayImage(`data:${availableVariant.variant_image_type};base64,${availableVariant.variant_image_base64}`);
+          } else {
+            if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
+              setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
+            } else {
+              setCurrentDisplayImage(fetchedProduct.product_image);
+            }
+          }
+        } else if (fetchedProduct.product_image) {
+          if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
+            setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
+          } else {
+            setCurrentDisplayImage(fetchedProduct.product_image);
+          }
+        }
       }
     }
   }, [route.params]);
@@ -135,6 +156,7 @@ const ProductDetailScreen = () => {
       quantity: variant.quantity,
       inventory: variant.inventory,
       allFields: Object.keys(variant)
+
     });
     
     // Kiểm tra xem biến thể có hàng tồn kho không - try multiple field names
@@ -151,8 +173,34 @@ const ProductDetailScreen = () => {
     });
     
     if (stockQuantity <= 0) {
-      console.log('=== PRODUCT DETAIL: Variant is out of stock ===');
-      Alert.alert('Thông báo', 'Biến thể này đã hết hàng. Vui lòng chọn biến thể khác.');
+      // Find the next available variant
+      const nextAvailableVariant = product.product_variant.find(v => {
+        const qty = v.variant_stock || v.variant_quantity || v.stock || v.quantity || v.inventory || 0;
+        
+        return qty > 0 && v._id !== variant._id;
+      });
+      if (nextAvailableVariant) {
+        setSelectedVariant(nextAvailableVariant);
+        // Update image for the new variant
+        if (nextAvailableVariant.variant_image_url) {
+          if (typeof nextAvailableVariant.variant_image_url === 'string' && nextAvailableVariant.variant_image_url.startsWith('/uploads_product/')) {
+            setCurrentDisplayImage(`${API_BASE_URL}${nextAvailableVariant.variant_image_url}`);
+          } else {
+            setCurrentDisplayImage(nextAvailableVariant.variant_image_url);
+          }
+        } else if (nextAvailableVariant.variant_image_base64 && nextAvailableVariant.variant_image_type) {
+          setCurrentDisplayImage(`data:${nextAvailableVariant.variant_image_type};base64,${nextAvailableVariant.variant_image_base64}`);
+        } else {
+          if (typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')) {
+            setCurrentDisplayImage(`${API_BASE_URL}${product.product_image}`);
+          } else {
+            setCurrentDisplayImage(product.product_image);
+          }
+        }
+        Alert.alert('Thông báo', 'Biến thể này đã hết hàng. Đã chuyển sang biến thể còn hàng tiếp theo.');
+      } else {
+        Alert.alert('Thông báo', 'Biến thể này đã hết hàng và không còn biến thể nào khác.');
+      }
       return;
     }
 
@@ -164,14 +212,19 @@ const ProductDetailScreen = () => {
     });
 
     if (variant.variant_image_url) {
-      console.log('=== PRODUCT DETAIL: Setting variant image URL ===');
-      setCurrentDisplayImage(variant.variant_image_url);
+      if (typeof variant.variant_image_url === 'string' && variant.variant_image_url.startsWith('/uploads_product/')) {
+        setCurrentDisplayImage(`${API_BASE_URL}${variant.variant_image_url}`);
+      } else {
+        setCurrentDisplayImage(variant.variant_image_url);
+      }
     } else if (variant.variant_image_base64 && variant.variant_image_type) {
-      console.log('=== PRODUCT DETAIL: Setting variant base64 image ===');
       setCurrentDisplayImage(`data:${variant.variant_image_type};base64,${variant.variant_image_base64}`);
     } else {
-      console.log('=== PRODUCT DETAIL: Using default product image ===');
-      setCurrentDisplayImage(product.product_image);
+      if (typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')) {
+        setCurrentDisplayImage(`${API_BASE_URL}${product.product_image}`);
+      } else {
+        setCurrentDisplayImage(product.product_image);
+      }
     }
   };
 
@@ -531,7 +584,7 @@ const styles = StyleSheet.create({
   },
   productImage: {
     width: width,
-    height: width * 0.7,
+    height: width * 0.9,
   },
   detailsContainer: {
     padding: 16,
@@ -630,8 +683,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   quantityButton: {
-    width: 30,
-    height: 30,
+    width: 40,
+    height: 40,
     borderRadius: 15,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',

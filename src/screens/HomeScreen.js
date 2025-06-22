@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, SafeAreaView, Text, FlatList, TouchableOpacity, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from '../firebase/firebaseConfig';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const numColumns = 2;
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width / numColumns - 24;
 const PRODUCTS_PER_PAGE = 2;
+
 
 /**
  * Màn hình Trang chủ (Home Screen)
@@ -72,7 +76,7 @@ const HomeScreen = ({ navigation }) => {
         return;
       }
 
-      console.log('Parsed API Response for page', page, ':', responseData);
+      // console.log('Parsed API Response for page', page, ':', responseData);
       console.log('Type of responseData:', typeof responseData);
       console.log('Is responseData truthy?', !!responseData);
       console.log('Does responseData have data property?', 'data' in responseData);
@@ -136,7 +140,7 @@ const HomeScreen = ({ navigation }) => {
         return;
       }
 
-      console.log('Parsed Initial API Response:', responseData);
+      // console.log('Parsed Initial API Response:', responseData);
       console.log('Type of responseData:', typeof responseData);
       console.log('Is responseData truthy?', !!responseData);
       console.log('Does responseData have data property?', 'data' in responseData);
@@ -289,9 +293,11 @@ const HomeScreen = ({ navigation }) => {
   const renderItem = ({ item }) => {
     // console.log('Rendering product:', item);
     // console.log('Product Image URL before validation:', item.product_image);
-    const productImageSource = (typeof item.product_image === 'string' && (item.product_image.startsWith('http://') || item.product_image.startsWith('https://') || item.product_image.startsWith('data:image')))
-      ? { uri: item.product_image }
-      : require('../assets/errorimg.webp');
+    const productImageSource = (typeof item.product_image === 'string' && item.product_image.startsWith('/uploads_product/'))
+      ? { uri: `${API_BASE_URL}${item.product_image}` }
+      : (typeof item.product_image === 'string' && (item.product_image.startsWith('http://') || item.product_image.startsWith('https://') || item.product_image.startsWith('data:image')))
+        ? { uri: item.product_image }
+        : require('../assets/errorimg.webp');
 
     return (
       <TouchableOpacity 
