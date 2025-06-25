@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
 
@@ -192,46 +193,19 @@ const RatingScreen = () => {
         console.log('User cancelled image capture');
       } else {
         console.log('No image selected or error occurred');
-        // Fallback to placeholder if no image selected
-        Alert.alert(
-          'Không có ảnh được chọn',
-          'Đang thêm ảnh mẫu để test.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                const newImages = [...(images[itemId] || []), { 
-                  uri: 'https://via.placeholder.com/300x300?text=Test+Image' 
-                }];
-                setImages(prev => ({
-                  ...prev,
-                  [itemId]: newImages
-                }));
-              }
-            }
-          ]
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Không có ảnh được chọn',
+          text2: 'Vui lòng thử lại hoặc chọn ảnh khác.'
+        });
       }
     } catch (error) {
       console.error('Image capture error:', error);
-      Alert.alert(
-        'Lỗi chụp ảnh', 
-        'Không thể chụp ảnh. Đang thêm ảnh mẫu để test.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              const newImages = [...(images[itemId] || []), { 
-                uri: 'https://via.placeholder.com/300x300?text=Test+Image' 
-              }];
-              setImages(prev => ({
-                ...prev,
-                [itemId]: newImages
-              }));
-            }
-          }
-        ]
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi chụp ảnh',
+        text2: 'Không thể chụp ảnh. Vui lòng thử lại.'
+      });
     }
   };
 
@@ -275,46 +249,19 @@ const RatingScreen = () => {
         console.log('User cancelled video capture');
       } else {
         console.log('No video selected or error occurred');
-        // Fallback to placeholder if no video selected
-        Alert.alert(
-          'Không có video được chọn',
-          'Đang thêm video mẫu để test.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                const newVideos = [...(videos[itemId] || []), { 
-                  uri: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4' 
-                }];
-                setVideos(prev => ({
-                  ...prev,
-                  [itemId]: newVideos
-                }));
-              }
-            }
-          ]
-        );
+        Toast.show({
+          type: 'error',
+          text1: 'Không có video được chọn',
+          text2: 'Vui lòng thử lại hoặc chọn video khác.'
+        });
       }
     } catch (error) {
       console.error('Video capture error:', error);
-      Alert.alert(
-        'Lỗi quay video', 
-        'Không thể quay video. Đang thêm video mẫu để test.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              const newVideos = [...(videos[itemId] || []), { 
-                uri: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4' 
-              }];
-              setVideos(prev => ({
-                ...prev,
-                [itemId]: newVideos
-              }));
-            }
-          }
-        ]
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi quay video',
+        text2: 'Không thể quay video. Vui lòng thử lại.'
+      });
     }
   };
 
@@ -818,6 +765,7 @@ const RatingScreen = () => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      <Toast />
     </View>
   );
 };
@@ -831,10 +779,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E3E4E5',
+    borderBottomColor: '#E0E0E0',
+    elevation: 2,
+    shadowColor: '#999',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
   },
   headerIcon: {
     width: 24,
@@ -852,87 +805,91 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   orderInfo: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
+    backgroundColor: '#FFF',
+    padding: 14,
     borderRadius: 12,
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    elevation: 1,
+    shadowColor: '#999',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   orderInfoText: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    color: '#888',
+    fontWeight: '500',
   },
   productCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    elevation: 1,
+    shadowColor: '#999',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
   },
   productHeader: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   productImage: {
-    width: 80,
-    height: 80,
+    width: 70,
+    height: 70,
     borderRadius: 8,
     marginRight: 12,
+    backgroundColor: '#F9F9F9',
   },
   productInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   productName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   productQuantity: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#888',
   },
   ratingSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   ratingTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   starsContainer: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   starButton: {
-    marginRight: 8,
+    marginRight: 4,
   },
   star: {
-    fontSize: 32,
+    fontSize: 28,
+    color: '#E0E0E0',
   },
   ratingText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#888',
   },
   commentSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   commentTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   commentInput: {
     borderWidth: 1,
@@ -941,31 +898,31 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 14,
     color: '#000',
-    backgroundColor: '#FFFFFF',
-    minHeight: 100,
+    backgroundColor: '#FFF',
+    minHeight: 80,
   },
   mediaSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   mediaHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   mediaTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#000',
   },
   mediaButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#000',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   mediaButtonText: {
-    color: '#FFFFFF',
+    color: '#FFF',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -977,63 +934,73 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   mediaThumbnail: {
-    width: 80,
-    height: 80,
+    width: 70,
+    height: 70,
     borderRadius: 8,
     backgroundColor: '#F0F0F0',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   removeMediaButton: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#888',
     borderRadius: 12,
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFF',
   },
   removeMediaText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: '#FFF',
+    fontSize: 15,
     fontWeight: 'bold',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#000',
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     marginTop: 16,
     marginBottom: 32,
+    shadowColor: '#999',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
   },
   submitButtonDisabled: {
-    backgroundColor: '#CCCCCC',
+    backgroundColor: '#E0E0E0',
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
   videoThumbnail: {
-    width: 80,
-    height: 80,
+    width: 70,
+    height: 70,
     borderRadius: 8,
     backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   videoPlayIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   videoPlayText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#FFF',
   },
 });
 

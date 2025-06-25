@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper';
@@ -31,6 +31,7 @@ const CartScreen = (props) => {
   const [finalTotal, setFinalTotal] = useState(0);
   const [selectAll, setSelectAll] = useState(false);
   const [animatedValues, setAnimatedValues] = useState({});
+  const quantityTimers = useRef({}); // Thêm dòng này để lưu timer debounce cho từng sản phẩm
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -161,68 +162,58 @@ const CartScreen = (props) => {
     }
   }, [cartItem, selectedItems]);
 
-  const handleQuantityChange = async (type, itemId) => {
+  const handleQuantityChange = (type, itemId) => {
     const currentItem = cartItem.find(item => item.id_variant === itemId);
-    if (!currentItem) {
-      console.log('Item not found in cart:', itemId);
-      return;
-    }
+    if (!currentItem) return;
 
     let newQuantity = currentItem.quantity;
     if (type === 'plus') newQuantity++;
     else if (type === 'minus' && newQuantity > 1) newQuantity--;
     else return;
 
-    try {
-      console.log('Updating quantity with data:', {
-        itemId,
-        newQuantity,
-        userId: idUser,
-        currentItem
-      });
+    const prevCartItem = [...cartItem];
+    setCartItem(prev =>
+      prev.map(item =>
+        item.id_variant === itemId ? { ...item, quantity: newQuantity } : item
+      )
+    );
 
-      const response = await fetch(`${API_ENDPOINTS.CART.UPDATE_QUANTITY(currentItem._id)}`, {
-        method: 'PATCH',
-        headers: {
-          ...API_HEADERS,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          quantity: newQuantity,
-          userId: idUser
-        }),
-      });
-
-      // Log the raw response for debugging
-      const responseText = await response.text();
-      console.log('Raw response:', responseText);
-
-      if (response.status === 404) {
-        throw new Error('Endpoint not found. Please check the API configuration.');
-      }
-
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (e) {
-        console.log('Response is not JSON, but operation might have succeeded');
-        // If we get here, the operation might have succeeded but returned non-JSON
-        // We'll proceed with refreshing the cart
-        getCart();
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(responseData.message || `Failed to update quantity: ${response.status}`);
-      }
-
-      console.log('Quantity updated successfully:', responseData);
-      getCart(); // Re-fetch cart to update UI
-
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      Toast.show({ type: 'error', text1: 'Lỗi', text2: error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại sau.' });
+    // Clear timer cũ nếu có
+    if (quantityTimers.current[itemId]) {
+      clearTimeout(quantityTimers.current[itemId]);
     }
+
+    // Đặt timer mới (debounce 400ms)
+    quantityTimers.current[itemId] = setTimeout(async () => {
+      try {
+        const response = await fetch(`${API_ENDPOINTS.CART.UPDATE_QUANTITY(currentItem._id)}`, {
+          method: 'PATCH',
+          headers: {
+            ...API_HEADERS,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            quantity: newQuantity,
+            userId: idUser
+          }),
+        });
+
+        const responseText = await response.text();
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (e) {
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(responseData.message || `Failed to update quantity: ${response.status}`);
+        }
+      } catch (error) {
+        setCartItem(prevCartItem);
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại sau.' });
+      }
+    }, 400);
   };
 
   const handleRemoveItem = async (cartItemId) => {
@@ -281,7 +272,7 @@ const CartScreen = (props) => {
         console.error('Error removing item:', error);
         Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Có lỗi khi xóa sản phẩm khỏi giỏ hàng' });
         // Nếu lỗi, có thể reload lại cart
-        setTimeout(() => { getCart(); }, 2000);
+        setTimeout(() => { getCart(); }, 100);
       }
     });
   };
@@ -328,14 +319,16 @@ const CartScreen = (props) => {
        product.image.startsWith('data:image'))
     )
       ? { uri: product.image }
-      : require('../assets/LogoGG.png');
+      : require('../assets/errorimg.webp');
 
     return (
       <Animated.View style={[styles.productContainer, { transform: [{ translateX: animatedValues[product.id_variant] || new Animated.Value(0) }] }]}>
         <Checkbox
           status={selectedItems[product.id_variant] ? 'checked' : 'unchecked'}
           onPress={() => toggleItemSelection(product.id_variant)}
-          style={styles.checkbox}
+          color="#000"
+          uncheckedColor="#E0E0E0"
+          style={[styles.checkbox, styles.customCheckbox]}
         />
         <Image 
           source={productImageSource} 
@@ -418,6 +411,9 @@ const CartScreen = (props) => {
             <Checkbox
               status={selectAll ? 'checked' : 'unchecked'}
               onPress={handleSelectAll}
+              color="#000"
+              uncheckedColor="#E0E0E0"
+              style={[styles.checkbox, styles.customCheckbox]}
             />
             <Text style={{color: '#222', fontSize: 14}}>Chọn tất cả</Text>
           </View>
@@ -449,7 +445,7 @@ const CartScreen = (props) => {
             disabled={Object.values(selectedItems).every(value => !value)}
           >
             <Image 
-              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e4f67212-d4f1-4513-bc97-88e16a24676d" }} 
+              source={require('../assets/checkout.png')} 
               style={styles.checkoutIcon} 
             />
             <Text style={styles.checkoutText}>{"Checkout"}</Text>
@@ -685,6 +681,9 @@ const styles = StyleSheet.create({
   },
   checkbox: {
     marginRight: 8,
+  },
+  customCheckbox: {
+    // Add any custom styles for the checkbox here
   },
 });
 export default CartScreen;
