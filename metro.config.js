@@ -6,6 +6,15 @@ const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
  *
  * @type {import('metro-config').MetroConfig}
  */
-const config = {};
+const config = {
+  resolver: {
+    alias: {
+      './PickerWindows': './PickerWindows.js',
+      './PickerMacOS': './PickerMacOS.js',
+    },
+    platforms: ['android', 'ios', 'native', 'windows'],
+    resolverMainFields: ['react-native', 'browser', 'main'],
+  },
+};
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

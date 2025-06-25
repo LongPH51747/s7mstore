@@ -6,6 +6,7 @@ import { getApp } from '@react-native-firebase/app';
 import { initializeSdks } from './src/utils/initializeSdks';
 import { StyleSheet, Text, View } from 'react-native'
 
+
 const App: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const backgroundStyle = {
@@ -35,7 +36,13 @@ const App: React.FC = () => {
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
+      
       <AppNavigator />
+      {/* <CartScreen/> */}
+      {/* <CheckoutScreen/> */}
+      {/* <OrderDetailsScreen/> */}
+      {/* <OrdersScreen/> */}
+      {/* <PaymentSuccessScreen/> */}
     </SafeAreaView>
   );
 };

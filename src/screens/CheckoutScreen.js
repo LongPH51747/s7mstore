@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -11,7 +11,7 @@ export default function CheckoutScreen() {
   const navigation = useNavigation();
 
   const [cartItems, setCartItems] = useState([]);
-  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [paymentMethod, setPaymentMethod] = useState('COD');
   const [subTotalPrice, setSubTotalPrice] = useState(0);
   const [voucherAmount, setVoucherAmount] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
@@ -207,13 +207,12 @@ export default function CheckoutScreen() {
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
           {cartItems.map((item, index) => {
             const productImageSource = (
-              item.image && 
-              (item.image.startsWith('http://') || 
-               item.image.startsWith('https://') || 
-               item.image.startsWith('data:image'))
+              item.image && item.image.startsWith('/uploads_product/')
             )
-              ? { uri: item.image }
-              : require('../assets/LogoGG.png');
+              ? { uri: `${API_BASE_URL}${item.image}` }
+              : (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image')))
+                ? { uri: item.image }
+                : require('../assets/errorimg.webp');
 
             return (
               <View key={item.id_variant || item._id || index} style={styles.productRow}>
@@ -221,9 +220,9 @@ export default function CheckoutScreen() {
                   source={productImageSource}
                   style={styles.image}
                   onError={(e) => {
-                    console.error('Product image loading error:', e.nativeEvent.error);
+                    console.error('Product image loading error in CheckoutScreen:', e.nativeEvent.error, 'for product:', item.name_product || item.product_name);
                     e.target.setNativeProps({
-                      source: require('../assets/LogoGG.png')
+                      source: require('../assets/errorimg.webp')
                     });
                   }}
                 />
@@ -260,9 +259,9 @@ export default function CheckoutScreen() {
           <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
           <View style={styles.radioRow}>
             <RadioButton
-              value="cod"
-              status={paymentMethod === 'cod' ? 'checked' : 'unchecked'}
-              onPress={() => setPaymentMethod('cod')}
+              value="COD"
+              status={paymentMethod === 'COD' ? 'checked' : 'unchecked'}
+              onPress={() => setPaymentMethod('COD')}
             />
             <Text style={styles.paymentMethodText}>Thanh toán khi nhận hàng</Text>
           </View>

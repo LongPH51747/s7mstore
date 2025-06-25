@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { API_BASE_URL } from '../config/api';
 
 const OrderDetailScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -58,13 +59,18 @@ const OrderDetailScreen = ({ route }) => {
             <View key={item.id_variant || index} style={styles.productItem}>
               <Image
                 source={(() => {
-                  if (item.image && 
-                    (item.image.startsWith('http://') ||
-                     item.image.startsWith('https://') ||
-                     item.image.startsWith('data:image'))
-                  ) {
-                    return { uri: item.image };
+                  console.log('OrderDetailScreen - item.image:', item.image);
+                  if (item.image && item.image.startsWith('/uploads_product/')) {
+                    const src = { uri: `${API_BASE_URL}${item.image}` };
+                    console.log('OrderDetailScreen - image source:', src);
+                    return src;
                   }
+                  if (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image'))) {
+                    const src = { uri: item.image };
+                    console.log('OrderDetailScreen - image source:', src);
+                    return src;
+                  }
+                  console.log('OrderDetailScreen - image source: default');
                   return require('../assets/LogoGG.png');
                 })()}
                 style={styles.productImage}

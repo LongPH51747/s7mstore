@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 
 const OrdersScreen = () => {
   const navigation = useNavigation();
@@ -164,13 +164,18 @@ const OrdersScreen = () => {
                       <Image
                         source={(() => {
                           const item = order.orderItems[0];
-                          if (item.image && 
-                            (item.image.startsWith('http://') ||
-                             item.image.startsWith('https://') ||
-                             item.image.startsWith('data:image'))
-                          ) {
-                            return { uri: item.image };
+                          console.log('OrderScreen - item.image:', item.image);
+                          if (item.image && item.image.startsWith('/uploads_product/')) {
+                            const src = { uri: `${API_BASE_URL}${item.image}` };
+                            console.log('OrderScreen - image source:', src);
+                            return src;
                           }
+                          if (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image'))) {
+                            const src = { uri: item.image };
+                            console.log('OrderScreen - image source:', src);
+                            return src;
+                          }
+                          console.log('OrderScreen - image source: default');
                           return require('../assets/LogoGG.png');
                         })()}
                         style={styles.productImageInOrder}
@@ -192,13 +197,18 @@ const OrdersScreen = () => {
                     <View key={orderItem.id_variant || `item-${index}`} style={styles.card}>
                       <Image
                         source={(() => {
-                          if (orderItem.image && 
-                            (orderItem.image.startsWith('http://') ||
-                             orderItem.image.startsWith('https://') ||
-                             orderItem.image.startsWith('data:image'))
-                          ) {
-                            return { uri: orderItem.image };
+                          console.log('OrderScreen - item.image:', orderItem.image);
+                          if (orderItem.image && orderItem.image.startsWith('/uploads_product/')) {
+                            const src = { uri: `${API_BASE_URL}${orderItem.image}` };
+                            console.log('OrderScreen - image source:', src);
+                            return src;
                           }
+                          if (orderItem.image && (orderItem.image.startsWith('http://') || orderItem.image.startsWith('https://') || orderItem.image.startsWith('data:image'))) {
+                            const src = { uri: orderItem.image };
+                            console.log('OrderScreen - image source:', src);
+                            return src;
+                          }
+                          console.log('OrderScreen - image source: default');
                           return require('../assets/LogoGG.png');
                         })()}
                         style={styles.productImageInOrder}

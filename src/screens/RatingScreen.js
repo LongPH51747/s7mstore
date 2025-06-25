@@ -14,7 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
@@ -111,7 +111,7 @@ const RatingScreen = () => {
 
   const handleImageCapture = (itemId) => {
     Alert.alert(
-      'Chụp ảnh',
+      'Ảnh',
       'Chọn phương thức',
       [
         {
@@ -132,7 +132,7 @@ const RatingScreen = () => {
 
   const handleVideoCapture = (itemId) => {
     Alert.alert(
-      'Quay video',
+      'Video',
       'Chọn phương thức',
       [
         {
@@ -176,6 +176,12 @@ const RatingScreen = () => {
 
       if (result.assets && result.assets.length > 0) {
         const newImages = [...(images[itemId] || []), { uri: result.assets[0].uri }];
+        console.log('Adding image to state:', {
+          itemId,
+          newImageUri: result.assets[0].uri,
+          totalImages: newImages.length,
+          allImages: newImages
+        });
         setImages(prev => ({
           ...prev,
           [itemId]: newImages
@@ -184,6 +190,12 @@ const RatingScreen = () => {
       } else if (result.uri) {
         // Fallback for older version structure
         const newImages = [...(images[itemId] || []), { uri: result.uri }];
+        console.log('Adding image to state (fallback):', {
+          itemId,
+          newImageUri: result.uri,
+          totalImages: newImages.length,
+          allImages: newImages
+        });
         setImages(prev => ({
           ...prev,
           [itemId]: newImages
@@ -193,6 +205,7 @@ const RatingScreen = () => {
         console.log('User cancelled image capture');
       } else {
         console.log('No image selected or error occurred');
+        console.log('Full result object:', result);
         Toast.show({
           type: 'error',
           text1: 'Không có ảnh được chọn',
@@ -621,8 +634,13 @@ const RatingScreen = () => {
     const media = type === 'image' ? images[itemId] : videos[itemId];
     const removeFunction = type === 'image' ? removeImage : removeVideo;
     const captureFunction = type === 'image' ? handleImageCapture : handleVideoCapture;
-    const buttonText = type === 'image' ? 'Chụp ảnh' : 'Quay video';
+    const buttonText = type === 'image' ? 'Ảnh' : 'Video';
     const iconText = type === 'image' ? '📷' : '🎥';
+
+    console.log(`Rendering ${type} section for item ${itemId}:`, {
+      mediaCount: media ? media.length : 0,
+      media: media
+    });
 
     return (
       <View style={styles.mediaSection}>
@@ -642,9 +660,28 @@ const RatingScreen = () => {
               <View key={index} style={styles.mediaItem}>
                 {type === 'image' ? (
                   <Image
-                    source={{ uri: item.uri || item }}
+                    source={(() => {
+                      // For images selected from library or camera, use the URI directly
+                      if (item.uri) {
+                        return { uri: item.uri };
+                      }
+                      // Fallback for other cases
+                      if (item && item.startsWith('/uploads_product/')) {
+                        return { uri: `${API_BASE_URL}${item}` };
+                      } else if (item && (item.startsWith('http://') || item.startsWith('https://') || item.startsWith('data:image'))) {
+                        return { uri: item };
+                      } else {
+                        return require('../assets/errorimg.webp');
+                      }
+                    })()}
                     style={styles.mediaThumbnail}
                     resizeMode="cover"
+                    onError={(e) => {
+                      console.error('Media image loading error in RatingScreen:', e.nativeEvent.error, 'for item:', item);
+                      e.target.setNativeProps({
+                        source: require('../assets/errorimg.webp')
+                      });
+                    }}
                   />
                 ) : (
                   <View style={styles.videoThumbnail}>
@@ -700,17 +737,22 @@ const RatingScreen = () => {
               <View style={styles.productHeader}>
                 <Image
                   source={(() => {
-                    if (item.image && 
-                      (item.image.startsWith('http://') ||
-                       item.image.startsWith('https://') ||
-                       item.image.startsWith('data:image'))
-                    ) {
+                    if (item.image && item.image.startsWith('/uploads_product/')) {
+                      return { uri: `${API_BASE_URL}${item.image}` };
+                    } else if (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image'))) {
                       return { uri: item.image };
+                    } else {
+                      return require('../assets/errorimg.webp');
                     }
-                    return require('../assets/LogoGG.png');
                   })()}
                   style={styles.productImage}
                   resizeMode="cover"
+                  onError={(e) => {
+                    console.error('Product image loading error in RatingScreen:', e.nativeEvent.error, 'for product:', item.name_product || 'Unknown product');
+                    e.target.setNativeProps({
+                      source: require('../assets/errorimg.webp')
+                    });
+                  }}
                 />
                 <View style={styles.productInfo}>
                   <Text style={styles.productName} numberOfLines={2}>
@@ -920,6 +962,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   mediaButtonText: {
     color: '#FFF',
