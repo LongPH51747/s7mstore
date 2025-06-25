@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { View, ActivityIndicator, Text } from 'react-native'; // Import View, ActivityIndicator, Text for loading state
 
 // Import các màn hình của bạn
-import ProfileScreen from './screens/ProfileScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import ForgotPasswordScreen from './screens/ForgotPassword';
 import OtpVerificationScreen from './screens/OtpScreen';
 import ResetPasswordScreen from './screens/ResetPassword';
@@ -13,11 +13,11 @@ import RefundReturnScreen from './screens/TraHangScreen';
 import AddAddressScreen from './screens/AddAddress';
 import RegisterScreen from './screens/RegisterScreen';
 import LoginScreen from './screens/LoginScreen';
-import UserChatScreen from './screens/ChatScreen';
+import UserChatScreen from './src/screens/ChatScreen';
 
 
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { SocketProvider } from './contexts/SocketContext'; // Import SocketProvider
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { SocketProvider } from './src/contexts/SocketContext'; // Import SocketProvider
 
 // Component nội dung chính của ứng dụng sau khi đã bọc Providers
 const AppContent = () => {

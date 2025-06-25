@@ -4,127 +4,16 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
 
-// const orders = [
-//   {
-//     id: "order123456789",
-//     userId: "68386c1824d040c9bd6bd868",
-//     orderItems: [
-//       {
-//         id_variant: "variant001",
-//         name_product: "Áo thun nam cổ tròn",
-//         color: "Đen",
-//         size: "L",
-//         quantity: 2,
-//         unit_price_item: 199000,
-//         total_price_item: 398000,
-//         image: "https://example.com/images/product-variant-1.png"
-//       },
-//       {
-//         id_variant: "variant002",
-//         name_product: "Quần short thể thao",
-//         color: "Xám",
-//         size: "M",
-//         quantity: 1,
-//         unit_price_item: 149000,
-//         total_price_item: 149000,
-//         image: "https://example.com/images/product-variant-2.png"
-//       }
-//     ],
-//     shipping: {
-//       address: "123 Nguyễn Trãi, Thanh Xuân, Hà Nội",
-//       phone: "0987654321",
-//       method: "Giao hàng tiết kiệm"
-//     },
-//     status: "Chờ xác nhận",
-//     sub_total_amount: 547000,
-//     total_amount: 577000,
-//     createdAt: "2025-06-06T12:30:00Z",
-//     updatedAt: "2025-06-06T12:30:00Z"
-//   },
-//   {
-//     id: "order123456786",
-//     userId: "68386c1824d040c9bd6bd868",
-//     orderItems: [
-//       {
-//         id_variant: "variant001",
-//         name_product: "Áo thun nam cổ tròn",
-//         color: "Đen",
-//         size: "L",
-//         quantity: 2,
-//         unit_price_item: 199000,
-//         total_price_item: 398000,
-//         image: "https://example.com/images/product-variant-1.png"
-//       },
-//       {
-//         id_variant: "variant002",
-//         name_product: "Quần short thể thao",
-//         color: "Xám",
-//         size: "M",
-//         quantity: 1,
-//         unit_price_item: 149000,
-//         total_price_item: 149000,
-//         image: "https://example.com/images/product-variant-2.png"
-//       }
-//     ],
-//     shipping: {
-//       address: "123 Nguyễn Trãi, Thanh Xuân, Hà Nội",
-//       phone: "0987654321",
-//       method: "Giao hàng tiết kiệm"
-//     },
-//     status: "Chờ xác nhận",
-//     sub_total_amount: 547000,
-//     total_amount: 577000,
-//     createdAt: "2025-06-06T12:30:00Z",
-//     updatedAt: "2025-06-06T12:30:00Z"
-//   },
-//   {
-//     id: "order123486789",
-//     userId: "68386c1824d040c9bd6bd868",
-//     orderItems: [
-//       {
-//         id_variant: "variant001",
-//         name_product: "Áo thun nam cổ tròn",
-//         color: "Đen",
-//         size: "L",
-//         quantity: 2,
-//         unit_price_item: 199000,
-//         total_price_item: 398000,
-//         image: "https://example.com/images/product-variant-1.png"
-//       },
-//       {
-//         id_variant: "variant002",
-//         name_product: "Quần short thể thao",
-//         color: "Xám",
-//         size: "M",
-//         quantity: 1,
-//         unit_price_item: 149000,
-//         total_price_item: 149000,
-//         image: "https://example.com/images/product-variant-2.png"
-//       }
-//     ],
-//     shipping: {
-//       address: "123 Nguyễn Trãi, Thanh Xuân, Hà Nội",
-//       phone: "0987654321",
-//       method: "Giao hàng tiết kiệm"
-//     },
-//     status: "Chờ xác nhận",
-//     sub_total_amount: 547000,
-//     total_amount: 577000,
-//     createdAt: "2025-06-06T12:30:00Z",
-//     updatedAt: "2025-06-06T12:30:00Z"
-//   }
-// ]
-
 const OrdersScreen = () => {
   const navigation = useNavigation();
 
   const [idUser, setIdUser] = useState(null);
-  const [selectedTab, setSelectedTab] = useState('Đang xử lý');
+  const [selectedTab, setSelectedTab] = useState('Chờ xác nhận');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState({});
 
-  const tabs = ['Đang xử lý', 'Chờ lấy hàng', 'Chờ giao hàng', 'Đã giao', 'Trả hàng'];
+  const tabs = ['Chờ xác nhận', 'Chờ lấy hàng', 'Chờ giao hàng', 'Đã giao', 'Trả hàng', 'Đã hủy'];
 
   const getUserInfo = useCallback(async () => {
     try {
@@ -172,6 +61,7 @@ const OrdersScreen = () => {
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
+        console.log(`${API_ENDPOINTS.ORDERS.GET_BY_USER_ID}`)
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -179,8 +69,20 @@ const OrdersScreen = () => {
         }
 
         const data = await response.json();
+        
+        // Debug logs for image data
+        data.forEach(order => {
+          console.log('Order ID:', order._id);
+          order.orderItems.forEach((item, index) => {
+            console.log(`Item ${index + 1} image data:`, {
+              hasImage: !!item.image,
+              imageType: item.image ? item.image.substring(0, 50) + '...' : 'no image',
+              imageLength: item.image ? item.image.length : 0
+            });
+          });
+        });
+
         setOrders(data);
-        console.log('Fetched orders:', data);
       } catch (error) {
         console.error('Lỗi khi lấy danh sách đơn hàng:', error);
         if (error.name === 'AbortError') {
@@ -210,18 +112,37 @@ const OrdersScreen = () => {
     }));
   };
 
-  const filteredOrders = orders ? orders.filter(o => o.order_status === selectedTab) : [];
+  const filteredOrders = orders ? orders.filter(o => o.status === selectedTab) : [];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Đơn hàng của bạn</Text>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Image 
+            source={require('../assets/back.png')} 
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Đơn hàng của bạn</Text>
+        <View style={styles.headerRight} />
+      </View>
 
-      <View style={styles.tabs}>
-        {tabs.map((tab, index) => (
-          <TouchableOpacity key={index} onPress={() => setSelectedTab(tab)} style={styles.tabItem}>
-            <Text style={[styles.tabText, selectedTab === tab && styles.activeTab]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.tabsContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabs}
+        >
+          {tabs.map((tab, index) => (
+            <TouchableOpacity key={index} onPress={() => setSelectedTab(tab)} style={styles.tabItem}>
+              <Text style={[styles.tabText, selectedTab === tab && styles.activeTab]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {loading ? (
@@ -235,74 +156,79 @@ const OrdersScreen = () => {
             <Text style={styles.noOrdersText}>Không có đơn hàng nào trong trạng thái này.</Text>
           ) : (
             filteredOrders.map((order) => {
-              const orderItems = order.order_items || [];
               const isExpanded = expandedOrders[order._id];
 
               return (
                 <View key={order._id} style={styles.cardWrapper}>
-                  <Text style={styles.status}>{order.order_status}</Text>
-                  {orderItems.length > 0 && (
+                  <Text style={styles.status}>{order.status}</Text>
+                  {order.orderItems.length > 0 && (
                     <View style={styles.card}>
                       <Image
                         source={(() => {
-                          const imageUrl = orderItems[0].product_variant?.variant_image_url ||
-                                           orderItems[0].product_variant?.variant_image_base64 ||
-                                           orderItems[0].product?.product_image;
-                          if (typeof imageUrl === 'string' &&
-                            (imageUrl.startsWith('http://') ||
-                              imageUrl.startsWith('https://') ||
-                              imageUrl.startsWith('data:image'))
+                          const item = order.orderItems[0];
+                          console.log('Rendering image for item:', {
+                            hasImage: !!item.image,
+                            imageType: item.image ? item.image.substring(0, 50) + '...' : 'no image'
+                          });
+                          if (item.image && 
+                            (item.image.startsWith('http://') ||
+                             item.image.startsWith('https://') ||
+                             item.image.startsWith('data:image'))
                           ) {
-                            return { uri: imageUrl };
+                            return { uri: item.image };
                           }
+                          console.log('Using default image for item');
                           return require('../assets/LogoGG.png');
                         })()}
                         style={styles.productImageInOrder}
                         resizeMode="cover"
                         onError={(e) => {
-                          console.error('Order item image loading error:', e.nativeEvent.error, 'for URL:', orderItems[0].product_variant?.variant_image_url || orderItems[0].product_variant?.variant_image_base64 || orderItems[0].product?.product_image);
+                          console.log('Image loading error:', {
+                            error: e.nativeEvent.error,
+                            item: order.orderItems[0].name_product
+                          });
                           e.target.setNativeProps({
                             source: require('../assets/LogoGG.png')
                           });
                         }}
                       />
                       <View style={styles.productInfoInOrder}>
-                        <Text style={styles.productTitle} numberOfLines={2}>{orderItems[0].product?.product_name}</Text>
-                        <Text style={styles.quantity}>x{orderItems[0].quantity}</Text>
+                        <Text style={styles.productTitle} numberOfLines={2}>
+                          {order.orderItems[0].name_product || 'Không rõ tên sản phẩm'}
+                        </Text>
+                        <Text style={styles.quantity}>x{order.orderItems[0].quantity}</Text>
                         <View style={styles.priceRow}>
-                          <Text style={styles.price}>{orderItems[0].unit_price_item?.toLocaleString('vi-VN')}đ</Text>
+                          <Text style={styles.price}>{order.orderItems[0].unit_price_item?.toLocaleString('vi-VN')}đ</Text>
                         </View>
                       </View>
                     </View>
                   )}
 
-                  {isExpanded && orderItems.slice(1).map((orderItem, index) => (
-                    <View key={orderItem._id || `item-${index}`} style={styles.card}>
+                  {isExpanded && order.orderItems.slice(1).map((orderItem, index) => (
+                    <View key={orderItem.id_variant || `item-${index}`} style={styles.card}>
                       <Image
                         source={(() => {
-                          const imageUrl = orderItem.product_variant?.variant_image_url ||
-                                           orderItem.product_variant?.variant_image_base64 ||
-                                           orderItem.product?.product_image;
-                          if (typeof imageUrl === 'string' &&
-                            (imageUrl.startsWith('http://') ||
-                              imageUrl.startsWith('https://') ||
-                              imageUrl.startsWith('data:image'))
+                          if (orderItem.image && 
+                            (orderItem.image.startsWith('http://') ||
+                             orderItem.image.startsWith('https://') ||
+                             orderItem.image.startsWith('data:image'))
                           ) {
-                            return { uri: imageUrl };
+                            return { uri: orderItem.image };
                           }
                           return require('../assets/LogoGG.png');
                         })()}
                         style={styles.productImageInOrder}
                         resizeMode="cover"
                         onError={(e) => {
-                          console.error('Order item image loading error:', e.nativeEvent.error, 'for URL:', orderItem.product_variant?.variant_image_url || orderItem.product_variant?.variant_image_base64 || orderItem.product?.product_image);
                           e.target.setNativeProps({
                             source: require('../assets/LogoGG.png')
                           });
                         }}
                       />
                       <View style={styles.productInfoInOrder}>
-                        <Text style={styles.productTitle} numberOfLines={2}>{orderItem.product?.product_name}</Text>
+                        <Text style={styles.productTitle} numberOfLines={2}>
+                          {orderItem.name_product || 'Không rõ tên sản phẩm'}
+                        </Text>
                         <Text style={styles.quantity}>x{orderItem.quantity}</Text>
                         <View style={styles.priceRow}>
                           <Text style={styles.price}>{orderItem.unit_price_item?.toLocaleString('vi-VN')}đ</Text>
@@ -311,7 +237,7 @@ const OrdersScreen = () => {
                     </View>
                   ))}
 
-                  {orderItems.length > 1 && ( // Only show toggle if there's more than 1 item
+                  {order.orderItems.length > 1 && (
                     <TouchableOpacity onPress={() => toggleExpanded(order._id)}>
                       <Text style={styles.toggleBtn}>
                         {isExpanded ? 'Ẩn bớt ▲' : 'Hiện thêm ▼'}
@@ -320,19 +246,21 @@ const OrdersScreen = () => {
                   )}
 
                   <Text style={styles.total}>
-                    Tổng số tiền ({orderItems.length} sản phẩm): {order.total_amount?.toLocaleString('vi-VN')}đ
+                    Tổng số tiền ({order.orderItems.length} sản phẩm): {order.total_amount?.toLocaleString('vi-VN')}đ
                   </Text>
 
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
                       style={styles.button}
-                      onPress={() => navigation.navigate('OrderDetail', { order: order })} // Pass the whole order object
+                      onPress={() => navigation.navigate('OrderDetail', { order: order })}
                     >
                       <Text style={styles.buttonText}>Xem chi tiết đơn hàng</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.button}>
-                      <Text style={styles.buttonText}>Mua lại</Text>
-                    </TouchableOpacity>
+                    {order.status === 'Đã giao' && (
+                      <TouchableOpacity style={styles.button}>
+                        <Text style={styles.buttonText}>Mua lại</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               );
@@ -347,25 +275,45 @@ const OrdersScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 40,
-    paddingHorizontal: 16,
     backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3E4E5',
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  headerRight: {
+    width: 40,
+  },
+  tabsContainer: {
+    height: 40,
     marginBottom: 12,
-    color: 'black'
   },
   tabs: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
-  tabItem: { // Added for better touchable area
+  tabItem: {
     paddingVertical: 5,
     paddingHorizontal: 10,
+    marginRight: 16,
   },
   tabText: {
     fontSize: 14,

@@ -11,6 +11,13 @@ import SearchResultsScreen from '../screens/SearchResultsScreen';
 import CartScreen from '../screens/CartScreen';
 import OrderScreen from '../screens/OrderScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import CheckoutScreen from '../screens/CheckoutScreen';
+import AddressScreen from '../screens/AddressScreen';
+import AddAddressScreen from '../screens/AddAddressScreen';
+import UpdateAddressScreen from '../screens/UpdateAddressScreen';
+import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import UserChatScreen from '../screens/ChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -19,7 +26,7 @@ const Stack = createStackNavigator();
  *
  * Chức năng:
  * - Định nghĩa các màn hình và luồng điều hướng chính
- * - Ẩn/hiện header cho từng màn hình
+ * - Ẩn/hiện header cho từng  màn hình
  * - Thiết lập màn hình khởi động
  */
 const AppNavigator = () => {
@@ -49,10 +56,21 @@ const AppNavigator = () => {
         
         {/* Màn hình giỏ hàng */}
         <Stack.Screen name="Cart" component={CartScreen} />
+        {/* Màn hình đặt hàng */}
+        <Stack.Screen name="Checkout" component={CheckoutScreen}/>
+        {/* Màn hình chọn địa chỉ */}
+        <Stack.Screen name="Address" component={AddressScreen} />
+        {/* Màn hình thêm địa chỉ */}
+        <Stack.Screen name="AddAddress" component={AddAddressScreen} />
+        {/* Màn hình sửa địa chỉ */}
+        <Stack.Screen name="UpdateAddress" component={UpdateAddressScreen} />
+        <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
         
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="Orders" component={OrderScreen} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+        <Stack.Screen name='Profile' component={ProfileScreen}/>
+        <Stack.Screen name='Chat' component={UserChatScreen}/>
         
       </Stack.Navigator>
     </NavigationContainer>
