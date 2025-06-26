@@ -147,7 +147,7 @@ export default function CheckoutScreen() {
 
       const result = await response.json();
       console.log('Order created:', result);
-      navigation.navigate('PaymentSuccess');
+      navigation.navigate('PaymentSuccess', { orderId: result._id || result.id });
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');

@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const PaymentSuccessScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const orderId = route.params?.orderId || '24587745633248'; // Fallback to default if no orderId passed
 
   const handleContinue = () => {
     navigation.navigate('Home'); // Navigate to the Home screen
@@ -19,7 +21,7 @@ const PaymentSuccessScreen = () => {
       </View>
 
       <Text style={styles.title}>Payment successful!</Text>
-      <Text style={styles.orderNumber}>Order number: 24587745633248</Text>
+      <Text style={styles.orderNumber}>Mã đơn hàng: {orderId}</Text>
       <Text style={styles.thankYou}>Thank you for shopping!</Text>
 
       <TouchableOpacity style={styles.button} onPress={handleContinue}>

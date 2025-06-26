@@ -242,19 +242,13 @@ const OrdersScreen = () => {
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
                       style={styles.buttonPrimary}
-                      onPress={() => navigation.navigate('OrderDetail', { order: order })}
+                      onPress={() => navigation.navigate('OrderDetail', { order: order, onOrderUpdate: getOrders })}
                     >
                       <Text style={styles.buttonPrimaryText}>Xem chi tiết</Text>
                     </TouchableOpacity>
                     {order.status === 'Giao thành công' && (
                       <>
-                        <TouchableOpacity 
-                          style={styles.buttonRating}
-                          onPress={() => navigation.navigate('Rating', { order: order })}
-                        >
-                          <Text style={styles.buttonRatingText}>Đánh giá</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.buttonSecondary}>
+                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Checkout', { cartItems: order.orderItems })}>
                           <Text style={styles.buttonSecondaryText}>Mua lại</Text>
                         </TouchableOpacity>
                       </>
@@ -456,18 +450,6 @@ const styles = StyleSheet.create({
   },
   buttonSecondaryText: {
     color: '#222',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  buttonRating: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    marginLeft: 4,
-  },
-  buttonRatingText: {
-    color: '#fff',
     fontWeight: 'bold',
     fontSize: 13,
   },

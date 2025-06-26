@@ -1,11 +1,61 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, API_HEADERS } from '../config/api';
 
 const OrderDetailScreen = ({ route }) => {
   const navigation = useNavigation();
-  const { order } = route.params;
+  const { order, onOrderUpdate } = route.params;
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelOrder = () => {
+    Alert.alert(
+      'Hủy đơn hàng',
+      'Bạn có chắc chắn muốn hủy đơn hàng này?',
+      [
+        { text: 'Không', style: 'cancel' },
+        {
+          text: 'Hủy đơn',
+          onPress: async () => {
+            if (isCancelling) return;
+            setIsCancelling(true);
+            try {
+              const response = await fetch(API_ENDPOINTS.ORDERS.UPDATE_STATUS(order._id), {
+                method: 'PATCH',
+                headers: API_HEADERS,
+                body: JSON.stringify({ status: 'Đã hủy' }),
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Lỗi không xác định' }));
+                throw new Error(errorData.message);
+              }
+
+              Alert.alert('Thành công', 'Đã hủy đơn hàng thành công.');
+              if (onOrderUpdate) {
+                onOrderUpdate();
+              }
+              navigation.goBack(); 
+
+            } catch (error) {
+              Alert.alert('Lỗi', `Không thể hủy đơn hàng: ${error.message}`);
+            } finally {
+              setIsCancelling(false);
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
+  const handleRateOrder = () => {
+    navigation.navigate('Rating', { order });
+  };
+
+  const handleReturnOrder = () => {
+    Alert.alert('Trả hàng', 'Chức năng trả hàng hiện đang được phát triển. Vui lòng quay lại sau.');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -109,6 +159,29 @@ const OrderDetailScreen = ({ route }) => {
           </View>
         </View>
       </ScrollView>
+
+      {order.status === 'Chờ xác nhận' && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.fullWidthButton, isCancelling && styles.disabledButton]}
+            onPress={handleCancelOrder}
+            disabled={isCancelling}
+          >
+            <Text style={styles.buttonTextPrimary}>{isCancelling ? 'Đang xử lý...' : 'Hủy đơn hàng'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {order.status === 'Giao thành công' && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.halfWidthButtonSecondary} onPress={handleReturnOrder}>
+            <Text style={styles.buttonTextSecondary}>Trả hàng</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.halfWidthButtonPrimary} onPress={handleRateOrder}>
+            <Text style={styles.buttonTextPrimary}>Đánh giá</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -155,7 +228,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-    paddingBottom: 20,
+    paddingBottom: 100,
   },
   section: {
     padding: 16,
@@ -229,6 +302,57 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#E3E4E5',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E3E4E5',
+    elevation: 5,
+  },
+  fullWidthButton: {
+    flex: 1,
+    backgroundColor: '#D3180C',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  halfWidthButtonPrimary: {
+    flex: 1,
+    backgroundColor: '#000',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  halfWidthButtonSecondary: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#000',
+    marginRight: 8,
+  },
+  buttonTextPrimary: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  buttonTextSecondary: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
 });
 
