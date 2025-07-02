@@ -13,7 +13,7 @@ const OrdersScreen = () => {
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState({});
 
-  const tabs = ['Chờ xác nhận', 'Chờ lấy hàng', 'Chờ giao hàng', 'Đã giao', 'Trả hàng', 'Đã hủy'];
+  const tabs = ['Chờ xác nhận', 'Chờ lấy hàng', 'Chờ giao hàng', 'Giao thành công', 'Trả hàng', 'Đã hủy'];
 
   const getUserInfo = useCallback(async () => {
     try {
@@ -117,29 +117,25 @@ const OrdersScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image 
             source={require('../assets/back.png')} 
-            style={styles.backIcon}
-            resizeMode="contain"
+            style={styles.headerIcon} 
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Đơn hàng của bạn</Text>
-        <View style={styles.headerRight} />
+        <View style={{ width: 24, height: 24 }} />
       </View>
 
       <View style={styles.tabsContainer}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabs}
         >
           {tabs.map((tab, index) => (
             <TouchableOpacity key={index} onPress={() => setSelectedTab(tab)} style={styles.tabItem}>
-              <Text style={[styles.tabText, selectedTab === tab && styles.activeTab]}>{tab}</Text>
+              <Text style={[styles.tabText, selectedTab === tab && styles.activeTab]} numberOfLines={1}>{tab}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -160,7 +156,9 @@ const OrdersScreen = () => {
 
               return (
                 <View key={order._id} style={styles.cardWrapper}>
-                  <Text style={styles.status}>{order.status}</Text>
+                  <View style={styles.statusRow}>
+                    <Text style={[styles.statusBadge, getStatusBadgeStyle(order.status)]}>{order.status}</Text>
+                  </View>
                   {order.orderItems.length > 0 && (
                     <View style={styles.card}>
                       <Image
@@ -182,15 +180,6 @@ const OrdersScreen = () => {
                         })()}
                         style={styles.productImageInOrder}
                         resizeMode="cover"
-                        onError={(e) => {
-                          console.log('Image loading error:', {
-                            error: e.nativeEvent.error,
-                            item: order.orderItems[0].name_product
-                          });
-                          e.target.setNativeProps({
-                            source: require('../assets/LogoGG.png')
-                          });
-                        }}
                       />
                       <View style={styles.productInfoInOrder}>
                         <Text style={styles.productTitle} numberOfLines={2}>
@@ -224,11 +213,6 @@ const OrdersScreen = () => {
                         })()}
                         style={styles.productImageInOrder}
                         resizeMode="cover"
-                        onError={(e) => {
-                          e.target.setNativeProps({
-                            source: require('../assets/LogoGG.png')
-                          });
-                        }}
                       />
                       <View style={styles.productInfoInOrder}>
                         <Text style={styles.productTitle} numberOfLines={2}>
@@ -250,21 +234,24 @@ const OrdersScreen = () => {
                     </TouchableOpacity>
                   )}
 
-                  <Text style={styles.total}>
-                    Tổng số tiền ({order.orderItems.length} sản phẩm): {order.total_amount?.toLocaleString('vi-VN')}đ
-                  </Text>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Tổng ({order.orderItems.length} sản phẩm):</Text>
+                    <Text style={styles.totalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
+                  </View>
 
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
-                      style={styles.button}
-                      onPress={() => navigation.navigate('OrderDetail', { order: order })}
+                      style={styles.buttonPrimary}
+                      onPress={() => navigation.navigate('OrderDetail', { order: order, onOrderUpdate: getOrders })}
                     >
-                      <Text style={styles.buttonText}>Xem chi tiết đơn hàng</Text>
+                      <Text style={styles.buttonPrimaryText}>Xem chi tiết</Text>
                     </TouchableOpacity>
-                    {order.status === 'Đã giao' && (
-                      <TouchableOpacity style={styles.button}>
-                        <Text style={styles.buttonText}>Mua lại</Text>
-                      </TouchableOpacity>
+                    {order.status === 'Giao thành công' && (
+                      <>
+                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Checkout', { cartItems: order.orderItems })}>
+                          <Text style={styles.buttonSecondaryText}>Mua lại</Text>
+                        </TouchableOpacity>
+                      </>
                     )}
                   </View>
                 </View>
@@ -277,38 +264,54 @@ const OrdersScreen = () => {
   );
 };
 
+function getStatusBadgeStyle(status) {
+  switch (status) {
+    case 'Chờ xác nhận':
+      return { backgroundColor: '#E0E0E0', color: '#222' };
+    case 'Chờ lấy hàng':
+      return { backgroundColor: '#BDBDBD', color: '#222' };
+    case 'Chờ giao hàng':
+      return { backgroundColor: '#9E9E9E', color: '#fff' };
+    case 'Giao thành công':
+      return { backgroundColor: '#616161', color: '#fff' };
+    case 'Trả hàng':
+      return { backgroundColor: '#757575', color: '#fff' };
+    case 'Đã hủy':
+      return { backgroundColor: '#424242', color: '#fff' };
+    default:
+      return { backgroundColor: '#BDBDBD', color: '#222' };
+  }
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F9F9F9',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E3E4E5',
-    backgroundColor: '#fff',
   },
-  backButton: {
-    padding: 8,
-  },
-  backIcon: {
+  headerIcon: {
     width: 24,
     height: 24,
   },
   headerTitle: {
+    flex: 1,
+    textAlign: 'center',
     fontSize: 18,
     fontWeight: 'bold',
     color: '#000',
   },
-  headerRight: {
-    width: 40,
-  },
   tabsContainer: {
     height: 40,
     marginBottom: 12,
+    position: 'relative',
   },
   tabs: {
     flexDirection: 'row',
@@ -317,117 +320,143 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     paddingVertical: 5,
-    paddingHorizontal: 10,
-    marginRight: 16,
+    paddingHorizontal: 16,
+    alignItems: 'center',
   },
   tabText: {
-    fontSize: 14,
-    color: 'black',
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
   },
   activeTab: {
-    color: 'red',
+    color: '#000',
     fontWeight: 'bold',
   },
   scrollView: {
     flex: 1,
   },
   cardWrapper: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 5,
+    margin: 5,
+    elevation: 1,
+    shadowColor: '#999',
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 'bold',
+    overflow: 'hidden',
+    alignSelf: 'flex-end',
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 10,
+    backgroundColor: '#FEFEFE',
+    padding: 5,
+    marginBottom: 2,
     elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
+    shadowColor: '#999',
+    shadowOpacity: 0.03,
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
   },
   productImageInOrder: {
-    width: 60,
-    height: 60,
+    width: 54,
+    height: 54,
     borderRadius: 8,
-    marginRight: 10,
+    marginRight: 6,
+    backgroundColor: '#fff',
   },
   productInfoInOrder: {
     flex: 1,
   },
-  status: {
-    textAlign: 'right',
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#000',
-  },
   productTitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: 'black'
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 0,
   },
   quantity: {
-    fontSize: 14,
-    marginTop: 4,
-    color: 'black'
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 0,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 4,
-  },
-  oldPrice: {
-    textDecorationLine: 'line-through',
-    color: '#888',
-    marginRight: 8,
+    marginVertical: 0,
   },
   price: {
     fontWeight: 'bold',
-    fontSize: 15,
-    color: '#2ecc71',
-  },
-  total: {
     fontSize: 14,
-    marginVertical: 6,
-    fontWeight: 'bold',
-    textAlign: 'right',
+    color: '#222',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 1,
+  },
+  totalLabel: {
+    fontSize: 13,
+    color: '#444',
+    fontWeight: '500',
+  },
+  totalValue: {
+    fontSize: 14,
     color: '#000',
+    fontWeight: 'bold',
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginTop: 10,
+    justifyContent: 'flex-end',
+    gap: 4,
+    marginTop: 3,
   },
-  button: {
-    flex: 1,
+  buttonPrimary: {
+    backgroundColor: '#222',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginLeft: 4,
+  },
+  buttonPrimaryText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  buttonSecondary: {
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#000',
-    padding: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 4,
+    borderColor: '#888',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginLeft: 4,
   },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
+  buttonSecondaryText: {
+    color: '#222',
+    fontWeight: 'bold',
+    fontSize: 13,
   },
   toggleBtn: {
     color: 'black',
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 5,
-    marginBottom: 10,
   },
   noOrdersText: {
     textAlign: 'center',

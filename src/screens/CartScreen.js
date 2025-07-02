@@ -43,7 +43,6 @@ const CartScreen = (props) => {
         const userInfo = JSON.parse(userInfoString);
         if (userInfo && userInfo._id) {
           setIdUser(userInfo._id);
-          console.log('User ID from AsyncStorage on focus (MongoDB _id):', userInfo._id);
         } else {
           setShowLoginModal(true);
         }
@@ -70,12 +69,10 @@ const CartScreen = (props) => {
 
   const getCart = useCallback(async () => {
     if(!idUser) {
-      console.log("Waiting for userId...");
       return;
     }
 
     try {
-      console.log('Fetching cart for userId:', idUser);
       const response = await fetch(`${API_ENDPOINTS.CART.GET_BY_USER_ID}/${idUser}`, {
         headers: API_HEADERS,
       });
@@ -92,18 +89,14 @@ const CartScreen = (props) => {
         throw new Error(data.message || `Failed to fetch cart: ${response.status}`);
       }
 
-      console.log('Cart data received:', data);
-      
       if (data && data.cartItem && Array.isArray(data.cartItem)) {
         setCart(data);
         setCartItem(data.cartItem);
       } else {
-        console.log('Invalid cart data format:', data);
         setCart({ cartItem: [] });
         setCartItem([]);
       }
     } catch (error) {
-      console.error('Lỗi khi lấy giỏ hàng:', error);
       Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể tải giỏ hàng. Vui lòng thử lại sau.' });
       setCart({ cartItem: [] });
       setCartItem([]);
@@ -128,7 +121,6 @@ const CartScreen = (props) => {
 
   useEffect(() => {
     if (cartItem && cartItem.length > 0) {
-      console.log("Số phần tử trong mảng cartItem:", cartItem.length);
       let subTotal = 0;
       cartItem.forEach(item => {
         if (selectedItems[item.id_variant]) {
@@ -147,7 +139,6 @@ const CartScreen = (props) => {
 
       setFinalTotal(subTotal - calculatedDiscount + (hasSelectedItems ? (subTotal > 500000 ? 0 : 30000) : 0));
     } else {
-      console.log("CartItem is empty or null.");
       setTotalPrice(0);
       setDiscount(0);
       setShippingFee(0);
@@ -202,7 +193,6 @@ const CartScreen = (props) => {
   const handleRemoveItem = async (cartItemId) => {
     const currentItem = cartItem.find(item => item.id_variant === cartItemId);
     if (!currentItem || !currentItem._id) {
-      console.log('Item not found in cart or missing _id:', cartItemId);
       Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không tìm thấy sản phẩm để xóa.' });
       return;
     }
@@ -225,7 +215,6 @@ const CartScreen = (props) => {
       }));
 
       try {
-        console.log('Call API to delete cart item:', currentItem._id);
         const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
           method: 'DELETE',
           headers: API_HEADERS,
@@ -244,12 +233,10 @@ const CartScreen = (props) => {
           throw new Error(responseData.message || `Failed to remove item: ${response.status}`);
         }
 
-        console.log('Delete cart item response:', responseData);
         Toast.show({ type: 'success', text1: 'Thành công', text2: 'Sản phẩm đã được xóa khỏi giỏ hàng.' });
         // Cập nhật lại giỏ hàng ngay lập tức
         await getCart();
       } catch (error) {
-        console.error('Error removing item:', error);
         // Rollback giao diện nếu xóa thất bại
         setCartItem(prev => [...prev, currentItem]);
         setCart(prev => ({
@@ -298,9 +285,6 @@ const CartScreen = (props) => {
 
   // Function to render a product item
   const renderProductItem = (product) => {
-    // Log chi tiết sản phẩm và tồn kho thực tế
-    console.log('CartScreen - Render product:', product);
-    console.log('CartScreen - Variant stock:', variantStocks[product.id_variant]);
     let productImageSource;
     if (typeof product.image === 'string' && product.image.startsWith('/uploads_product/')) {
       productImageSource = { uri: `${API_BASE_URL}${product.image}` };
@@ -324,9 +308,8 @@ const CartScreen = (props) => {
           source={productImageSource} 
           style={styles.productImage}
           onError={(e) => {
-            console.error('Product image loading error:', e.nativeEvent.error);
             e.target.setNativeProps({
-              source: require('../assets/LogoGG.png')
+              source: require('../assets/errorimg.webp')
             });
           }}
         />
