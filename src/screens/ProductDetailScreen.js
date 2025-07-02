@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -25,6 +26,7 @@ const ProductDetailScreen = () => {
   const [quantity, setQuantity] = useState(1);
   const [currentDisplayImage, setCurrentDisplayImage] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -229,6 +231,13 @@ const ProductDetailScreen = () => {
   };
 
   const handleAddToCart = async () => {
+    // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
+    const token = await AsyncStorage.getItem('userToken');
+    if (!token) {
+      setShowLoginModal(true);
+      return;
+    }
+
     console.log('=== PRODUCT DETAIL: handleAddToCart called ===');
     
     if (!userId) {
@@ -315,7 +324,6 @@ const ProductDetailScreen = () => {
                   `data:${selectedVariant.variant_image_type};base64,${selectedVariant.variant_image_base64}` : 
                   product.product_image),
           status: false,
-          variant_quantity: stockQuantity, // Add stock information to cart item
         }
       };
 
@@ -560,6 +568,27 @@ const ProductDetailScreen = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showLoginModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={{flex:1, justifyContent:'center', alignItems:'center', backgroundColor:'rgba(0,0,0,0.5)'}}>
+          <View style={{backgroundColor:'#fff', padding:24, borderRadius:12, alignItems:'center'}}>
+            <Text style={{fontSize:16, marginBottom:16}}>Bạn cần đăng nhập để sử dụng chức năng này!</Text>
+            <TouchableOpacity
+              style={{backgroundColor:'#1c2b38', padding:12, borderRadius:8}}
+              onPress={() => {
+                setShowLoginModal(false);
+                navigation.navigate('Login');
+              }}
+            >
+              <Text style={{color:'#fff', fontWeight:'bold'}}>Đăng nhập</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };

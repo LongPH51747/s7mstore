@@ -9,7 +9,7 @@
  * - Chuyển hướng đến màn hình Home sau khi đăng nhập thành công
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   View,
@@ -26,6 +26,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import { useFocusEffect } from '@react-navigation/native'; // Nếu muốn check mỗi lần vào Login
 
 const LoginScreen = ({ navigation }) => {
   // Cấu hình Google Sign-In khi component mount
@@ -202,13 +203,41 @@ const LoginScreen = ({ navigation }) => {
               photoURL: backendUser.avatar || userCredential.user.photoURL,
               uid: userCredential.user.uid, // Keep Firebase UID as a reference
               _id: backendUser._id, // Add MongoDB _id from backend
+              is_allowed: backendUser.is_allowed, // Đảm bảo có trường này
               // Add other fields from backendUser if necessary, e.g., phone, address
               ...backendUser
             };
 
+            const userId = backendUser._id;
+            if (userId) {
+              try {
+                // Gọi API kiểm tra trạng thái user mới nhất
+                const res = await fetch(`${API_ENDPOINTS.USERS.GET_BY_ID(userId)}`, {
+                  method: 'GET',
+                  headers: API_HEADERS,
+                });
+                const userData = await res.json();
+                if (!res.ok || userData.is_allowed === false || (userData.data && userData.data.is_allowed === false)) {
+                  await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+                  Alert.alert(
+                    'Tài khoản bị chặn',
+                    'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ hỗ trợ.',
+                    [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+                  );
+                  return;
+                }
+              } catch (e) {
+                // Nếu lỗi API, xử lý như chưa đăng nhập
+                await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+                navigation.replace('Login');
+                return;
+              }
+            }
+
             await AsyncStorage.setItem('userToken', backendResponseData.access_token);
             await AsyncStorage.setItem('shouldAutoLogin', 'true');
             await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
+
             console.log('Đã lưu token và thông tin người dùng từ backend, chuẩn bị chuyển màn hình Home');
             navigation.replace('Home');
           } else {
@@ -236,6 +265,23 @@ const LoginScreen = ({ navigation }) => {
               photoURL: userCredential.user.photoURL,
               uid: userCredential.user.uid
             }));
+
+            // Kiểm tra trạng thái is_allowed (nếu có)
+            const fallbackUserInfo = {
+              displayName: userCredential.user.displayName,
+              email: userCredential.user.email,
+              photoURL: userCredential.user.photoURL,
+              uid: userCredential.user.uid
+            };
+            if (fallbackUserInfo.is_allowed === false) {
+              await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+              Alert.alert(
+                'Tài khoản bị chặn',
+                'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ hỗ trợ.',
+                [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+              );
+              return;
+            }
 
             console.log('Đã lưu thông tin người dùng từ Firebase, chuẩn bị chuyển màn hình Home');
             navigation.replace('Home');
@@ -268,6 +314,45 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert('Lỗi', message);
     }
   };
+
+  const checkUserStatus = useCallback(async () => {
+    try {
+      const userToken = await AsyncStorage.getItem('userToken');
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      if (userToken && userInfoString) {
+        const userInfo = JSON.parse(userInfoString);
+        const userId = userInfo._id;
+        if (!userId) {
+          // Không có userId, xóa token
+          await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+          return;
+        }
+        // Gọi API kiểm tra trạng thái user
+        const response = await fetch(`${API_ENDPOINTS.USERS.GET_BY_ID(userId)}`, {
+          method: 'GET',
+          headers: API_HEADERS,
+        });
+        const data = await response.json();
+        if (!response.ok || !data || data.is_allowed === false) {
+          // User bị khóa hoặc không tồn tại
+          await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+          Alert.alert(
+            'Tài khoản bị chặn',
+            'Tài khoản của bạn đã bị chặn hoặc không tồn tại. Vui lòng liên hệ hỗ trợ.',
+            [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+          );
+          return;
+        }
+        // User hợp lệ, cho vào Home
+        navigation.replace('Home');
+      }
+    } catch (error) {
+      // Nếu lỗi, xóa token để tránh auto login lỗi
+      await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+    }
+  }, [navigation]);
+
+  useFocusEffect(checkUserStatus);
 
   return (
     <SafeAreaView style={styles.container}>

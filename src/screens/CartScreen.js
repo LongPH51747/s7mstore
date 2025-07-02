@@ -1,7 +1,9 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
+import { Animated, LayoutAnimation, Platform, UIManager, Modal, Alert } from 'react-native';
 
 import { 
   SafeAreaView, 
@@ -11,8 +13,7 @@ import {
   Image, 
   Text, 
   StyleSheet, 
-  ActivityIndicator,
-  Alert
+  ActivityIndicator
 } from "react-native";
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api'; // Import API config
 
@@ -27,6 +28,12 @@ const CartScreen = (props) => {
   const [discount, setDiscount] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
   const [finalTotal, setFinalTotal] = useState(0);
+  const [selectAll, setSelectAll] = useState(false);
+  const [animatedValues, setAnimatedValues] = useState({});
+  const [localQuantities, setLocalQuantities] = useState({});
+  const debounceTimers = useRef({});
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [variantStocks, setVariantStocks] = useState({}); // Lưu tồn kho theo id_variant
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -38,20 +45,15 @@ const CartScreen = (props) => {
           setIdUser(userInfo._id);
           console.log('User ID from AsyncStorage on focus (MongoDB _id):', userInfo._id);
         } else {
-          console.log('userInfo found but _id is missing on focus:', userInfo);
-          Alert.alert('Lỗi', 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại.');
-          navigation.replace('Login');
+          setShowLoginModal(true);
         }
       } else {
-        console.log('No userInfo found in AsyncStorage on focus.');
-        Alert.alert('Lỗi', 'Chưa đăng nhập. Vui lòng đăng nhập để xem giỏ hàng.');
-        navigation.replace('Login');
+        setShowLoginModal(true);
       }
     } catch (error) {
-      console.error('Lỗi khi lấy thông tin người dùng từ AsyncStorage on focus:', error);
-      Alert.alert('Lỗi', 'Không thể lấy thông tin người dùng. Vui lòng thử lại.');
+      setShowLoginModal(true);
     }
-  }, [navigation]);
+  }, []);
 
   useEffect(() => {
     // Initial load
@@ -73,7 +75,7 @@ const CartScreen = (props) => {
     }
 
     try {
-      console.log('=== CART SCREEN: Fetching cart for userId ===', idUser);
+      console.log('Fetching cart for userId:', idUser);
       const response = await fetch(`${API_ENDPOINTS.CART.GET_BY_USER_ID}/${idUser}`, {
         headers: API_HEADERS,
       });
@@ -90,40 +92,19 @@ const CartScreen = (props) => {
         throw new Error(data.message || `Failed to fetch cart: ${response.status}`);
       }
 
-      console.log('=== CART SCREEN: Raw cart data received ===');
-      console.log('Full cart response:', JSON.stringify(data, null, 2));
+      console.log('Cart data received:', data);
       
       if (data && data.cartItem && Array.isArray(data.cartItem)) {
-        console.log('=== CART SCREEN: Cart items details ===');
-        data.cartItem.forEach((item, index) => {
-          console.log(`Item ${index + 1}:`, {
-            id_variant: item.id_variant,
-            name_product: item.name_product,
-            color: item.color,
-            size: item.size,
-            quantity: item.quantity,
-            unit_price_item: item.unit_price_item,
-            price: item.price,
-            stock: item.stock,
-            variant_quantity: item.variant_quantity,
-            inventory: item.inventory,
-            image: item.image ? 'Has image' : 'No image',
-            _id: item._id,
-            allFields: Object.keys(item),
-            calculatedStock: item.variant_quantity || item.stock || item.quantity || item.inventory || 0
-          });
-        });
-        
         setCart(data);
         setCartItem(data.cartItem);
       } else {
-        console.log('=== CART SCREEN: Invalid cart data format ===', data);
+        console.log('Invalid cart data format:', data);
         setCart({ cartItem: [] });
         setCartItem([]);
       }
     } catch (error) {
-      console.error('=== CART SCREEN: Error fetching cart ===', error);
-      Alert.alert('Lỗi', 'Không thể tải giỏ hàng. Vui lòng thử lại sau.');
+      console.error('Lỗi khi lấy giỏ hàng:', error);
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể tải giỏ hàng. Vui lòng thử lại sau.' });
       setCart({ cartItem: [] });
       setCartItem([]);
     }
@@ -137,12 +118,11 @@ const CartScreen = (props) => {
 
   useEffect(() => {
     if (cartItem && cartItem.length > 0) {
-      // Initialize selected items when cart is loaded
-      const initialSelected = {};
+      const initialQuantities = {};
       cartItem.forEach(item => {
-        initialSelected[item.id_variant] = true;
+        initialQuantities[item.id_variant] = item.quantity;
       });
-      setSelectedItems(initialSelected);
+      setLocalQuantities(initialQuantities);
     }
   }, [cartItem]);
 
@@ -175,194 +155,114 @@ const CartScreen = (props) => {
     }
   }, [cartItem, selectedItems]);
 
-  const handleQuantityChange = async (type, itemId) => {
-    console.log('=== CART SCREEN: handleQuantityChange called ===');
-    console.log('Type:', type, 'ItemId:', itemId);
-    
-    const currentItem = cartItem.find(item => item.id_variant === itemId);
-    if (!currentItem) {
-      console.log('=== CART SCREEN: Item not found in cart ===', itemId);
-      return;
-    }
-
-    console.log('=== CART SCREEN: Current item details ===', {
-      id_variant: currentItem.id_variant,
-      name_product: currentItem.name_product,
-      current_quantity: currentItem.quantity,
-      stock: currentItem.stock,
-      variant_quantity: currentItem.variant_quantity
-    });
-
-    // Check if item is out of stock
-    const stockQuantity = currentItem.variant_stock || currentItem.variant_quantity || currentItem.stock || currentItem.quantity || currentItem.inventory || 0;
-    console.log('=== CART SCREEN: Stock validation ===', {
-      stockQuantity,
-      isOutOfStock: stockQuantity <= 0
-    });
-    
-    if (stockQuantity <= 0) {
-      console.log('=== CART SCREEN: Item is out of stock ===');
-      Alert.alert('Thông báo', 'Sản phẩm này đã hết hàng trong kho.');
-      return;
-    }
-
-    let newQuantity = currentItem.quantity;
-    if (type === 'plus') {
-      // Kiểm tra số lượng tồn kho trước khi tăng
-      if (newQuantity >= stockQuantity) {
-        console.log('=== CART SCREEN: Cannot increase quantity - at stock limit ===', {
-          currentQuantity: newQuantity,
-          stockLimit: stockQuantity
-        });
-        Alert.alert('Thông báo', `Chỉ còn ${stockQuantity} sản phẩm trong kho. Không thể tăng thêm số lượng.`);
-        return;
-      }
-      newQuantity++;
-      console.log('=== CART SCREEN: Increasing quantity ===', {
-        from: currentItem.quantity,
-        to: newQuantity
-      });
-    } else if (type === 'minus' && newQuantity > 1) {
-      newQuantity--;
-      console.log('=== CART SCREEN: Decreasing quantity ===', {
-        from: currentItem.quantity,
-        to: newQuantity
-      });
-    } else if (type === 'minus' && newQuantity <= 1) {
-      console.log('=== CART SCREEN: Cannot decrease quantity - at minimum ===');
-      Alert.alert('Thông báo', 'Số lượng tối thiểu là 1. Nếu muốn xóa sản phẩm, vui lòng sử dụng nút X.');
-      return;
-    } else return;
-
-    try {
-      console.log('=== CART SCREEN: Updating quantity with data ===', {
-        itemId,
-        newQuantity,
-        userId: idUser,
-        currentItem: {
-          _id: currentItem._id,
-          name_product: currentItem.name_product,
-          stockQuantity
-        }
-      });
-
-      const response = await fetch(`${API_ENDPOINTS.CART.UPDATE_QUANTITY(currentItem._id)}`, {
-        method: 'PATCH',
-        headers: {
-          ...API_HEADERS,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          quantity: newQuantity,
-          userId: idUser
-        }),
-      });
-
-      // Log the raw response for debugging
-      const responseText = await response.text();
-      console.log('=== CART SCREEN: Raw response from quantity update ===', responseText);
-
-      if (response.status === 404) {
-        throw new Error('Endpoint not found. Please check the API configuration.');
-      }
-
-      let responseData;
+  // Hàm lấy tồn kho thực tế cho từng sản phẩm trong cart
+  const fetchVariantStocks = useCallback(async () => {
+    if (!cartItem || cartItem.length === 0) return;
+    const stocks = {};
+    for (const item of cartItem) {
       try {
-        responseData = JSON.parse(responseText);
-        console.log('=== CART SCREEN: Parsed response data ===', responseData);
-      } catch (e) {
-        console.log('=== CART SCREEN: Response is not JSON, but operation might have succeeded ===');
-        // If we get here, the operation might have succeeded but returned non-JSON
-        // We'll proceed with refreshing the cart
-        getCart();
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(responseData.message || `Failed to update quantity: ${response.status}`);
-      }
-
-      console.log('=== CART SCREEN: Quantity updated successfully ===', responseData);
-      getCart(); // Re-fetch cart to update UI
-
-    } catch (error) {
-      console.error('=== CART SCREEN: Error updating quantity ===', error);
-      Alert.alert(
-        'Lỗi',
-        error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại sau.',
-        [{ text: 'OK' }]
-      );
+        const res = await fetch(`${API_ENDPOINTS.PRODUCTS.GET_BY_ID_FULL(item.id_product)}`);
+        const data = await res.json();
+        if (res.ok && data && data.product_variant) {
+          const variant = data.product_variant.find(v => v._id === item.id_variant);
+          if (variant && typeof variant.variant_stock === 'number') {
+            stocks[item.id_variant] = variant.variant_stock;
+          }
+        }
+      } catch (e) {}
     }
+    setVariantStocks(stocks);
+  }, [cartItem]);
+
+  useEffect(() => {
+    fetchVariantStocks();
+  }, [fetchVariantStocks]);
+
+  const handleQuantityChange = (type, itemId) => {
+    setLocalQuantities(prev => {
+      const currentItem = cartItem.find(item => item.id_variant === itemId);
+      if (!currentItem) return prev;
+      // Lấy tồn kho thực tế từ variantStocks
+      const maxStock = variantStocks[itemId] ?? 99;
+      const currentQuantity = prev[itemId] || currentItem.quantity || 1;
+      let newQuantity = currentQuantity;
+      if (type === 'plus') {
+        if (currentQuantity < maxStock) {
+          newQuantity = currentQuantity + 1;
+        } else {
+          Toast.show({ type: 'info', text1: 'Thông báo', text2: `Chỉ còn ${maxStock} sản phẩm trong kho.` });
+        }
+      } else if (type === 'minus') {
+        newQuantity = Math.max(currentQuantity - 1, 1);
+      }
+      return { ...prev, [itemId]: newQuantity };
+    });
   };
 
   const handleRemoveItem = async (cartItemId) => {
     const currentItem = cartItem.find(item => item.id_variant === cartItemId);
-    if (!currentItem) {
-      console.log('Item not found in cart:', cartItemId);
+    if (!currentItem || !currentItem._id) {
+      console.log('Item not found in cart or missing _id:', cartItemId);
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không tìm thấy sản phẩm để xóa.' });
       return;
     }
 
-    try {
-      console.log('Removing item with data:', {
-        cartItemId,
-        userId: idUser,
-        cartId: cart._id,
-        currentItem
-      });
-
-      const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
-        method: 'DELETE',
-        headers: {
-          ...API_HEADERS,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userId: idUser,
-          cartItemId: currentItem._id,
-          cartId: cart._id
-        }),
-      });
-
-      let responseData;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        responseData = await response.json();
-      } else {
-        throw new Error('Server returned non-JSON response');
-      }
-
-      if (!response.ok) {
-        throw new Error(responseData.message || `Failed to remove item: ${response.status}`);
-      }
-
-      console.log('Item removed successfully:', responseData);
-      Alert.alert(
-        'Thành công',
-        'Sản phẩm đã được xóa khỏi giỏ hàng.',
-        [{ text: 'OK' }]
-      );
-      getCart(); // Re-fetch cart to update UI
-
-    } catch (error) {
-      console.error('Error removing item:', error);
-      Alert.alert(
-        'Lỗi',
-        'Không thể xóa sản phẩm. Vui lòng thử lại sau.',
-        [{ text: 'OK' }]
-      );
+    // Bắt đầu animation
+    if (!animatedValues[cartItemId]) {
+      setAnimatedValues(prev => ({ ...prev, [cartItemId]: new Animated.Value(0) }));
     }
+    Animated.timing(animatedValues[cartItemId], {
+      toValue: -400,
+      duration: 100,
+      useNativeDriver: true,
+    }).start(async () => {
+      // Tạm thời xóa khỏi giao diện
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCartItem(prev => prev.filter(item => item.id_variant !== cartItemId));
+      setCart(prev => ({
+        ...prev,
+        cartItem: prev.cartItem.filter(item => item.id_variant !== cartItemId)
+      }));
+
+      try {
+        console.log('Call API to delete cart item:', currentItem._id);
+        const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
+          method: 'DELETE',
+          headers: API_HEADERS,
+          body: JSON.stringify({ userId: idUser }),
+        });
+
+        const responseText = await response.text();
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (e) {
+          responseData = responseText;
+        }
+
+        if (!response.ok) {
+          throw new Error(responseData.message || `Failed to remove item: ${response.status}`);
+        }
+
+        console.log('Delete cart item response:', responseData);
+        Toast.show({ type: 'success', text1: 'Thành công', text2: 'Sản phẩm đã được xóa khỏi giỏ hàng.' });
+        // Cập nhật lại giỏ hàng ngay lập tức
+        await getCart();
+      } catch (error) {
+        console.error('Error removing item:', error);
+        // Rollback giao diện nếu xóa thất bại
+        setCartItem(prev => [...prev, currentItem]);
+        setCart(prev => ({
+          ...prev,
+          cartItem: [...prev.cartItem, currentItem]
+        }));
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Có lỗi khi xóa sản phẩm khỏi giỏ hàng.' });
+        await getCart(); // Đồng bộ lại dữ liệu
+      }
+    });
   };
 
   const toggleItemSelection = (itemId) => {
-    const item = cartItem.find(item => item.id_variant === itemId);
-    if (item) {
-      const stockQuantity = item.variant_stock || item.variant_quantity || item.stock || item.quantity || item.inventory || 0;
-      if (stockQuantity <= 0) {
-        Alert.alert('Thông báo', 'Không thể chọn sản phẩm đã hết hàng.');
-        return;
-      }
-    }
-    
     setSelectedItems(prev => ({
       ...prev,
       [itemId]: !prev[itemId]
@@ -373,251 +273,285 @@ const CartScreen = (props) => {
     const selectedProducts = cartItem.filter(item => selectedItems[item.id_variant]);
     
     if (selectedProducts.length === 0) {
-      Alert.alert(
-        'Thông báo',
-        'Vui lòng chọn ít nhất một sản phẩm để thanh toán.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    // Check stock availability for all selected items
-    const outOfStockItems = selectedProducts.filter(item => {
-      const stockQuantity = item.variant_stock || item.variant_quantity || item.stock || item.quantity || item.inventory || 0;
-      return stockQuantity <= 0;
-    });
-
-    const lowStockItems = selectedProducts.filter(item => {
-      const stockQuantity = item.variant_stock || item.variant_quantity || item.stock || item.quantity || item.inventory || 0;
-      return stockQuantity > 0 && item.quantity > stockQuantity;
-    });
-
-    if (outOfStockItems.length > 0) {
-      Alert.alert(
-        'Sản phẩm hết hàng',
-        'Một số sản phẩm trong giỏ hàng đã hết hàng. Vui lòng xóa chúng trước khi thanh toán.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    if (lowStockItems.length > 0) {
-      const lowStockMessage = lowStockItems.map(item => 
-        `${item.name_product} (${item.color} - ${item.size}): Chỉ còn ${item.variant_quantity || item.stock || item.quantity || item.inventory} sản phẩm`
-      ).join('\n');
-
-      Alert.alert(
-        'Cảnh báo tồn kho',
-        `Một số sản phẩm có số lượng vượt quá tồn kho:\n\n${lowStockMessage}\n\nVui lòng điều chỉnh số lượng trước khi thanh toán.`,
-        [{ text: 'OK' }]
-      );
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Vui lòng chọn ít nhất một sản phẩm để thanh toán.' });
       return;
     }
     
     navigation.navigate('Checkout', { cartItems: selectedProducts, cartId: cart._id });
   };
 
+  const handleSelectAll = () => {
+    const newValue = !selectAll;
+    setSelectAll(newValue);
+    const newSelected = {};
+    if (cartItem && cartItem.length > 0) {
+      cartItem.forEach(item => {
+        newSelected[item.id_variant] = newValue;
+      });
+    }
+    setSelectedItems(newSelected);
+  };
+
   const renderDivider = () => (
     <View style={styles.divider} />
   );
+
   // Function to render a product item
   const renderProductItem = (product) => {
-    // console.log('Rendering product item:', product);
-    // Update image source logic to properly handle variant images
-    const productImageSource = (
-      product.image && product.image.startsWith('/uploads_product/')
-    )
-      ? { uri: `${API_BASE_URL}${product.image}` }
-      : (product.image && (product.image.startsWith('http://') || product.image.startsWith('https://') || product.image.startsWith('data:image')))
-        ? { uri: product.image }
-        : require('../assets/erorrimg.png');
-    console.log('CartScreen - product.image:', product.image);
-    console.log('CartScreen - productImageSource:', productImageSource);
-
-    // Check stock status
-    const stockQuantity = product.variant_stock || product.variant_quantity || product.stock || product.quantity || product.inventory || 0;
-    const isOutOfStock = stockQuantity <= 0;
-    const isQuantityAtMax = product.quantity >= stockQuantity;
-
-    console.log('=== CART SCREEN: Rendering product item ===', {
-      id_variant: product.id_variant,
-      name_product: product.name_product,
-      quantity: product.quantity,
-      stockQuantity,
-      isOutOfStock,
-      isQuantityAtMax,
-      color: product.color,
-      size: product.size,
-      price: product.price,
-      unit_price_item: product.unit_price_item,
-      stockFieldValues: {
-        variant_quantity: product.variant_quantity,
-        stock: product.stock,
-        quantity: product.quantity,
-        inventory: product.inventory
-      }
-    });
+    // Log chi tiết sản phẩm và tồn kho thực tế
+    console.log('CartScreen - Render product:', product);
+    console.log('CartScreen - Variant stock:', variantStocks[product.id_variant]);
+    let productImageSource;
+    if (typeof product.image === 'string' && product.image.startsWith('/uploads_product/')) {
+      productImageSource = { uri: `${API_BASE_URL}${product.image}` };
+    } else if (
+      typeof product.image === 'string' &&
+      (product.image.startsWith('http://') || product.image.startsWith('https://') || product.image.startsWith('data:image'))
+    ) {
+      productImageSource = { uri: product.image };
+    } else {
+      productImageSource = require('../assets/errorimg.webp');
+    }
 
     return (
-      <View style={styles.productContainer}>
+      <Animated.View style={[styles.productContainer, { transform: [{ translateX: animatedValues[product.id_variant] || new Animated.Value(0) }] }]}>
         <Checkbox
           status={selectedItems[product.id_variant] ? 'checked' : 'unchecked'}
           onPress={() => toggleItemSelection(product.id_variant)}
           style={styles.checkbox}
-          disabled={isOutOfStock}
         />
         <Image 
-          key={product.image}
           source={productImageSource} 
           style={styles.productImage}
           onError={(e) => {
-            console.error('Product image loading error in CartScreen:', e.nativeEvent.error, 'for product:', product.name_product);
+            console.error('Product image loading error:', e.nativeEvent.error);
             e.target.setNativeProps({
-              source: require('../assets/erorrimg.png')
+              source: require('../assets/LogoGG.png')
             });
           }}
         />
         <View style={styles.productDetails}>
           <Text style={styles.productName}>{product.name_product}</Text>
           <View style={styles.productInfo}>
-            {product.color && (
-              <Text style={styles.productColorLabel}>{"Màu:"} {product.color}</Text>
-            )}
-            {product.size && (
-              <>
-                <Text style={styles.productSizeLabel}>{"Size:"}</Text>
-                <Text style={styles.productSize}>{product.size}</Text>
-              </>
-            )}
+            <Text style={styles.productColorLabel}>{"Color:"}  {product.color}</Text>
+            <Text style={styles.productSizeLabel}>{"Size:"}</Text>
+            <Text style={styles.productSize}>{product.size}</Text>
           </View>
-          
-          {/* Stock status display */}
-          <View style={styles.stockStatusContainer}>
-            <Text style={[
-              styles.stockStatusText,
-              isOutOfStock ? styles.outOfStockText : styles.inStockText
-            ]}>
-              {isOutOfStock ? 'Hết hàng' : `Còn ${stockQuantity} sản phẩm trong kho`}
-            </Text>
-          </View>
-          
           <View style={styles.productPriceContainer}>
             <Text style={styles.discountedPrice}>{product.price?.toLocaleString('vi-VN')}đ</Text>
           </View>
           <View style={styles.quantityContainer}>
-            <TouchableOpacity 
-              onPress={() => handleQuantityChange('minus', product.id_variant)}
-              disabled={isOutOfStock || product.quantity <= 1}
-              style={[
-                styles.quantityButton,
-                (isOutOfStock || product.quantity <= 1) && styles.quantityButtonDisabled
-              ]}
-            >
-              <Image 
-                source={require('../assets/minus.png')} 
-                style={[
-                  styles.quantityIcon,
-                  (isOutOfStock || product.quantity <= 1) && styles.quantityIconDisabled
-                ]} 
-              />
+            <TouchableOpacity onPress={() => handleQuantityChange('minus', product.id_variant)}>
+              <Image source={require('../assets/minus.png')} style={styles.quantityIcon} />
             </TouchableOpacity>
-            <Text style={[
-              styles.quantityText,
-              isOutOfStock && styles.quantityTextDisabled
-            ]}>{product.quantity}</Text>
+            <Text style={styles.quantityText}>{localQuantities[product.id_variant] || product.quantity}</Text>
             <TouchableOpacity 
               onPress={() => handleQuantityChange('plus', product.id_variant)}
-              disabled={isOutOfStock || isQuantityAtMax}
-              style={[
-                styles.quantityButton,
-                (isOutOfStock || isQuantityAtMax) && styles.quantityButtonDisabled
-              ]}
+              disabled={(() => {
+                const maxStock = variantStocks[product.id_variant] ?? 99;
+                return (localQuantities[product.id_variant] || product.quantity) >= maxStock;
+              })()}
             >
-              <Image 
-                source={require('../assets/plus.png')} 
-                style={[
-                  styles.quantityIcon,
-                  (isOutOfStock || isQuantityAtMax) && styles.quantityIconDisabled
-                ]} 
-              />
+              <Image source={require('../assets/plus.png')} style={styles.quantityIcon} />
             </TouchableOpacity>
           </View>
         </View>
+        {/* Delete Button */}
         <TouchableOpacity 
-          onPress={() => handleRemoveItem(product.id_variant)} 
+          onPress={() => confirmRemoveItem(product.id_variant)} 
           style={styles.deleteButton}
         >
-          <Text style={styles.deleteButtonText}>X</Text>
+          <Image source={require('../assets/x.png')} style={styles.deleteIcon} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
+    );
+  };
+
+  // Enable LayoutAnimation on Android
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    Object.entries(localQuantities).forEach(([itemId, quantity]) => {
+      const currentItem = cartItem?.find(item => item.id_variant === itemId);
+      if (!currentItem || currentItem.quantity === quantity) return;
+
+      // Xóa timer cũ nếu có
+      if (debounceTimers.current[itemId]) {
+        clearTimeout(debounceTimers.current[itemId]);
+      }
+
+      // Tạo timer mới
+      debounceTimers.current[itemId] = setTimeout(async () => {
+        try {
+          const response = await fetch(`${API_ENDPOINTS.CART.UPDATE_QUANTITY(currentItem._id)}`, {
+            method: 'PATCH',
+            headers: {
+              ...API_HEADERS,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              quantity,
+              userId: idUser
+            }),
+          });
+          const responseText = await response.text();
+          let responseData;
+          try {
+            responseData = JSON.parse(responseText);
+          } catch (e) {}
+          if (!response.ok) {
+            throw new Error(responseData?.message || `Failed to update quantity: ${response.status}`);
+          }
+          getCart();
+        } catch (error) {
+          Toast.show({ type: 'error', text1: 'Lỗi', text2: error.message || 'Không thể cập nhật số lượng.' });
+        }
+      }, 500); // 500ms debounce
+    });
+    // Cleanup khi unmount
+    return () => {
+      Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+    };
+  }, [localQuantities]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      const checkLogin = async () => {
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token && isActive) {
+          setShowLoginModal(true);
+        }
+      };
+      checkLogin();
+      return () => { isActive = false; }; // clean-up
+    }, [])
+  );
+
+  // Thêm hàm xác nhận xóa
+  const confirmRemoveItem = (cartItemId) => {
+    Alert.alert(
+      'Xác nhận',
+      'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?',
+      [
+        {
+          text: 'Hủy',
+          style: 'cancel',
+        },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: () => handleRemoveItem(cartItemId),
+        },
+      ],
+      { cancelable: true }
     );
   };
 
   return (
-    !cartItem ? (
-      <View style={{flex:1, backgroundColor:"#FFFFFF", alignItems:"center", justifyContent:"center", flexDirection:"column", color:"black"}}>
-        <ActivityIndicator size={"large"} color={'black'}/>
-        <Text>Đang tải dữ liệu...</Text>
-      </View>
-    ) : (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Image 
-              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/3d932128-0328-4607-bacf-7a9ced0de013" }} 
-              style={styles.headerIcon} 
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{"Cart"}</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
-            <Image 
-              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c5d652d4-87eb-4bb4-8eaf-62b26c7c040b" }} 
-              style={styles.headerIcon}
-            />
-          </TouchableOpacity>
+    <>
+      <Modal
+        visible={showLoginModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={{flex:1, justifyContent:'center', alignItems:'center', backgroundColor:'rgba(0,0,0,0.5)'}}>
+          <View style={{backgroundColor:'#fff', padding:24, borderRadius:12, alignItems:'center'}}>
+            <Text style={{fontSize:16, marginBottom:16}}>Bạn cần đăng nhập để sử dụng chức năng này!</Text>
+            <TouchableOpacity
+              style={{backgroundColor:'#1c2b38', padding:12, borderRadius:8}}
+              onPress={() => {
+                setShowLoginModal(false);
+                navigation.navigate('Login');
+              }}
+            >
+              <Text style={{color:'#fff', fontWeight:'bold'}}>Đăng nhập</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.cartTextContainer}>
-          <Text style={styles.cartText}>
-            {"You have"} {cartItem.length} {"products in your Cart"}
-          </Text>
-        </View>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
-          {cartItem.map(product => (
-            <View key={product.id_variant}>
-              {renderProductItem(product)}
+      </Modal>
+      {showLoginModal ? null : (
+        !cartItem ? (
+          <View style={{flex:1, backgroundColor:"#FFFFFF", alignItems:"center", justifyContent:"center", flexDirection:"column", color:"black"}}>
+            <ActivityIndicator size={"large"} color={'black'}/>
+            <Text>Đang tải dữ liệu...</Text>
+          </View>
+        ) : (
+          <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Image 
+                  source={require('../assets/back.png')} 
+                  style={styles.headerIcon} 
+                />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>{"Cart"}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
+                <Image 
+                  source={require('../assets/search.png')} 
+                  style={styles.headerIcon}
+                />
+              </TouchableOpacity>
             </View>
-          ))}
-          {renderDivider()}
-        </ScrollView>
-        <View style={styles.fixedCheckoutContainer}>
-          <View style={styles.summaryContainer}>
-            <SummaryItem label="Total Price" value={`${totalPrice?.toLocaleString('vi-VN')}đ`} />
-            <SummaryItem label="Discount" value={`-${discount?.toLocaleString('vi-VN')}đ`} />
-            <SummaryItem label="Delivery" value={shippingFee === 0 ? "Free" : `${shippingFee?.toLocaleString('vi-VN')}đ`} />
-          </View>
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>{"Total:"}</Text>
-            <Text style={styles.totalValue}>{`${finalTotal?.toLocaleString('vi-VN')}đ`}</Text>
-          </View>
-          <TouchableOpacity 
-            style={[
-              styles.checkoutButton,
-              Object.values(selectedItems).every(value => !value) && styles.checkoutButtonDisabled
-            ]} 
-            onPress={handleCheckout}
-            disabled={Object.values(selectedItems).every(value => !value)}
-          >
-            <Image 
-              source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e4f67212-d4f1-4513-bc97-88e16a24676d" }} 
-              style={styles.checkoutIcon} 
-            />
-            <Text style={styles.checkoutText}>{"Checkout"}</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    )   
+            <View style={styles.cartTextContainer}>
+              <Text style={styles.cartText}>
+                {"You have"} {cartItem.length} {"products in your Cart"}
+              </Text>
+            </View>
+            {cartItem.length >= 2 && (
+              <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 16, marginBottom: 4}}>
+                <Checkbox
+                  status={selectAll ? 'checked' : 'unchecked'}
+                  onPress={handleSelectAll}
+                />
+                <Text style={{color: '#222', fontSize: 14}}>Chọn tất cả</Text>
+              </View>
+            )}
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+              {cartItem.map(product => (
+                <View key={product.id_variant}>
+                  {renderProductItem(product)}
+                </View>
+              ))}
+              {renderDivider()}
+            </ScrollView>
+            <View style={styles.fixedCheckoutContainer}>
+              <View style={styles.summaryContainer}>
+                <SummaryItem label="Total Price" value={`${totalPrice?.toLocaleString('vi-VN')}đ`} />
+                <SummaryItem label="Discount" value={`-${discount?.toLocaleString('vi-VN')}đ`} />
+                <SummaryItem label="Delivery" value={shippingFee === 0 ? "Free" : `${shippingFee?.toLocaleString('vi-VN')}đ`} />
+              </View>
+              <View style={styles.totalContainer}>
+                <Text style={styles.totalLabel}>{"Total:"}</Text>
+                <Text style={styles.totalValue}>{`${finalTotal?.toLocaleString('vi-VN')}đ`}</Text>
+              </View>
+              <TouchableOpacity 
+                style={[
+                  styles.checkoutButton,
+                  Object.values(selectedItems).every(value => !value) && styles.checkoutButtonDisabled
+                ]} 
+                onPress={handleCheckout}
+                disabled={Object.values(selectedItems).every(value => !value)}
+              >
+                <Image 
+                  source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e4f67212-d4f1-4513-bc97-88e16a24676d" }} 
+                  style={styles.checkoutIcon} 
+                />
+                <Text style={styles.checkoutText}>{"Checkout"}</Text>
+              </TouchableOpacity>
+            </View>
+            <Toast />
+          </SafeAreaView>
+        )
+      )}
+    </>
   );
 };
+
 // Summary item component
 const SummaryItem = ({ label, value }) => (
   <View style={styles.summaryItem}>
@@ -625,6 +559,7 @@ const SummaryItem = ({ label, value }) => (
     <Text style={styles.summaryValue}>{value}</Text>
   </View>
 );
+
 // Styles
 const styles = StyleSheet.create({
   container: {
@@ -690,27 +625,29 @@ const styles = StyleSheet.create({
   },
   productName: {
     color: "#202325",
-    fontSize: 14,
+    fontSize: 16,
     marginRight: 36,
     flex: 1,
+    fontWeight: 'bold',
   },
   productInfo: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 5,
+    color: '#444',
   },
   productColorLabel: {
-    color: "#000000",
+    color: "#444",
     fontSize: 14,
     marginRight: 16,
   },
   productSizeLabel: {
-    color: "#000000",
+    color: "#444",
     fontSize: 14,
-    marginRight: 20,
+    marginRight: 5,
   },
   productSize: {
-    color: "#000000",
+    color: "#444",
     fontSize: 14,
   },
   productPriceContainer: {
@@ -828,49 +765,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    backgroundColor: '#FF0000',
     borderRadius: 15,
     width: 30,
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+  deleteIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#000',
   },
   checkbox: {
     marginRight: 8,
   },
-  stockStatusContainer: {
-    marginBottom: 5,
-  },
-  stockStatusText: {
-    color: "#000000",
-    fontSize: 14,
-  },
-  outOfStockText: {
-    color: "#FF0000",
-  },
-  inStockText: {
-    color: "#00FF00",
-  },
-  quantityButton: {
-    borderRadius: 8,
-    width: 15,
-    height: 15,
-    marginHorizontal: 16,
-  },
-  quantityButtonDisabled: {
-    backgroundColor: '#cccccc',
-    opacity: 0.7,
-  },
-  quantityIconDisabled: {
-    opacity: 0.5,
-  },
-  quantityTextDisabled: {
-    opacity: 0.5,
-  },
 });
+
 export default CartScreen;

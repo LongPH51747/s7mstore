@@ -9,76 +9,19 @@
  */
 
 import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Image, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_ENDPOINTS, API_HEADERS } from '../config/api';
 
 const WelcomeScreen = ({ navigation }) => {
   // Kiểm tra token người dùng khi component được mount
   useEffect(() => {
-    checkUserToken();
+    const timer = setTimeout(() => {
+      navigation.replace('Home');
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
-
-  /**
-   * Hàm kiểm tra token người dùng
-   * - Kiểm tra token trong AsyncStorage
-   * - Xác thực token với Firebase
-   * - Chuyển hướng đến màn hình phù hợp
-   */
-  const checkUserToken = async () => {
-    try {
-      console.log('Kiểm tra token người dùng...');
-      const token = await AsyncStorage.getItem('userToken');
-      const userInfoString = await AsyncStorage.getItem('userInfo');
-      let userInfo = null;
-      if (userInfoString) {
-        try {
-          userInfo = JSON.parse(userInfoString);
-        } catch (parseError) {
-          console.error('Lỗi phân tích userInfo từ AsyncStorage:', parseError);
-        }
-      }
-      
-      // Tạo timer trước khi kiểm tra token
-      const timer = setTimeout(() => {
-        if (token && userInfo && userInfo.uid) {
-          console.log('Tìm thấy token và thông tin người dùng, kiểm tra tính hợp lệ...');
-          const user = auth().currentUser;
-          if (user && user.uid === userInfo.uid) {
-            console.log('Token và người dùng hợp lệ, chuyển đến màn hình Home');
-            navigation.replace('Home');
-            return;
-          } else {
-            console.log('Token hoặc người dùng không hợp lệ, xóa thông tin đăng nhập');
-            AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
-          }
-        } else {
-          console.log('Không tìm thấy token hoặc thông tin người dùng hợp lệ, chuyển đến màn hình Login');
-          AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']); // Ensure all related data is cleared
-        }
-        
-        // Nếu không có token hoặc token không hợp lệ, chuyển đến màn hình Login
-        console.log('Chuyển đến màn hình Login');
-        navigation.replace('Login');
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    } catch (error) {
-      console.error('Lỗi kiểm tra token:', error);
-      // Nếu có lỗi, xóa tất cả thông tin đăng nhập và chuyển đến màn hình Login
-      try {
-        await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone']);
-      } catch (e) {
-        console.error('Lỗi xóa thông tin đăng nhập:', e);
-      }
-      
-      const timer = setTimeout(() => {
-        navigation.replace('Login');
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>

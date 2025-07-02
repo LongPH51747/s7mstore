@@ -32,7 +32,7 @@ const AppNavigator = () => {
     <NavigationContainer>
       {/* Stack Navigator quản lý các màn hình chính */}
       <Stack.Navigator
-        initialRouteName="Welcome"
+        initialRouteName="Home"
         screenOptions={{
           headerShown: false,
         }}
