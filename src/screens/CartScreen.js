@@ -20,6 +20,7 @@ import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config
 // Main component
 const CartScreen = (props) => {
   const navigation = useNavigation();
+  const url = `${API_BASE_URL}/cart/getByUserId/`
   const [idUser, setIdUser] = useState(null);
   const [cart, setCart] = useState([]);
   const [cartItem, setCartItem] = useState(null);

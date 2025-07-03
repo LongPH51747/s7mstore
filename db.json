@@ -1,4 +1,19 @@
 {
+  "users": [
+    {
+      "id": "1",
+      "email": "bao@gmail.com",
+      "password": "123456789bB@",
+      "name": "Demo User"
+    },
+    {
+      "id": "2",
+      "email": "test@example.com",
+      "password": "password",
+      "name": "Test User"
+    }
+  ]
+,
     "banners": [
         { "id": 1, "image": "https://i.pinimg.com/236x/16/75/12/167512edefec5b8f9343169f7899b06d.jpg" },
         { "id": 2, "image": "https://i.pinimg.com/736x/e4/dc/d8/e4dcd8a80475b99cef4d66dc8df94909.jpg" },
