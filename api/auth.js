@@ -1,5 +1,5 @@
 // src/api/auth.js
-const API_BASE_URL = 'http://192.168.2.104:5000/api/auth'; // THAY THẾ BẰNG URL BACKEND THẬT CỦA BẠN
+const API_BASE_URL = 'http://192.168.1.41:5000/api/auth'; // THAY THẾ BẰNG URL BACKEND THẬT CỦA BẠN
 
 export const apiRegister = async (username, email, password, fullname) => {
     try {

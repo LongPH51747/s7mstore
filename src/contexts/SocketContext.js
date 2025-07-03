@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 
-const API_URL = 'http://192.168.1.144:5000';
+const API_URL = 'http://192.168.1.41:5000';
 
 const SocketContext = createContext(null);
 
