@@ -17,8 +17,17 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Initialize SDKs first
-    initializeSdks();
+    // Initialize SDKs first (including database)
+    const initApp = async () => {
+      try {
+        await initializeSdks();
+        console.log('All SDKs initialized successfully');
+      } catch (error) {
+        console.error('Error initializing SDKs:', error);
+      }
+    };
+
+    initApp();
 
     // Then set up auth listener
     const auth = getAuth();
@@ -39,13 +48,7 @@ const App: React.FC = () => {
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      
       <AppNavigator />
-      {/* <CartScreen/> */}
-      {/* <CheckoutScreen/> */}
-      {/* <OrderDetailsScreen/> */}
-      {/* <OrdersScreen/> */}
-      {/* <PaymentSuccessScreen/> */}
     </SafeAreaView>
     </SocketProvider>
   );
