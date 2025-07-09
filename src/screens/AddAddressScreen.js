@@ -142,17 +142,18 @@ const AddAddressScreen = ({ route }) => {
   };
 
   const handleChooseLocation = () => {
-    const lat = latitude || 21.028511;
-    const lng = longitude || 105.804817;
+    // Lấy các trường cần thiết để truyền sang MapScreen
+    const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
+    const provinceType = provinces.find(p => p.id === selectedProvince)?.type || '';
+    const wardName = wards.find(w => w.id === selectedWard)?.name || '';
+    const wardType = wards.find(w => w.id === selectedWard)?.type || '';
     navigation.navigate('MapScreen', {
-      latitude: lat,
-      longitude: lng,
-      fromScreen: 'AddAddress',
       addressDetail,
-      selectedWard,
-      selectedProvince,
-      wards,
-      provinces,
+      wardType,
+      wardName,
+      provinceType,
+      provinceName,
+      fromScreen: 'AddAddress',
     });
   };
 
@@ -334,11 +335,6 @@ const AddAddressScreen = ({ route }) => {
             <Text style={styles.saveBtnText}>Chọn vị trí trên bản đồ</Text>
           </TouchableOpacity>
           
-          {/* Coordinates display */}
-          <View style={{ alignItems: 'center', marginBottom: 10 }}>
-            <Text>Latitude: {latitude}</Text>
-            <Text>Longitude: {longitude}</Text>
-          </View>
         </>
       )}
     </SafeAreaView>

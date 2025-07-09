@@ -9,6 +9,7 @@ const { width, height } = Dimensions.get('window');
 const MARKER_WIDTH = 48;
 const MARKER_HEIGHT = 48;
 const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'; // điền key của bạn
+const NOMINATIM_API = 'https://nominatim.openstreetmap.org/search';
 
 const getGeocode = async (address) => {
   console.log('Địa chỉ truyền vào geocode:', address);
@@ -30,99 +31,87 @@ const MapScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const {
-    latitude,
-    longitude,
     addressDetail,
-    selectedWard,
-    selectedDistrict,
-    selectedProvince,
-    wards = [],
-    districts = [],
-    provinces = [],
-    skipGeocode = false, // Thêm flag này
+    wardType,
+    wardName,
+    provinceType,
+    provinceName,
+    fromScreen,
   } = route.params || {};
 
   const [region, setRegion] = useState({
-    latitude: latitude || 21.028511,
-    longitude: longitude || 105.804817,
+    latitude: 21.028511,
+    longitude: 105.804817,
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchLocation = async () => {
-      setLoading(true);
-      let location = null;
-      
-      // Nếu có flag skipGeocode, chỉ dùng vị trí được truyền vào
-      if (skipGeocode) {
-        location = { lat: latitude, lng: longitude };
-        console.log('Skip geocode, dùng vị trí được truyền vào:', location);
-      } else {
-        // Logic geocode/lấy vị trí hiện tại như cũ
-        // 1. Nếu có đủ thông tin địa chỉ, thử geocode
-        if (addressDetail && selectedWard && selectedDistrict && selectedProvince) {
-          let address = `${addressDetail}, ${wards.find(w => w.WardCode?.toString() === selectedWard)?.WardName || ''}, ${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
-          location = await getGeocode(address);
-          // 2. Nếu không có, thử với phường/xã, quận/huyện, tỉnh/thành
-          if (!location) {
-            address = `${wards.find(w => w.WardCode?.toString() === selectedWard)?.WardName || ''}, ${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
-            location = await getGeocode(address);
-          }
-          // 3. Nếu không có, thử với quận/huyện, tỉnh/thành
-          if (!location) {
-            address = `${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
-            location = await getGeocode(address);
-          }
+    const fetchLatLng = async (address) => {
+      try {
+        const url = `${NOMINATIM_API}?q=${encodeURIComponent(address)}&format=json&limit=1`;
+        const response = await fetch(url, { headers: { 'User-Agent': 's7mstore/1.0' } });
+        const data = await response.json();
+        console.log('Nominatim API response for', address, ':', data);
+        if (data && data.length > 0) {
+          return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
         }
-        // 4. Nếu vẫn không có, lấy vị trí hiện tại
-        if (!location) {
-          console.log('Không geocode được, thử lấy vị trí hiện tại của người dùng...');
-          await new Promise((resolve) => {
-            Geolocation.getCurrentPosition(
-              pos => {
-                location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                console.log('Lấy được vị trí hiện tại:', location);
-                resolve();
-              },
-              err => {
-                console.log('Không lấy được vị trí hiện tại:', err);
-                resolve();
-              },
-              { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
-            );
-          });
-        }
-        // 5. Nếu vẫn không có, dùng vị trí mặc định
-        if (!location) {
-          console.log('Không lấy được vị trí nào, dùng vị trí mặc định Hà Nội');
-          location = { lat: 21.028511, lng: 105.804817 };
-        }
+        return null;
+      } catch (err) {
+        return null;
       }
-      
-      console.log('Tọa độ cuối cùng sẽ hiển thị trên bản đồ:', location);
-      // CHUẨN HÓA KEY CHO REGION
-      setRegion(r => ({
-        ...r,
-        latitude: location.lat !== undefined ? location.lat : location.latitude,
-        longitude: location.lng !== undefined ? location.lng : location.longitude,
-      }));
+    };
+
+    const getLocation = async () => {
+      setLoading(true);
+      // 1. Thử với fullAddress
+      const fullAddress = `${addressDetail}, ${wardType} ${wardName}, ${provinceType} ${provinceName}`;
+      let geo = await fetchLatLng(fullAddress);
+      // 2. Nếu không có, thử với xã/phường + tỉnh/thành phố
+      if (!geo) {
+        const fallbackAddress = `${wardType} ${wardName}, ${provinceType} ${provinceName}`;
+        geo = await fetchLatLng(fallbackAddress);
+      }
+      // 3. Nếu vẫn không có, dùng toạ độ mặc định Hà Nội
+      const lat = geo?.lat || 21.028511;
+      const lng = geo?.lon || 105.804817;
+      setRegion(r => ({ ...r, latitude: lat, longitude: lng }));
       setLoading(false);
     };
-    fetchLocation();
+    getLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skipGeocode, latitude, longitude, addressDetail, selectedWard, selectedDistrict, selectedProvince]);
+  }, [addressDetail, wardType, wardName, provinceType, provinceName]);
 
   const handleConfirm = () => {
     navigation.navigate({
-      name: route.params?.fromScreen || 'AddAddress',
+      name: fromScreen || 'AddAddress',
       params: {
         selectedLat: region.latitude,
         selectedLng: region.longitude,
       },
       merge: true,
     });
+  };
+
+  const handleCurrentLocation = () => {
+    setLoading(true);
+    Geolocation.getCurrentPosition(
+      pos => {
+        setRegion(r => ({
+          ...r,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }));
+        setLoading(false);
+      },
+      err => {
+        console.log('Lỗi khi lấy vị trí hiện tại:', err);
+        Alert.alert('Lỗi', 'Không lấy được vị trí hiện tại.');
+        setLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+    );
   };
 
   return (
@@ -148,6 +137,8 @@ const MapScreen = () => {
         <Button title="Hủy" onPress={() => navigation.goBack()} color="#888" />
         <View style={{ width: 20 }} />
         <Button title="Xác nhận" onPress={handleConfirm} color="#2196F3" />
+        <View style={{ width: 20 }} />
+        <Button title="Chọn vị trí hiện tại của tôi" onPress={handleCurrentLocation} color="#4CAF50" />
       </View>
     </View>
   );
