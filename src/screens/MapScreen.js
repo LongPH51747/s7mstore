@@ -39,6 +39,7 @@ const MapScreen = () => {
     wards = [],
     districts = [],
     provinces = [],
+    skipGeocode = false, // Thêm flag này
   } = route.params || {};
 
   const [region, setRegion] = useState({
@@ -53,44 +54,53 @@ const MapScreen = () => {
     const fetchLocation = async () => {
       setLoading(true);
       let location = null;
-      // 1. Nếu có đủ thông tin địa chỉ, thử geocode
-      if (addressDetail && selectedWard && selectedDistrict && selectedProvince) {
-        let address = `${addressDetail}, ${wards.find(w => w.WardCode?.toString() === selectedWard)?.WardName || ''}, ${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
-        location = await getGeocode(address);
-        // 2. Nếu không có, thử với phường/xã, quận/huyện, tỉnh/thành
-        if (!location) {
-          address = `${wards.find(w => w.WardCode?.toString() === selectedWard)?.WardName || ''}, ${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
+      
+      // Nếu có flag skipGeocode, chỉ dùng vị trí được truyền vào
+      if (skipGeocode) {
+        location = { lat: latitude, lng: longitude };
+        console.log('Skip geocode, dùng vị trí được truyền vào:', location);
+      } else {
+        // Logic geocode/lấy vị trí hiện tại như cũ
+        // 1. Nếu có đủ thông tin địa chỉ, thử geocode
+        if (addressDetail && selectedWard && selectedDistrict && selectedProvince) {
+          let address = `${addressDetail}, ${wards.find(w => w.WardCode?.toString() === selectedWard)?.WardName || ''}, ${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
           location = await getGeocode(address);
+          // 2. Nếu không có, thử với phường/xã, quận/huyện, tỉnh/thành
+          if (!location) {
+            address = `${wards.find(w => w.WardCode?.toString() === selectedWard)?.WardName || ''}, ${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
+            location = await getGeocode(address);
+          }
+          // 3. Nếu không có, thử với quận/huyện, tỉnh/thành
+          if (!location) {
+            address = `${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
+            location = await getGeocode(address);
+          }
         }
-        // 3. Nếu không có, thử với quận/huyện, tỉnh/thành
+        // 4. Nếu vẫn không có, lấy vị trí hiện tại
         if (!location) {
-          address = `${districts.find(d => d.DistrictID?.toString() === selectedDistrict)?.DistrictName || ''}, ${provinces.find(p => p.ProvinceID?.toString() === selectedProvince)?.ProvinceName || ''}`;
-          location = await getGeocode(address);
+          console.log('Không geocode được, thử lấy vị trí hiện tại của người dùng...');
+          await new Promise((resolve) => {
+            Geolocation.getCurrentPosition(
+              pos => {
+                location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                console.log('Lấy được vị trí hiện tại:', location);
+                resolve();
+              },
+              err => {
+                console.log('Không lấy được vị trí hiện tại:', err);
+                resolve();
+              },
+              { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+            );
+          });
+        }
+        // 5. Nếu vẫn không có, dùng vị trí mặc định
+        if (!location) {
+          console.log('Không lấy được vị trí nào, dùng vị trí mặc định Hà Nội');
+          location = { lat: 21.028511, lng: 105.804817 };
         }
       }
-      // 4. Nếu vẫn không có, lấy vị trí hiện tại
-      if (!location) {
-        console.log('Không geocode được, thử lấy vị trí hiện tại của người dùng...');
-        await new Promise((resolve) => {
-          Geolocation.getCurrentPosition(
-            pos => {
-              location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-              console.log('Lấy được vị trí hiện tại:', location);
-              resolve();
-            },
-            err => {
-              console.log('Không lấy được vị trí hiện tại:', err);
-              resolve();
-            },
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
-          );
-        });
-      }
-      // 5. Nếu vẫn không có, dùng vị trí mặc định
-      if (!location) {
-        console.log('Không lấy được vị trí nào, dùng vị trí mặc định Hà Nội');
-        location = { lat: 21.028511, lng: 105.804817 };
-      }
+      
       console.log('Tọa độ cuối cùng sẽ hiển thị trên bản đồ:', location);
       // CHUẨN HÓA KEY CHO REGION
       setRegion(r => ({
@@ -102,7 +112,7 @@ const MapScreen = () => {
     };
     fetchLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [skipGeocode, latitude, longitude, addressDetail, selectedWard, selectedDistrict, selectedProvince]);
 
   const handleConfirm = () => {
     navigation.navigate({
