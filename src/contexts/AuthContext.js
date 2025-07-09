@@ -2,7 +2,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {  createContext, useContext, useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { apiRegister, apiLogin } from '../../api/auth';
+import { io } from "socket.io-client";
+import { API_BASE_URL } from "../config/api";
+
 const AuthContext = createContext();
+
+const socket = io(API_BASE_URL, {
+  transports: ["websocket"],
+  path: "/socket.io/",
+});
+
 export const AuthProvider = ({children}) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(null);

@@ -1,10 +1,10 @@
 // src/api/auth.js
-import { API_BASE_URL } from '../src/config/api';
+import { API_BASE_URL, API_ENDPOINTS } from '../src/config/api';
 
 
 export const apiRegister = async (username, email, password, fullname) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export const apiRegister = async (username, email, password, fullname) => {
 // Bạn cũng có thể thêm apiLogin vào đây
 export const apiLogin = async (email, password) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/login-email`, {
+        const response = await fetch(`${API_BASE_URL}/auth/login-email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),

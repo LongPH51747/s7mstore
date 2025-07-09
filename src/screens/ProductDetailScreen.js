@@ -63,84 +63,15 @@ const ProductDetailScreen = () => {
       const fetchedProduct = route.params.product;
       console.log('=== PRODUCT DETAIL: Product data received ===');
       console.log('Full product data:', JSON.stringify(fetchedProduct, null, 2));
-      
       setProduct(fetchedProduct);
-      
-      if (fetchedProduct.product_variant && fetchedProduct.product_variant.length > 0) {
-        console.log('=== PRODUCT DETAIL: Product variants ===');
-        fetchedProduct.product_variant.forEach((variant, index) => {
-          console.log(`Variant ${index + 1}:`, {
-            _id: variant._id,
-            variant_color: variant.variant_color,
-            variant_size: variant.variant_size,
-            variant_price: variant.variant_price,
-            variant_quantity: variant.variant_quantity,
-            stock: variant.stock,
-            // Log all available fields to see what's actually there
-            allFields: Object.keys(variant),
-            fullVariantData: variant
-          });
-        });
-        
-        // Chỉ chọn biến thể còn hàng đầu tiên
-        const availableVariant = fetchedProduct.product_variant.find(variant => {
-          const stockQuantity = variant.variant_stock || variant.variant_quantity || variant.stock || variant.quantity || variant.inventory || 0;
-          console.log('=== PRODUCT DETAIL: Checking variant stock ===', {
-            variantId: variant._id,
-            variant_quantity: variant.variant_quantity,
-            stock: variant.stock,
-            quantity: variant.quantity,
-            inventory: variant.inventory,
-            calculatedStock: stockQuantity
-          });
-          return stockQuantity > 0;
-        });
-        
-        console.log('=== PRODUCT DETAIL: Initial variant selection ===', {
-          availableVariant: availableVariant ? {
-            _id: availableVariant._id,
-            variant_color: availableVariant.variant_color,
-            variant_size: availableVariant.variant_size,
-            variant_quantity: availableVariant.variant_quantity,
-            stock: availableVariant.stock,
-            quantity: availableVariant.quantity,
-            inventory: availableVariant.inventory
-          } : 'No available variant found',
-          firstVariant: fetchedProduct.product_variant[0] ? {
-            _id: fetchedProduct.product_variant[0]._id,
-            variant_color: fetchedProduct.product_variant[0].variant_color,
-            variant_size: fetchedProduct.product_variant[0].variant_size,
-            variant_quantity: fetchedProduct.product_variant[0].variant_quantity,
-            stock: fetchedProduct.product_variant[0].stock,
-            quantity: fetchedProduct.product_variant[0].quantity,
-            inventory: fetchedProduct.product_variant[0].inventory
-          } : 'No variants available'
-        });
-        
-        setSelectedVariant(availableVariant || null); // Nếu không có biến thể nào còn hàng thì null
-        // Set image for the available variant if exists
-        if (availableVariant) {
-          if (availableVariant.variant_image_url) {
-            if (typeof availableVariant.variant_image_url === 'string' && availableVariant.variant_image_url.startsWith('/uploads_product/')) {
-              setCurrentDisplayImage(`${API_BASE_URL}${availableVariant.variant_image_url}`);
-            } else {
-              setCurrentDisplayImage(availableVariant.variant_image_url);
-            }
-          } else if (availableVariant.variant_image_base64 && availableVariant.variant_image_type) {
-            setCurrentDisplayImage(`data:${availableVariant.variant_image_type};base64,${availableVariant.variant_image_base64}`);
-          } else {
-            if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
-              setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
-            } else {
-              setCurrentDisplayImage(fetchedProduct.product_image);
-            }
-          }
-        } else if (fetchedProduct.product_image) {
+      // KHÔNG tự động chọn biến thể nào khi vào màn hình
+      setSelectedVariant(null);
+      // Ảnh lớn mặc định là ảnh sản phẩm chính
+      if (fetchedProduct.product_image) {
           if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
             setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
           } else {
             setCurrentDisplayImage(fetchedProduct.product_image);
-          }
         }
       }
     }
@@ -433,6 +364,52 @@ const ProductDetailScreen = () => {
         }}
       />
 
+      {/* Variant Thumbnails */}
+      {product.product_variant && product.product_variant.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginVertical: 10, paddingHorizontal: 10 }}
+        >
+          {product.product_variant.map((variant) => {
+            // Lấy ảnh variant
+            let variantImgSrc = require('../assets/LogoGG.png');
+            if (variant.variant_image_url) {
+              variantImgSrc =
+                typeof variant.variant_image_url === 'string' && variant.variant_image_url.startsWith('/uploads_product/')
+                  ? { uri: `${API_BASE_URL}${variant.variant_image_url}` }
+                  : { uri: variant.variant_image_url };
+            } else if (variant.variant_image_base64 && variant.variant_image_type) {
+              variantImgSrc = { uri: `data:${variant.variant_image_type};base64,${variant.variant_image_base64}` };
+            } else if (product.product_image) {
+              variantImgSrc =
+                typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')
+                  ? { uri: `${API_BASE_URL}${product.product_image}` }
+                  : { uri: product.product_image };
+            }
+
+            const isSelected = selectedVariant && selectedVariant._id === variant._id;
+
+            return (
+              <TouchableOpacity
+                key={variant._id}
+                onPress={() => handleVariantChange(variant)}
+                style={[
+                  styles.variantThumbnail,
+                  isSelected && styles.variantThumbnailSelected,
+                ]}
+              >
+                <Image
+                  source={variantImgSrc}
+                  style={{ width: 60, height: 60, borderRadius: 8 }}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       <View style={styles.detailsContainer}>
         <Text style={styles.productName}>{product.product_name}</Text>
         <Text style={styles.productPrice}>
@@ -440,20 +417,7 @@ const ProductDetailScreen = () => {
         </Text>
         <Text style={styles.description}>{product.product_description}</Text>
 
-        {/* Hiển thị thông tin tồn kho */}
-        {selectedVariant && (
-          <View style={styles.stockInfo}>
-            <Text style={[
-              styles.stockText,
-              selectedVariantStock > 0 ? styles.inStock : styles.outOfStock
-            ]}>
-              {selectedVariantStock > 0 
-                ? `Còn ${selectedVariantStock} sản phẩm trong kho` 
-                : 'Hết hàng'
-              }
-            </Text>
-          </View>
-        )}
+     
 
         {/* Variant Selection */}
         {product.product_variant && product.product_variant.length > 0 && (
@@ -505,9 +469,7 @@ const ProductDetailScreen = () => {
           <View style={styles.quantityContainer}>
             <View style={styles.quantityHeader}>
               <Text style={styles.quantityText}>Số lượng: {quantity}</Text>
-              <Text style={styles.stockLimitText}>
-                Tối đa: {selectedVariantStock} sản phẩm
-              </Text>
+             
             </View>
             <View style={styles.quantityButtons}>
               <TouchableOpacity 
@@ -773,6 +735,18 @@ const styles = StyleSheet.create({
   },
   variantStockTextOut: {
     color: '#e74c3c',
+  },
+  variantThumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  variantThumbnailSelected: {
+    borderColor: '#FF0000',
   },
 });
 
