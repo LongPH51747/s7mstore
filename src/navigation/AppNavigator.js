@@ -17,6 +17,7 @@ import AddAddressScreen from '../screens/AddAddressScreen';
 import UpdateAddressScreen from '../screens/UpdateAddressScreen';
 import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
 import RatingScreen from '../screens/RatingScreen';
+import MapScreen from '../screens/MapScreen';
 
 const Stack = createStackNavigator();
 
@@ -64,6 +65,7 @@ const AppNavigator = () => {
         {/* Màn hình sửa địa chỉ */}
         <Stack.Screen name="UpdateAddress" component={UpdateAddressScreen} />
         <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+        <Stack.Screen name="MapScreen" component={MapScreen} />
         
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="Orders" component={OrderScreen} />

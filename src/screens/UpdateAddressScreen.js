@@ -44,29 +44,26 @@ const UpdateAddressScreen = () => {
   const [provinceName, setProvinceName] = useState('');
   const [districtName, setDistrictName] = useState('');
   const [wardName, setWardName] = useState('');
+  const [latitude, setLatitude] = useState(address?.latitude || 37.78825);
+  const [longitude, setLongitude] = useState(address?.longitude || -122.4324);
 
-  // Parse address string to get address detail and location
   useEffect(() => {
     if (address) {
       setFullName(address.fullName || '');
       setPhoneNumber(address.phone_number || '');
       setIsDefault(address.is_default || false);
-      
-      // Parse address string to get address detail
-      const addressParts = address.addressDetail.split(', ');
+      setLatitude(address.latitude || 37.78825);
+      setLongitude(address.longitude || -122.4324);
+
+      // Tách phần chi tiết từ addressDetail
+      const addressParts = address.addressDetail ? address.addressDetail.split(', ') : [];
       if (addressParts.length >= 4) {
-        setAddressDetail(addressParts[0]);
-        // Province is the last part
-        const provinceName = addressParts[addressParts.length - 1];
-        // District is the second last part
-        const districtName = addressParts[addressParts.length - 2];
-        // Ward is the third last part
-        const wardName = addressParts[addressParts.length - 3];
-        
-        // Set the location names
-        setProvinceName(provinceName);
-        setDistrictName(districtName);
-        setWardName(wardName);
+        setAddressDetail(addressParts.slice(0, addressParts.length - 3).join(', ')); // phần chi tiết
+        setWardName(addressParts[addressParts.length - 3]);
+        setDistrictName(addressParts[addressParts.length - 2]);
+        setProvinceName(addressParts[addressParts.length - 1]);
+      } else {
+        setAddressDetail(address.addressDetail || '');
       }
     }
   }, [address]);
@@ -171,6 +168,14 @@ const UpdateAddressScreen = () => {
     fetchWards();
   }, [selectedDistrict, wardName]);
 
+  // Thêm hàm nhận toạ độ mới từ MapScreen
+  useEffect(() => {
+    if (route.params?.selectedLat && route.params?.selectedLng) {
+      setLatitude(route.params.selectedLat);
+      setLongitude(route.params.selectedLng);
+    }
+  }, [route.params?.selectedLat, route.params?.selectedLng]);
+
   const validate = () => {
     if (!fullName.trim() || !phoneNumber.trim() || !addressDetail.trim() || !selectedProvince || !selectedDistrict || !selectedWard) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin.');
@@ -195,13 +200,16 @@ const UpdateAddressScreen = () => {
       const provinceName = provinces.find(p => p.ProvinceID.toString() === selectedProvince)?.ProvinceName || '';
       const districtName = districts.find(d => d.DistrictID.toString() === selectedDistrict)?.DistrictName || '';
       const wardName = wards.find(w => w.WardCode.toString() === selectedWard)?.WardName || '';
+      // Ghép lại addressDetail đầy đủ
       const fullAddress = `${addressDetail}, ${wardName}, ${districtName}, ${provinceName}`;
 
       const body = {
         fullName: fullName.trim(),
         addressDetail: fullAddress,
         phone_number: phoneNumber.trim(),
-        is_default: isDefault
+        is_default: isDefault,
+        latitude,
+        longitude
       };
 
       const response = await fetch(`${API_ENDPOINTS.ADDRESS.UPDATE(address._id)}`, {
@@ -360,6 +368,18 @@ const UpdateAddressScreen = () => {
           <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? 'Đang cập nhật...' : 'Cập nhật địa chỉ'}</Text>
           </TouchableOpacity>
+          {/* Thêm button chuyển sang MapScreen */}
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: '#2196F3', marginBottom: 10 }]}
+            onPress={() => navigation.navigate('MapScreen', { latitude, longitude, fromScreen: 'UpdateAddress' })}
+          >
+            <Text style={styles.saveBtnText}>Chọn vị trí trên bản đồ</Text>
+          </TouchableOpacity>
+          {/* Hiển thị toạ độ hiện tại */}
+          <View style={{ alignItems: 'center', marginBottom: 10 }}>
+            <Text>Latitude: {latitude}</Text>
+            <Text>Longitude: {longitude}</Text>
+          </View>
         </>
       )}
     </SafeAreaView>

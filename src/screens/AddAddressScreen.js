@@ -15,13 +15,15 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Checkbox } from 'react-native-paper';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import Geolocation from '@react-native-community/geolocation';
 
 const GHN_API = 'https://online-gateway.ghn.vn/shiip/public-api/master-data/province';
 const GHN_DISTRICT_API = 'https://online-gateway.ghn.vn/shiip/public-api/master-data/district';
 const GHN_WARD_API = 'https://online-gateway.ghn.vn/shiip/public-api/master-data/ward';
 const GHN_TOKEN = '3b3e051d-4a82-11f0-96b4-2e25dbd34d53';
+const GOOGLE_API_KEY = 'AIzaSyB7ETOwK6NMmiPXlHUAThIjfDbCxXq_A6c';
 
-const AddAddressScreen = () => {
+const AddAddressScreen = ({ route }) => {
   const navigation = useNavigation();
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -38,6 +40,8 @@ const AddAddressScreen = () => {
   const [addressDetail, setAddressDetail] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [latitude, setLatitude] = useState(37.78825);
+  const [longitude, setLongitude] = useState(-122.4324);
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -63,6 +67,13 @@ const AddAddressScreen = () => {
     };
     fetchProvinces();
   }, []);
+
+  useEffect(() => {
+    if (route.params?.selectedLat && route.params?.selectedLng) {
+      setLatitude(route.params.selectedLat);
+      setLongitude(route.params.selectedLng);
+    }
+  }, [route.params?.selectedLat, route.params?.selectedLng]);
 
   // Fetch districts when province changes
   useEffect(() => {
@@ -152,7 +163,9 @@ const AddAddressScreen = () => {
         fullName: fullName.trim(),
         addressDetail: fullAddress,
         phone_number: phoneNumber.trim(),
-        is_default: isDefault
+        is_default: isDefault,
+        latitude,
+        longitude
       };
       const response = await fetch(API_ENDPOINTS.ADDRESS.CREATE(userInfo._id), {
         method: 'POST',
@@ -175,6 +188,41 @@ const AddAddressScreen = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const getGeocode = async (address) => {
+    console.log('Địa chỉ truyền vào geocode:', address);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`;
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log('Kết quả trả về từ Google:', data);
+      if (data.results && data.results.length > 0) {
+        return data.results[0].geometry.location;
+      }
+    } catch (err) {
+      console.log('Lỗi khi gọi geocode:', err);
+    }
+    return null;
+  };
+
+  const handleChooseLocation = () => {
+    // Lấy vị trí hiện tại trong state, nếu không có thì dùng Hà Nội
+    const lat = latitude || 21.028511;
+    const lng = longitude || 105.804817;
+    navigation.navigate('MapScreen', {
+      latitude: lat,
+      longitude: lng,
+      fromScreen: 'AddAddress',
+      // Truyền thêm các trường địa chỉ nếu muốn MapScreen xử lý geocode
+      addressDetail,
+      selectedWard,
+      selectedDistrict,
+      selectedProvince,
+      wards,
+      districts,
+      provinces,
+    });
   };
 
   return (
@@ -309,6 +357,18 @@ const AddAddressScreen = () => {
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? 'Đang lưu...' : 'Lưu địa chỉ'}</Text>
           </TouchableOpacity>
+          {/* Thêm button chuyển sang MapScreen */}
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: '#2196F3', marginBottom: 10 }]}
+            onPress={handleChooseLocation}
+          >
+            <Text style={styles.saveBtnText}>Chọn vị trí trên bản đồ</Text>
+          </TouchableOpacity>
+          {/* Hiển thị toạ độ hiện tại */}
+          <View style={{ alignItems: 'center', marginBottom: 10 }}>
+            <Text>Latitude: {latitude}</Text>
+            <Text>Longitude: {longitude}</Text>
+          </View>
         </>
       )}
     </SafeAreaView>
