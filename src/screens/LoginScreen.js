@@ -9,7 +9,7 @@
  * - Chuyển hướng đến màn hình Home sau khi đăng nhập thành công
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   View,
@@ -26,6 +26,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import { useFocusEffect } from '@react-navigation/native'; // Nếu muốn check mỗi lần vào Login
 
 const LoginScreen = ({ navigation }) => {
   // Cấu hình Google Sign-In khi component mount
@@ -38,94 +39,57 @@ const LoginScreen = ({ navigation }) => {
   }, []);
 
   // State quản lý thông tin đăng nhập
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [confirm, setConfirm] = useState(null);
-  const [showVerification, setShowVerification] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   /**
-   * Hàm gửi mã xác thực OTP
-   * - Kiểm tra số điện thoại
-   * - Format số điện thoại theo định dạng quốc tế
-   * - Gửi mã xác thực qua Firebase
+   * Hàm xử lý đăng nhập bằng email và mật khẩu
+   * - Gọi API backend để xác thực
+   * - Lưu thông tin đăng nhập nếu thành công
    */
-  const handleSendCode = async () => {
-    try {
-      if (!phoneNumber) {
-        Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại');
-        return;
-      }
-
-      // Format số điện thoại theo định dạng quốc tế
-      const formattedPhoneNumber = phoneNumber.startsWith('0') 
-        ? `+84${phoneNumber.substring(1)}` 
-        : phoneNumber;
-
-      console.log('Sending verification code to:', formattedPhoneNumber);
-
-      const confirmation = await auth().signInWithPhoneNumber(formattedPhoneNumber);
-      setConfirm(confirmation);
-      setShowVerification(true);
-      Alert.alert('Thành công', 'Mã xác thực đã được gửi đến số điện thoại của bạn');
-    } catch (error) {
-      console.error('Lỗi gửi mã:', error);
-      let errorMessage = 'Không thể gửi mã xác thực. Vui lòng thử lại sau.';
-      
-      switch (error.code) {
-        case 'auth/invalid-phone-number':
-          errorMessage = 'Số điện thoại không hợp lệ';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Quá nhiều yêu cầu. Vui lòng thử lại sau';
-          break;
-      }
-      
-      Alert.alert('Lỗi', errorMessage);
+  const handleEmailLogin = async () => {
+    console.log("Email:", email, "Password:", password);
+    if (!email || !password) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email và mật khẩu');
+      return;
     }
-  };
-
-  /**
-   * Hàm xác thực mã OTP và đăng nhập
-   * - Kiểm tra mã xác thực
-   * - Xác thực với Firebase
-   * - Lưu thông tin đăng nhập
-   * - Chuyển hướng đến màn hình Home
-   */
-  const handleVerifyAndLogin = async () => {
+    setLoading(true);
     try {
-      if (!verificationCode) {
-        Alert.alert('Lỗi', 'Vui lòng nhập mã xác thực');
-        return;
-      }
-
-      // Xác thực mã
-      const userCredential = await confirm.confirm(verificationCode);
-      
-      if (userCredential.user) {
-        // Lưu token vào AsyncStorage
-        const token = await userCredential.user.getIdToken();
-        await AsyncStorage.setItem('userToken', token);
-        await AsyncStorage.setItem('userPhone', phoneNumber);
+      // Gọi API backend để xác thực
+      const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN_EMAIL, {
+        email,
+        password
+      }, {
+        timeout: API_TIMEOUT,
+        headers: API_HEADERS,
+      });
+      if (response.data && response.data.user && response.data.user.access_token) {
+        const backendResponseData = response.data.user;
+        const backendUser = backendResponseData.user || {};
+        const userInfoToStore = {
+          displayName: backendUser.fullname || backendUser.displayName || '',
+          email: backendUser.email || email,
+          photoURL: backendUser.avatar || '',
+          _id: backendUser._id,
+          is_allowed: backendUser.is_allowed,
+          ...backendUser
+        };
+        await AsyncStorage.setItem('userToken', backendResponseData.access_token);
         await AsyncStorage.setItem('shouldAutoLogin', 'true');
-        await AsyncStorage.setItem('userInfo', JSON.stringify(userCredential.user));
-
-        Alert.alert('Thành công', 'Đăng nhập thành công!');
+        await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
         navigation.replace('Home');
+      } else {
+        throw new Error('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
       }
     } catch (error) {
-      console.error('Lỗi xác thực:', error);
-      let errorMessage = 'Mã xác thực không đúng. Vui lòng thử lại.';
-      
-      switch (error.code) {
-        case 'auth/invalid-verification-code':
-          errorMessage = 'Mã xác thực không hợp lệ';
-          break;
-        case 'auth/invalid-verification-id':
-          errorMessage = 'Phiên xác thực không hợp lệ';
-          break;
+      let message = 'Đăng nhập thất bại. Vui lòng thử lại.';
+      if (error.response && error.response.data && error.response.data.message) {
+        message = error.response.data.message;
       }
-      
-      Alert.alert('Lỗi', errorMessage);
+      Alert.alert('Lỗi', message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -202,13 +166,41 @@ const LoginScreen = ({ navigation }) => {
               photoURL: backendUser.avatar || userCredential.user.photoURL,
               uid: userCredential.user.uid, // Keep Firebase UID as a reference
               _id: backendUser._id, // Add MongoDB _id from backend
+              is_allowed: backendUser.is_allowed, // Đảm bảo có trường này
               // Add other fields from backendUser if necessary, e.g., phone, address
               ...backendUser
             };
 
+            const userId = backendUser._id;
+            if (userId) {
+              try {
+                // Gọi API kiểm tra trạng thái user mới nhất
+                const res = await fetch(`${API_ENDPOINTS.USERS.GET_BY_ID(userId)}`, {
+                  method: 'GET',
+                  headers: API_HEADERS,
+                });
+                const userData = await res.json();
+                if (!res.ok || userData.is_allowed === false || (userData.data && userData.data.is_allowed === false)) {
+                  await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+                  Alert.alert(
+                    'Tài khoản bị chặn',
+                    'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ hỗ trợ.',
+                    [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+                  );
+                  return;
+                }
+              } catch (e) {
+                // Nếu lỗi API, xử lý như chưa đăng nhập
+                await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+                navigation.replace('Login');
+                return;
+              }
+            }
+
             await AsyncStorage.setItem('userToken', backendResponseData.access_token);
             await AsyncStorage.setItem('shouldAutoLogin', 'true');
             await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
+
             console.log('Đã lưu token và thông tin người dùng từ backend, chuẩn bị chuyển màn hình Home');
             navigation.replace('Home');
           } else {
@@ -236,6 +228,23 @@ const LoginScreen = ({ navigation }) => {
               photoURL: userCredential.user.photoURL,
               uid: userCredential.user.uid
             }));
+
+            // Kiểm tra trạng thái is_allowed (nếu có)
+            const fallbackUserInfo = {
+              displayName: userCredential.user.displayName,
+              email: userCredential.user.email,
+              photoURL: userCredential.user.photoURL,
+              uid: userCredential.user.uid
+            };
+            if (fallbackUserInfo.is_allowed === false) {
+              await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+              Alert.alert(
+                'Tài khoản bị chặn',
+                'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ hỗ trợ.',
+                [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+              );
+              return;
+            }
 
             console.log('Đã lưu thông tin người dùng từ Firebase, chuẩn bị chuyển màn hình Home');
             navigation.replace('Home');
@@ -269,6 +278,45 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const checkUserStatus = useCallback(async () => {
+    try {
+      const userToken = await AsyncStorage.getItem('userToken');
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      if (userToken && userInfoString) {
+        const userInfo = JSON.parse(userInfoString);
+        const userId = userInfo._id;
+        if (!userId) {
+          // Không có userId, xóa token
+          await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+          return;
+        }
+        // Gọi API kiểm tra trạng thái user
+        const response = await fetch(`${API_ENDPOINTS.USERS.GET_BY_ID(userId)}`, {
+          method: 'GET',
+          headers: API_HEADERS,
+        });
+        const data = await response.json();
+        if (!response.ok || !data || data.is_allowed === false) {
+          // User bị khóa hoặc không tồn tại
+          await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+          Alert.alert(
+            'Tài khoản bị chặn',
+            'Tài khoản của bạn đã bị chặn hoặc không tồn tại. Vui lòng liên hệ hỗ trợ.',
+            [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+          );
+          return;
+        }
+        // User hợp lệ, cho vào Home
+        navigation.replace('Home');
+      }
+    } catch (error) {
+      // Nếu lỗi, xóa token để tránh auto login lỗi
+      await AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin']);
+    }
+  }, [navigation]);
+
+  useFocusEffect(checkUserStatus);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.formContainer}>
@@ -282,43 +330,25 @@ const LoginScreen = ({ navigation }) => {
         <View style={styles.formContent}>
           <Text style={styles.title}>Chào mừng đến với S7M Store</Text>
           
-          {/* Form đăng nhập */}
-          {!showVerification ? (
-            <>
-              <CustomTextInput
-                label="Số điện thoại"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                placeholder="Nhập số điện thoại của bạn"
-                keyboardType="phone-pad"
-              />
-              <TouchableOpacity onPress={handleSendCode} style={styles.button}>
-                <Text style={styles.buttonText}>Gửi mã xác thực</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <CustomTextInput
-                label="Mã xác thực"
-                value={verificationCode}
-                onChangeText={setVerificationCode}
-                placeholder="Nhập mã xác thực"
-                keyboardType="number-pad"
-              />
-              <TouchableOpacity onPress={handleVerifyAndLogin} style={styles.button}>
-                <Text style={styles.buttonText}>Xác thực và đăng nhập</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => {
-                  setShowVerification(false);
-                  setConfirm(null);
-                }} 
-                style={styles.resendButton}
-              >
-                <Text style={styles.resendText}>Gửi lại mã</Text>
-              </TouchableOpacity>
-            </>
-          )}
+          {/* Form đăng nhập bằng email */}
+          <CustomTextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Nhập email của bạn"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <CustomTextInput
+            label="Mật khẩu"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Nhập mật khẩu"
+            secureTextEntry
+          />
+          <TouchableOpacity onPress={handleEmailLogin} style={styles.button} disabled={loading}>
+            <Text style={styles.buttonText}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</Text>
+          </TouchableOpacity>
 
           {/* Đăng nhập bằng Google */}
           <Text style={{ textAlign: 'center', marginVertical: 10 }}>
@@ -375,7 +405,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   button: {
-    backgroundColor: '#1c2b38',
+    backgroundColor: '#007AFF',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -403,18 +433,6 @@ const styles = StyleSheet.create({
   signupText: {
     textAlign: 'center',
     marginTop: 10,
-  },
-  resendButton: {
-    backgroundColor: '#1c2b38',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  resendText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

@@ -10,12 +10,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert, Dimensions } from 'react-native';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const { width } = Dimensions.get('window');
 const numColumns = 2;
 const ITEM_WIDTH = width / numColumns - 24;
+
+const getImageSource = (img) => {
+  if (typeof img === 'string') {
+    if (img.startsWith('/uploads_product/')) {
+      return { uri: `${API_BASE_URL}${img}` };
+    }
+    if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:image')) {
+      return { uri: img };
+    }
+  }
+  return require('../assets/errorimg.webp');
+};
 
 const SearchResultsScreen = ({ route, navigation }) => {
   const { searchQuery } = route.params;
@@ -107,12 +119,7 @@ const SearchResultsScreen = ({ route, navigation }) => {
   });
 
   const renderProductItem = ({ item }) => {
-    const productImageSource = (typeof item.product_image === 'string' && 
-      (item.product_image.startsWith('http://') || 
-       item.product_image.startsWith('https://') || 
-       item.product_image.startsWith('data:image')))
-      ? { uri: item.product_image }
-      : require('../assets/errorimg.webp');
+    const productImageSource = getImageSource(item.product_image);
 
     return (
       <TouchableOpacity 
@@ -124,10 +131,7 @@ const SearchResultsScreen = ({ route, navigation }) => {
           style={styles.image} 
           resizeMode="cover"
           onError={(e) => {
-            console.error('Product image loading error:', e.nativeEvent.error);
-            e.target.setNativeProps({
-              source: require('../assets/errorimg.webp')
-            });
+            e.target.setNativeProps({ source: require('../assets/errorimg.webp') });
           }}
         />
         <Text style={styles.price}>{item.product_price?.toLocaleString('vi-VN')}đ</Text>
@@ -209,22 +213,10 @@ const SearchResultsScreen = ({ route, navigation }) => {
             >
               <View style={styles.categoryImageContainer}>
                 <Image
-                  source={(() => {
-                    const categoryImg = category.category_image;
-                    if (typeof categoryImg === 'string' && 
-                        (categoryImg.startsWith('http://') || 
-                         categoryImg.startsWith('https://') || 
-                         categoryImg.startsWith('data:image'))) {
-                      return { uri: categoryImg };
-                    }
-                    return require('../assets/errorimg.webp');
-                  })()}
+                  source={getImageSource(category.category_image)}
                   style={styles.categoryImage}
                   onError={(e) => {
-                    console.error('Category image loading error:', e.nativeEvent.error);
-                    e.target.setNativeProps({
-                      source: require('../assets/errorimg.webp')
-                    });
+                    e.target.setNativeProps({ source: require('../assets/errorimg.webp') });
                   }}
                 />
               </View>

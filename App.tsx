@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import { SafeAreaView, StatusBar, useColorScheme } from 'react-native';
-import AppNavigator from './src/navigation/AppNavigator'
+// @ts-ignore
+  import AppNavigator from './src/navigation/AppNavigator.js' 
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
 import { initializeSdks } from './src/utils/initializeSdks';
 import { StyleSheet, Text, View } from 'react-native'
-
+// @ts-ignore
+import {SocketProvider} from './src/contexts/SocketContext.js'
 
 const App: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -40,6 +42,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
+    <SocketProvider>
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
@@ -47,6 +50,7 @@ const App: React.FC = () => {
       />
       <AppNavigator />
     </SafeAreaView>
+    </SocketProvider>
   );
 };
 

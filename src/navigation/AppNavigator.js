@@ -17,6 +17,8 @@ import AddAddressScreen from '../screens/AddAddressScreen';
 import UpdateAddressScreen from '../screens/UpdateAddressScreen';
 import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
 import RatingScreen from '../screens/RatingScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import UserChatScreen from '../screens/ChatScreen';
 import MapScreen from '../screens/MapScreen';
 
 const Stack = createStackNavigator();
@@ -34,7 +36,7 @@ const AppNavigator = () => {
     <NavigationContainer>
       {/* Stack Navigator quản lý các màn hình chính */}
       <Stack.Navigator
-        initialRouteName="Welcome"
+        initialRouteName="Home"
         screenOptions={{
           headerShown: false,
         }}
@@ -71,6 +73,9 @@ const AppNavigator = () => {
         <Stack.Screen name="Orders" component={OrderScreen} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
         <Stack.Screen name="Rating" component={RatingScreen} />
+        <Stack.Screen name='Profile' component={ProfileScreen}/>
+        <Stack.Screen name='Chat' component={UserChatScreen}/>
+        
       </Stack.Navigator>
     </NavigationContainer>
   );

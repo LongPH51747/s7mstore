@@ -249,14 +249,10 @@ const HomeScreen = ({ navigation }) => {
    */
   const filteredProducts = selectedCategory === 'All'
     ? products
-    : products.filter(product => {
-        if (!product.product_category || !Array.isArray(product.product_category)) {
-          return false;
-        }
-        return product.product_category.some(category => 
-          category && category.category_name === selectedCategory
-        );
-      });
+    : products.filter(product =>
+        Array.isArray(product.product_category) &&
+        product.product_category.includes(selectedCategory)
+      );
 
   // Add error handling for filtering
   useEffect(() => {
@@ -382,7 +378,11 @@ const HomeScreen = ({ navigation }) => {
                 styles.categoryTab,
                 selectedCategory === 'All' && styles.selectedCategoryTab
               ]}
-              onPress={() => setSelectedCategory('All')}
+              onPress={() => {
+                if (selectedCategory !== 'All') {
+                  setSelectedCategory('All');
+                }
+              }}
             >
               <View style={styles.categoryImageContainer}>
                 <Image
@@ -400,9 +400,13 @@ const HomeScreen = ({ navigation }) => {
                 key={category._id}
                 style={[
                   styles.categoryTab,
-                  selectedCategory === category.category_name && styles.selectedCategoryTab
+                  selectedCategory === category._id && styles.selectedCategoryTab
                 ]}
-                onPress={() => setSelectedCategory(category.category_name)}
+                onPress={() => {
+                  if (selectedCategory !== category._id) {
+                    setSelectedCategory(category._id);
+                  }
+                }}
               >
                 <View style={styles.categoryImageContainer}>
                   <Image
@@ -427,7 +431,7 @@ const HomeScreen = ({ navigation }) => {
                 </View>
                 <Text style={[
                   styles.categoryText,
-                  selectedCategory === category.category_name && styles.selectedCategoryText
+                  selectedCategory === category._id && styles.selectedCategoryText
                 ]}>{category.category_name}</Text>
               </TouchableOpacity>
             ))}

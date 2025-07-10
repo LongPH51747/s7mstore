@@ -23,11 +23,23 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 
 const { width } = Dimensions.get('window');
 const numColumns = 2;
 const ITEM_WIDTH = width / numColumns - 24;
+
+const getImageSource = (img) => {
+  if (typeof img === 'string') {
+    if (img.startsWith('/uploads_product/')) {
+      return { uri: `${API_BASE_URL}${img}` };
+    }
+    if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:image')) {
+      return { uri: img };
+    }
+  }
+  return require('../assets/errorimg.webp');
+};
 
 const SearchScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,12 +163,7 @@ const SearchScreen = ({ navigation }) => {
   };
 
   const renderRecommendedProduct = ({ item }) => {
-    const productImageSource = (typeof item.product_image === 'string' && 
-      (item.product_image.startsWith('http://') || 
-       item.product_image.startsWith('https://') || 
-       item.product_image.startsWith('data:image')))
-      ? { uri: item.product_image }
-      : require('../assets/errorimg.webp');
+    const productImageSource = getImageSource(item.product_image);
 
     return (
       <TouchableOpacity 
@@ -168,10 +175,7 @@ const SearchScreen = ({ navigation }) => {
           style={styles.recommendedImage} 
           resizeMode="cover"
           onError={(e) => {
-            console.error('Product image loading error:', e.nativeEvent.error);
-            e.target.setNativeProps({
-              source: require('../assets/errorimg.webp')
-            });
+            e.target.setNativeProps({ source: require('../assets/errorimg.webp') });
           }}
         />
         <Text style={styles.recommendedPrice}>{item.product_price?.toLocaleString('vi-VN')}đ</Text>
