@@ -12,7 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 
@@ -27,6 +27,11 @@ const ProductDetailScreen = () => {
   const [currentDisplayImage, setCurrentDisplayImage] = useState(null);
   const [userId, setUserId] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [userInfoById, setUserInfoById] = useState({});
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -304,6 +309,42 @@ const ProductDetailScreen = () => {
     }
   };
 
+  useEffect(() => {
+    if (product?._id) {
+      fetchReviews(product._id);
+    }
+  }, [product?._id]);
+
+  const fetchReviews = async (productId) => {
+    setLoadingReviews(true);
+    try {
+      const url = API_ENDPOINTS.REVIEWS.GET_REVIEW_BY_PRODUCT_ID(productId);
+      const res = await fetch(url, { headers: API_HEADERS });
+      if (!res.ok) throw new Error('Failed to fetch reviews');
+      const data = await res.json();
+      setReviews(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setReviews([]);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const fetchUserInfo = async (userId) => {
+    if (userInfoById[userId]) return; // Đã có rồi thì không fetch lại
+    try {
+      const res = await fetch(API_ENDPOINTS.USERS.GET_BY_ID(userId), { headers: API_HEADERS });
+      if (!res.ok) throw new Error('Failed to fetch user');
+      const data = await res.json();
+      setUserInfoById(prev => ({ ...prev, [userId]: data.data || data }));
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    // Fetch user info cho tất cả review_user_id
+    reviews.forEach(r => fetchUserInfo(r.review_user_id));
+  }, [reviews]);
+
   // Declare only once before first use
   const isSelectedVariantInStock = selectedVariant && (selectedVariant.variant_stock || selectedVariant.variant_quantity || selectedVariant.stock || selectedVariant.quantity || selectedVariant.inventory || 0) > 0;
   const selectedVariantStock = selectedVariant ? (selectedVariant.variant_stock || selectedVariant.variant_quantity || selectedVariant.stock || selectedVariant.quantity || selectedVariant.inventory || 0) : 0;
@@ -342,7 +383,27 @@ const ProductDetailScreen = () => {
      currentDisplayImage.startsWith('data:image'))
   )
     ? { uri: currentDisplayImage }
-    : require('../assets/LogoGG.png');
+    : require('../assets/errorimg.webp');
+
+  const renderStars = (rate) => (
+    <View style={{ flexDirection: 'row' }}>
+      {[...Array(5)].map((_, i) => (
+        <Icon
+          key={i}
+          name={i < rate ? 'star' : 'star-o'} // star-o là sao rỗng
+          size={18}
+          color="#FFD700"
+        />
+      ))}
+    </View>
+  );
+
+  // Hàm xử lý khi nhấn vào variant
+  const handleVariantPress = (variantId, productName) => {
+    // Ví dụ: log ra, hoặc mở modal, hoặc điều hướng
+    console.log('Variant ID:', variantId, 'Tên sản phẩm:', productName);
+    // Bạn có thể điều hướng hoặc xử lý khác ở đây
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -360,7 +421,7 @@ const ProductDetailScreen = () => {
         resizeMode="cover"
         onError={(e) => {
           console.error('Product detail image loading error:', e.nativeEvent.error);
-          e.target.setNativeProps({ source: require('../assets/LogoGG.png') });
+          e.target.setNativeProps({ source: require('../assets/errorimg.webp') });
         }}
       />
 
@@ -373,7 +434,7 @@ const ProductDetailScreen = () => {
         >
           {product.product_variant.map((variant) => {
             // Lấy ảnh variant
-            let variantImgSrc = require('../assets/LogoGG.png');
+            let variantImgSrc = require('../assets/errorimg.webp');
             if (variant.variant_image_url) {
               variantImgSrc =
                 typeof variant.variant_image_url === 'string' && variant.variant_image_url.startsWith('/uploads_product/')
@@ -408,6 +469,29 @@ const ProductDetailScreen = () => {
             );
           })}
         </ScrollView>
+      )}
+
+      {/* Ví dụ render danh sách variant */}
+      {product?.product_variant && product.product_variant.length > 0 && (
+        <View style={{ marginTop: 16, paddingHorizontal: 16 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>Các phiên bản</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {product.product_variant.map((variant) => (
+              <TouchableOpacity
+                key={variant._id}
+                style={{ marginRight: 12, alignItems: 'center' }}
+                onPress={() => handleVariantPress(variant._id, product.product_name)}
+              >
+                <Image
+                  source={{ uri: `${API_BASE_URL}${variant.variant_image_url}` }}
+                  style={{ width: 80, height: 80, borderRadius: 8, marginBottom: 4 }}
+                  resizeMode="cover"
+                />
+                <Text style={{ fontSize: 12 }}>{variant.variant_color} - {variant.variant_size}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       <View style={styles.detailsContainer}>
@@ -530,6 +614,75 @@ const ProductDetailScreen = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Hiển thị danh sách review */}
+      <View style={{ marginTop: 24, paddingHorizontal: 16 }}>
+        <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Đánh giá sản phẩm</Text>
+        {loadingReviews ? (
+          <ActivityIndicator size="small" color="#000" />
+        ) : reviews.length === 0 ? (
+          <Text style={{ color: '#888' }}>Chưa có đánh giá nào cho sản phẩm này.</Text>
+        ) : (
+          reviews.map((review) => {
+            const user = userInfoById[review.review_user_id];
+            // Tìm variant nếu có id_variant trong review
+            let variantName = product.product_name;
+            if (review.id_variant && Array.isArray(product.product_variant)) {
+              const foundVariant = product.product_variant.find(
+                v => v._id === review.id_variant || v.variant_sku === review.id_variant
+              );
+              if (foundVariant) {
+                variantName = `${foundVariant.variant_color || ''}${foundVariant.variant_color && foundVariant.variant_size ? ' - ' : ''}${foundVariant.variant_size || ''}`.trim();
+              }
+            }
+            console.log('Review', review._id, 'variantName:', variantName, 'id_variant:', review.id_variant);
+            return (
+              <View key={review._id} style={{ marginBottom: 20, backgroundColor: '#f8f8f8', borderRadius: 10, padding: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                  {user?.avatar && (
+                    <Image
+                      source={{ uri: user.avatar.startsWith('http') ? user.avatar : `${API_BASE_URL}/${user.avatar.replace(/\\/g, '/')}` }}
+                      style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }}
+                    />
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15 }}>{user?.fullname || 'Người dùng'}</Text>
+                    {renderStars(review.review_rate)}
+                    {/* Hiển thị tên biến thể dưới sao */}
+                    <Text style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{variantName}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#444', marginVertical: 6, fontSize: 14 }}>{review.review_comment}</Text>
+                {Array.isArray(review.review_image) && review.review_image.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+                    {review.review_image.map((img, idx) => (
+                      <TouchableOpacity key={idx} onPress={() => { setSelectedImage(`${API_BASE_URL}${img}`); setShowImageModal(true); }}>
+                        <Image
+                          source={{ uri: `${API_BASE_URL}${img}` }}
+                          style={{ width: 150, height: 150, borderRadius: 8, marginRight: 8 }}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            );
+          })
+        )}
+      </View>
+
+      {/* Modal xem ảnh lớn */}
+      <Modal visible={showImageModal} transparent onRequestClose={() => setShowImageModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity style={{ position: 'absolute', top: 40, right: 20, zIndex: 2 }} onPress={() => setShowImageModal(false)}>
+            <Icon name="close" size={32} color="#fff" />
+          </TouchableOpacity>
+          {selectedImage && (
+            <Image source={{ uri: selectedImage }} style={{ width: '90%', height: '70%', borderRadius: 10 }} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
 
       <Modal
         visible={showLoginModal}

@@ -1,13 +1,11 @@
 import React, { useEffect } from 'react';
-import { SafeAreaView, StatusBar, useColorScheme } from 'react-native';
-// @ts-ignore
-  import AppNavigator from './src/navigation/AppNavigator.js' 
+import { SafeAreaView, StatusBar, useColorScheme, View, ActivityIndicator, Text } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
-import { getApp } from '@react-native-firebase/app';
 import { initializeSdks } from './src/utils/initializeSdks';
-import { StyleSheet, Text, View } from 'react-native'
-// @ts-ignore
-import {SocketProvider} from './src/contexts/SocketContext.js'
+import { AuthProvider } from './src/contexts/AuthContext';
+import { SocketProvider } from './src/contexts/SocketContext';
+import AppNavigator from './src/navigation/AppNavigator';
 
 const App: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -17,7 +15,6 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Initialize SDKs first (including database)
     const initApp = async () => {
       try {
         await initializeSdks();
@@ -26,10 +23,7 @@ const App: React.FC = () => {
         console.error('Error initializing SDKs:', error);
       }
     };
-
     initApp();
-
-    // Then set up auth listener
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, user => {
       if (user) {
@@ -42,21 +36,20 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <SocketProvider>
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      <AppNavigator />
+      <NavigationContainer>
+        <AuthProvider>
+          <SocketProvider>
+            <AppNavigator />
+          </SocketProvider>
+        </AuthProvider>
+      </NavigationContainer>
     </SafeAreaView>
-    </SocketProvider>
   );
 };
 
-
-
-
-export default App
-
-const styles = StyleSheet.create({})
+export default App;

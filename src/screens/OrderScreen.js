@@ -176,7 +176,7 @@ const OrdersScreen = () => {
                             return src;
                           }
                           console.log('OrderScreen - image source: default');
-                          return require('../assets/LogoGG.png');
+                          return require('../assets/errorimg.webp');
                         })()}
                         style={styles.productImageInOrder}
                         resizeMode="cover"
@@ -209,7 +209,7 @@ const OrdersScreen = () => {
                             return src;
                           }
                           console.log('OrderScreen - image source: default');
-                          return require('../assets/LogoGG.png');
+                          return require('../assets/errorimg.webp');
                         })()}
                         style={styles.productImageInOrder}
                         resizeMode="cover"

@@ -9,7 +9,7 @@ const ForgotPasswordScreen = () => {
       style={{ flex: 1, alignItems:'center', backgroundColor: 'white' }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-       <Image style={styles.image} source={require('../assets/image/logo.png')}/>
+       <Image style={styles.image} source={require('../../assets/image/logo.png')}/>
       <View style={styles.container}>
          
         <Text style={styles.title}>Bạn quên mật khẩu ư ?</Text>

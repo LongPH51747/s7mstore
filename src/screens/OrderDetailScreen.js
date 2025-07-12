@@ -121,13 +121,13 @@ const OrderDetailScreen = ({ route }) => {
                     return src;
                   }
                   console.log('OrderDetailScreen - image source: default');
-                  return require('../assets/LogoGG.png');
+                  return require('../assets/errorimg.webp');
                 })()}
                 style={styles.productImage}
                 resizeMode="cover"
                 onError={(e) => {
                   e.target.setNativeProps({
-                    source: require('../assets/LogoGG.png')
+                    source: require('../assets/errorimg.webp')
                   });
                 }}
               />

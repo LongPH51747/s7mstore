@@ -9,30 +9,21 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Modal,
-  ActivityIndicator,
-} from 'react-native';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, StatusBar, Modal } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather'; 
 import axios from 'axios';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { useNavigation } from '@react-navigation/native';
 
-
-const SignUpScreen = ({ navigation }) => {
+const SignUpScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [fullname, setFullname] = useState('');
   const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '']);
   const otpInputs = [useRef(), useRef(), useRef(), useRef(), useRef()];
@@ -40,6 +31,7 @@ const SignUpScreen = ({ navigation }) => {
   const [verifying, setVerifying] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [usernameError, setUsernameError] = useState('');
+    const navigation = useNavigation();
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,31 +43,26 @@ const SignUpScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
     if (!validateEmail(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-
     if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
-
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
-
     try {
       setLoading(true);
-      // Gọi API gửi mã xác thực về email
+            // Gửi mã xác thực về email
       const res = await axios.post(
-        API_ENDPOINTS.AUTH.SEND_VERIFICATION,
+                API_ENDPOINTS.AUTH.SEND_VERIFICATION,
         { email },
         { timeout: API_TIMEOUT, headers: API_HEADERS }
       );
-      // Lưu randomCode vào state
       const code = res?.data?.data?.randomCode || res?.data?.randomCode;
       if (code) {
         setRandomCode(code);
@@ -84,7 +71,6 @@ const SignUpScreen = ({ navigation }) => {
         Alert.alert('Error', 'Could not send verification code.');
       }
     } catch (error) {
-      console.log('Send verification error:', error, error?.response?.data);
       let errorMessage = 'An error occurred while sending verification code';
       if (error.response && error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
@@ -103,7 +89,7 @@ const SignUpScreen = ({ navigation }) => {
   }, [otpDigits, showOtpModal]);
 
   const handleOtpChange = (value, idx) => {
-    if (!/^[0-9]?$/.test(value)) return; // chỉ cho nhập số hoặc rỗng
+        if (!/^[0-9]?$/.test(value)) return;
     const newOtp = [...otpDigits];
     newOtp[idx] = value;
     setOtpDigits(newOtp);
@@ -122,7 +108,6 @@ const SignUpScreen = ({ navigation }) => {
       setVerifying(true);
       setEmailError('');
       setUsernameError('');
-      console.log('Đăng ký với:', { username, fullname, email, password, randomCode, otpToCheck });
       const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, {
         username,
         fullname,
@@ -132,13 +117,12 @@ const SignUpScreen = ({ navigation }) => {
         timeout: API_TIMEOUT,
         headers: API_HEADERS,
       });
-      console.log('Đăng ký response:', response?.data);
       if (response.data && (response.data.data || response.data.user || response.data.message === 'Dang ky thanh cong')) {
         setShowOtpModal(false);
         Alert.alert('Success', 'Account created successfully', [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Login'),
+                        onPress: () => navigation.navigate('login'),
           },
         ]);
       } else {
@@ -147,7 +131,6 @@ const SignUpScreen = ({ navigation }) => {
       }
     } catch (error) {
       setShowOtpModal(false);
-      console.log('SignUp error:', error, error?.response, error?.response?.data, { randomCode, otpDigits });
       let errorMessage = 'An error occurred during sign up';
       if (error.response && error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
@@ -169,7 +152,7 @@ const SignUpScreen = ({ navigation }) => {
       setVerifying(true);
       setOtpDigits(['', '', '', '', '']);
       const res = await axios.post(
-        API_ENDPOINTS.AUTH.SEND_VERIFICATION,
+                API_ENDPOINTS.AUTH.SEND_VERIFICATION,
         { email },
         { timeout: API_TIMEOUT, headers: API_HEADERS }
       );
@@ -181,7 +164,6 @@ const SignUpScreen = ({ navigation }) => {
         Alert.alert('Error', 'Could not resend verification code.');
       }
     } catch (error) {
-      console.log('Resend OTP error:', error, error?.response?.data);
       let errorMessage = 'An error occurred while resending verification code';
       if (error.response && error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
@@ -193,85 +175,89 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
-
-          <View style={styles.form}>
+        <View style={styles.container}>
+            <StatusBar backgroundColor='white' barStyle='dark-content'/>
+            <Image
+                source={require('../../assets/image/logo.png')}
+                style={styles.logo}
+            />
+            <Text style={styles.title}>Create Your Account</Text>
+            <View style={styles.inputContainer}>
+                <Icon name="mail" size={20} color="#888" style={styles.icon} />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor="#999"
+                />
+            </View>
+            <View style={styles.inputContainer}>
+                <Icon name="user" size={20} color="#888" style={styles.icon} />
             <TextInput
               style={styles.input}
               placeholder="Username"
               value={username}
-              onChangeText={text => {
-                setUsername(text);
-                setUsernameError('');
-              }}
+                    onChangeText={setUsername}
               autoCapitalize="none"
-            />
-            {usernameError ? (
-              <Text style={{ color: 'red', marginBottom: 8, marginLeft: 4 }}>{usernameError}</Text>
-            ) : null}
+                    placeholderTextColor="#999"
+                />
+            </View>
+            <View style={styles.inputContainer}>
+                <Icon name="info" size={20} color="#888" style={styles.icon} />
             <TextInput
               style={styles.input}
-              placeholder="Full name"
+                    placeholder="Full Name"
               value={fullname}
               onChangeText={setFullname}
+                    placeholderTextColor="#999"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={text => {
-                setEmail(text);
-                setEmailError('');
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {emailError ? (
-              <Text style={{ color: 'red', marginBottom: 8, marginLeft: 4 }}>{emailError}</Text>
-            ) : null}
+            </View>
+            <View style={styles.inputContainer}>
+                <Icon name="lock" size={20} color="#888" style={styles.icon} />
             <TextInput
               style={styles.input}
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry
-            />
-
+                    secureTextEntry={!showPassword}
+                    placeholderTextColor="#999"
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                    <Icon name={showPassword ? "eye" : "eye-off"} size={20} color="#888" />
+                </TouchableOpacity>
+            </View>
+            <View style={styles.inputContainer}>
+                <Icon name="lock" size={20} color="#888" style={styles.icon} />
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              secureTextEntry
+                    secureTextEntry={!showConfirmPassword}
+                    placeholderTextColor="#999"
             />
-
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                    <Icon name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#888" />
+                </TouchableOpacity>
+            </View>
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+                style={styles.button}
               onPress={handleSignUp}
               disabled={loading}
             >
-              <Text style={styles.buttonText}>
-                {loading ? 'Creating Account...' : 'Sign Up'}
-              </Text>
+                {loading ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={styles.buttonText}>Sign up</Text>
+                )}
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.footerLink}>Sign In</Text>
+            <Text style={styles.orText}>or continue with</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('login')}>
+                <Text style={styles.bottomLink}>Already have an account? <Text style={styles.linkText}>Sign in</Text></Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
       {/* Modal nhập OTP */}
       <Modal
         visible={showOtpModal}
@@ -311,74 +297,81 @@ const SignUpScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+        </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
     justifyContent: 'center',
+        alignItems: 'center',
+        padding: 25,
+        backgroundColor: 'white',
+    },
+    logo: {
+        width: 150,
+        height: 150,
+        marginBottom: 30,
+        resizeMode: 'contain',
   },
   title: {
-    fontSize: 32,
+        fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
+        marginBottom: 30,
+        color: '#333',
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        backgroundColor: '#F2F4F5',
+        borderRadius: 10,
+        paddingHorizontal: 15,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  form: {
-    marginBottom: 24,
+    icon: {
+        marginRight: 10,
   },
   input: {
+        flex: 1,
     height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    marginBottom: 16,
     fontSize: 16,
+        color: '#333',
+    },
+    eyeIcon: {
+        padding: 5,
   },
   button: {
-    backgroundColor: '#007AFF',
-    height: 50,
-    borderRadius: 8,
+        width: '100%',
+        height: 55,
+        backgroundColor: '#343A40',
+        borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
+        marginBottom: 20,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+        fontSize: 18,
     fontWeight: 'bold',
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#666',
+    orText: {
+        fontSize: 16,
+        color: '#888',
+        marginBottom: 20,
+    },
+    bottomLink: {
     fontSize: 16,
+        color: '#555',
   },
-  footerLink: {
-    color: '#007AFF',
-    fontSize: 16,
+    linkText: {
+        color: '#343A40',
     fontWeight: 'bold',
   },
 });
