@@ -13,7 +13,7 @@ const OrdersScreen = () => {
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState({});
 
-  const tabs = ['Chờ xác nhận', 'Chờ lấy hàng', 'Chờ giao hàng', 'Giao thành công', 'Trả hàng', 'Đã hủy'];
+  const tabs = ['Chờ xác nhận', 'Đã xác nhận', 'Chờ giao hàng', 'Giao thành công', 'Trả hàng', 'Đã hủy'];
 
   const getUserInfo = useCallback(async () => {
     try {
@@ -268,7 +268,7 @@ function getStatusBadgeStyle(status) {
   switch (status) {
     case 'Chờ xác nhận':
       return { backgroundColor: '#E0E0E0', color: '#222' };
-    case 'Chờ lấy hàng':
+    case 'Đã xác nhận':
       return { backgroundColor: '#BDBDBD', color: '#222' };
     case 'Chờ giao hàng':
       return { backgroundColor: '#9E9E9E', color: '#fff' };
