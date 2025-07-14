@@ -72,6 +72,10 @@ export const API_ENDPOINTS = {
     UPDATE: (ratingId) => `${API_BASE_URL}/api/ratings/update/${ratingId}`,
     DELETE: (ratingId) => `${API_BASE_URL}/api/ratings/delete/${ratingId}`,
   },
+
+  REVIEWS: {
+    GET_REVIEW_BY_PRODUCT_ID: (id_product) => `${API_BASE_URL}/api/review/get-review-by-id/id_product/${id_product}`,
+  },
 };
 
 // API Headers
