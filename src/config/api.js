@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://c4ecbb6af413.ngrok-free.app';
+export const API_BASE_URL = 'https://7d3ae165ab2d.ngrok-free.app';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -76,6 +76,9 @@ export const API_ENDPOINTS = {
   REVIEWS: {
     GET_REVIEW_BY_PRODUCT_ID: (id_product) => `${API_BASE_URL}/api/review/get-review-by-id/id_product/${id_product}`,
   },
+  MOMO:{
+    CREATE_PAY: () => `${API_BASE_URL}/api/momo/create-payment`
+  }
 };
 
 // API Headers

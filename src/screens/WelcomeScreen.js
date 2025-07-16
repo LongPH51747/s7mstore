@@ -18,7 +18,7 @@ const WelcomeScreen = ({ navigation }) => {
   // Kiểm tra token người dùng khi component được mount
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace('Home');
+      navigation.replace('Login');
     }, 1500);
     return () => clearTimeout(timer);
   }, []);
