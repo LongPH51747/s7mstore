@@ -4,14 +4,14 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 
-const API_URL = 'http://172.20.10.2:5000';
+const API_URL = 'http://172.20.10.3:3000';
 
 const SocketContext = createContext(null);
 
 export const useSocket = () => {
     const context = useContext(SocketContext);
     if (!context) throw new Error('useSocket must be used within a SocketProvider');
-    return contextgi;
+    return context;
 };
 
 export const SocketProvider = ({ children }) => {
