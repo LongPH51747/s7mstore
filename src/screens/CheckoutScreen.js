@@ -187,7 +187,7 @@ export default function CheckoutScreen() {
       const result_momo = await response.json();
       console.log('Order created:', result_momo);
         
-        const result = await axios.post(`https://7d3ae165ab2d.ngrok-free.app/api/momo/create-payment`,{
+        const result = await axios.post(`${API_BASE_URL}/api/momo/create-payment`,{
           total_amount: result_momo.total_amount,
           orderId: result_momo._id
         })

@@ -21,7 +21,7 @@ const PaymentSuccessScreen = () => {
       </View>
 
       <Text style={styles.title}>Payment successful!</Text>
-      <Text style={styles.orderNumber}>Mã đơn hàng: {orderId}</Text>
+      {/* <Text style={styles.orderNumber}>Mã đơn hàng: {orderId}</Text> */}
       <Text style={styles.thankYou}>Thank you for shopping!</Text>
 
       <TouchableOpacity style={styles.button} onPress={handleContinue}>
