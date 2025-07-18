@@ -16,8 +16,15 @@ import AddressScreen from '../screens/AddressScreen';
 import AddAddressScreen from '../screens/AddAddressScreen';
 import UpdateAddressScreen from '../screens/UpdateAddressScreen';
 import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
+import RatingScreen from '../screens/RatingScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import UserChatScreen from '../screens/ChatScreen';
+import MapScreen from '../screens/MapScreen';
+import ForgotPasswordScreen from '../screens/ForgotPassword';
+import OtpVerificationScreen from '../screens/OtpScreen';
+import ResetPasswordScreen from '../screens/ResetPassword';
+import ChangePasswordScreen from '../screens/ChangePassword';
+import RefundReturnScreen from '../screens/TraHangScreen';
 
 const Stack = createStackNavigator();
 
@@ -31,10 +38,9 @@ const Stack = createStackNavigator();
  */
 const AppNavigator = () => {
   return (
-    <NavigationContainer>
-      {/* Stack Navigator quản lý các màn hình chính */}
+    
       <Stack.Navigator
-        initialRouteName="Welcome"
+        initialRouteName="Home"
         screenOptions={{
           headerShown: false,
         }}
@@ -65,15 +71,17 @@ const AppNavigator = () => {
         {/* Màn hình sửa địa chỉ */}
         <Stack.Screen name="UpdateAddress" component={UpdateAddressScreen} />
         <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+        <Stack.Screen name="MapScreen" component={MapScreen} />
         
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="Orders" component={OrderScreen} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+        <Stack.Screen name="Rating" component={RatingScreen} />
         <Stack.Screen name='Profile' component={ProfileScreen}/>
         <Stack.Screen name='Chat' component={UserChatScreen}/>
         
       </Stack.Navigator>
-    </NavigationContainer>
+
   );
 };
 

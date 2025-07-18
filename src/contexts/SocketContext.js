@@ -3,8 +3,9 @@ import { io } from 'socket.io-client';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
+import { API_BASE_URL } from '../config/api';
 
-const API_URL = 'http://172.20.10.3:3000';
+// const API_URL = 'http://172.20.10.3:3000';
 
 const SocketContext = createContext(null);
 
@@ -143,6 +144,12 @@ export const SocketProvider = ({ children }) => {
     // SOCKET.IO KẾT NỐI VÀ QUẢN LÝ LIFECYCLE
     useEffect(() => {
         setMessagesError(null);
+        console.log('[SocketContext] ===== BẮT ĐẦU KẾT NỐI SOCKET =====');
+        console.log('[SocketContext] API_BASE_URL:', API_BASE_URL);
+        console.log('[SocketContext] accessToken:', accessToken);
+        console.log('[SocketContext] isAuthenticated:', isAuthenticated);
+        console.log('[SocketContext] user:', user);
+        console.log('[SocketContext] user?._id:', user?._id);
         if (loadingAuth || !isAuthenticated || !accessToken || !user?._id) {
             if (socketRef.current) {
                 socketRef.current.disconnect();
@@ -173,7 +180,8 @@ export const SocketProvider = ({ children }) => {
             isConnecting.current = true;
             setIsSocketReady(false);
 
-            const newSocket = io(API_URL, {
+            console.log('[SocketContext] Tạo socket mới với URL:', API_BASE_URL);
+            const newSocket = io(API_BASE_URL, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionAttempts: 5,
@@ -184,11 +192,18 @@ export const SocketProvider = ({ children }) => {
                 auth: { token: accessToken, tokenType: 'firebase'},
             });
 
+            newSocket.onAny((event, ...args) => {
+                console.log('[SocketContext][SOCKET EVENT]', event, args);
+            });
+
             socketRef.current = newSocket;
 
             // Listeners
-            const onConnect = () => {};
+            const onConnect = () => {
+                console.log('[SocketContext] Đã kết nối socket thành công!');
+            };
             const onAuthenticated = (data) => {
+                console.log('[SocketContext] Đã authenticated:', data);
                 setIsSocketReady(true);
                 isConnecting.current = false;
                 if (latestUserRef.current?.role === 'admin') {
@@ -198,24 +213,29 @@ export const SocketProvider = ({ children }) => {
                 }
             };
             const onUnauthorized = (reason) => {
+                console.warn('[SocketContext] unauthorized:', reason);
                 Alert.alert('Phiên đăng nhập hết hạn', 'Vui lòng đăng nhập lại để tiếp tục.', [{ text: 'OK', onPress: handleLocalLogout }]);
                 if (newSocket && newSocket.connected) { newSocket.disconnect(); }
                 setIsSocketReady(false);
                 isConnecting.current = false;
             };
             const onDisconnect = (reason) => {
+                console.warn('[SocketContext] Đã disconnect:', reason);
                 setIsSocketReady(false);
                 isConnecting.current = false;
             };
             const onConnectError = (error) => {
-                console.error('[SocketContext] Lỗi kết nối Socket:', error); 
+                console.error('[SocketContext] Lỗi connect_error:', error);
                 setIsSocketReady(false);
                 isConnecting.current = false;
                 Alert.alert('Lỗi kết nối', 'Không thể kết nối đến máy chủ chat. Vui lòng thử lại sau.', [{ text: 'OK' }]);
             };
-            const onGenericError = (error) => {};
+            const onGenericError = (error) => {
+                console.error('[SocketContext] Lỗi error:', error);
+            };
 
             const onChatRoomsList = (rooms) => {
+                console.log('[SocketContext] Nhận danh sách phòng chat:', rooms);
                 setChatRooms(rooms.map(room => ({ ...room, roomId: room._id, userId: room.userId })));
                 if (rooms.length > 0 && !latestCurrentChatRoomIdRef.current) {
                     latestCurrentChatRoomIdRef.current = rooms[0]._id || rooms[0].id;
@@ -223,6 +243,7 @@ export const SocketProvider = ({ children }) => {
             };
 
             const onReceiveMessage = (message) => {
+                console.log('[SocketContext] Nhận message:', message);
                 setMessages((prevMessages) => {
                     if (message.tempMessageId) {
                         const existingTempMessageIndex = prevMessages.findIndex(msg => msg._id === message.tempMessageId);
@@ -246,7 +267,7 @@ export const SocketProvider = ({ children }) => {
             };
 
             const onChatHistory = (data) => {
-                console.log('Dữ liệu nhận từ backend:', data);
+                console.log('[SocketContext] Dữ liệu nhận từ backend:', data);
                 // data có thể là mảng (cũ) hoặc object mới { chatRoomId, messages }
                 let history = [];
                 let chatRoomId = null;

@@ -14,23 +14,18 @@ import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Checkbox } from 'react-native-paper';
-import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api'; // Import API config
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
+import { useLocationData } from '../hooks/useLocationData';
+import Geolocation from '@react-native-community/geolocation';
 
-const GHN_API = 'https://online-gateway.ghn.vn/shiip/public-api/master-data/province';
-const GHN_DISTRICT_API = 'https://online-gateway.ghn.vn/shiip/public-api/master-data/district';
-const GHN_WARD_API = 'https://online-gateway.ghn.vn/shiip/public-api/master-data/ward';
-const GHN_TOKEN = '3b3e051d-4a82-11f0-96b4-2e25dbd34d53';
+const GOOGLE_API_KEY = 'AIzaSyB7ETOwK6NMmiPXlHUAThIjfDbCxXq_A6c';
 
-const AddAddressScreen = () => {
+const AddAddressScreen = ({ route }) => {
   const navigation = useNavigation();
-  const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
+  const { provinces, wards, loading, loadWardsByProvince } = useLocationData();
+  
   const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedWard, setSelectedWard] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadingDistrict, setLoadingDistrict] = useState(false);
   const [loadingWard, setLoadingWard] = useState(false);
   const [error, setError] = useState(null);
   const [fullName, setFullName] = useState('');
@@ -38,94 +33,53 @@ const AddAddressScreen = () => {
   const [addressDetail, setAddressDetail] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [latitude, setLatitude] = useState(21.028511); // Hà Nội mặc định
+  const [longitude, setLongitude] = useState(105.804817);
 
+  // Set province đầu tiên khi provinces được load
   useEffect(() => {
-    const fetchProvinces = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch(GHN_API, {
-          method: 'GET',
-          headers: { token: GHN_TOKEN },
-        });
-        if (!response.ok) throw new Error('Không thể lấy danh sách tỉnh/thành phố');
-        const data = await response.json();
-        setProvinces(data.data || []);
-        if (data.data && data.data.length > 0) {
-          setSelectedProvince(data.data[0].ProvinceID.toString());
-        }
-      } catch (err) {
-        setError(err.message);
-        Alert.alert('Lỗi', err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProvinces();
-  }, []);
+    // Không tự động chọn tỉnh đầu tiên nữa
+    // if (provinces.length > 0 && !selectedProvince) {
+    //   setSelectedProvince(provinces[0].id);
+    // }
+  }, [provinces]);
 
-  // Fetch districts when province changes
+  // Load wards khi province thay đổi
   useEffect(() => {
-    if (!selectedProvince) return;
-    const fetchDistricts = async () => {
-      try {
-        setLoadingDistrict(true);
-        setDistricts([]);
-        setSelectedDistrict('');
-        setWards([]);
-        setSelectedWard('');
-        const response = await fetch(GHN_DISTRICT_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', token: GHN_TOKEN },
-          body: JSON.stringify({ province_id: parseInt(selectedProvince) })
-        });
-        if (!response.ok) throw new Error('Không thể lấy danh sách quận/huyện');
-        const data = await response.json();
-        setDistricts(data.data || []);
-        if (data.data && data.data.length > 0) {
-          setSelectedDistrict(data.data[0].DistrictID.toString());
-        }
-      } catch (err) {
-        setError(err.message);
-        Alert.alert('Lỗi', err.message);
-      } finally {
-        setLoadingDistrict(false);
-      }
-    };
-    fetchDistricts();
+    if (selectedProvince) {
+      loadWardsForProvince(selectedProvince);
+    }
   }, [selectedProvince]);
 
-  // Fetch wards when district changes
+  // Set ward đầu tiên khi wards được load
   useEffect(() => {
-    if (!selectedDistrict) return;
-    const fetchWards = async () => {
-      try {
-        setLoadingWard(true);
-        setWards([]);
-        setSelectedWard('');
-        const response = await fetch(GHN_WARD_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', token: GHN_TOKEN },
-          body: JSON.stringify({ district_id: parseInt(selectedDistrict) })
-        });
-        if (!response.ok) throw new Error('Không thể lấy danh sách phường/xã');
-        const data = await response.json();
-        setWards(data.data || []);
-        if (data.data && data.data.length > 0) {
-          setSelectedWard(data.data[0].WardCode.toString());
-        }
-      } catch (err) {
-        setError(err.message);
-        Alert.alert('Lỗi', err.message);
-      } finally {
-        setLoadingWard(false);
-      }
-    };
-    fetchWards();
-  }, [selectedDistrict]);
+    if (wards.length > 0 && !selectedWard) {
+      setSelectedWard(wards[0].id);
+    }
+  }, [wards, selectedWard]);
+
+  const loadWardsForProvince = async (provinceId) => {
+    try {
+      setLoadingWard(true);
+      setSelectedWard('');
+      await loadWardsByProvince(provinceId);
+    } catch (err) {
+      setError('Không thể tải danh sách xã/phường');
+      Alert.alert('Lỗi', 'Không thể tải danh sách xã/phường');
+    } finally {
+      setLoadingWard(false);
+    }
+  };
+
+  useEffect(() => {
+    if (route.params?.selectedLat && route.params?.selectedLng) {
+      setLatitude(route.params.selectedLat);
+      setLongitude(route.params.selectedLng);
+    }
+  }, [route.params?.selectedLat, route.params?.selectedLng]);
 
   const validate = () => {
-    if (!fullName.trim() || !phoneNumber.trim() || !addressDetail.trim() || !selectedProvince || !selectedDistrict || !selectedWard) {
+    if (!fullName.trim() || !phoneNumber.trim() || !addressDetail.trim() || !selectedProvince || !selectedWard) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin.');
       return false;
     }
@@ -143,27 +97,37 @@ const AddAddressScreen = () => {
       const userInfoString = await AsyncStorage.getItem('userInfo');
       const userInfo = JSON.parse(userInfoString);
       if (!userInfo || !userInfo._id) throw new Error('Không tìm thấy thông tin người dùng');
-      // Lấy tên tỉnh, quận, phường
-      const provinceName = provinces.find(p => p.ProvinceID.toString() === selectedProvince)?.ProvinceName || '';
-      const districtName = districts.find(d => d.DistrictID.toString() === selectedDistrict)?.DistrictName || '';
-      const wardName = wards.find(w => w.WardCode.toString() === selectedWard)?.WardName || '';
-      const fullAddress = `${addressDetail}, ${wardName}, ${districtName}, ${provinceName}`;
+      
+      // Lấy tên tỉnh và xã từ SQLite data
+      const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
+      const provinceType = provinces.find(p => p.id === selectedProvince)?.type || '';
+      const wardName = wards.find(w => w.id === selectedWard)?.name || '';
+      const wardType = wards.find(w => w.id === selectedWard)?.type || '';
+      
+      // Địa chỉ chi tiết: {addressDetail}, {wardName} {wardType}, {provinceName}
+      const fullAddress = `${addressDetail}, ${wardType} ${wardName}, ${provinceType} ${provinceName}`;
+      
       const body = {
         fullName: fullName.trim(),
         addressDetail: fullAddress,
         phone_number: phoneNumber.trim(),
-        is_default: isDefault
+        is_default: isDefault,
+        latitude,
+        longitude
       };
+      
       const response = await fetch(API_ENDPOINTS.ADDRESS.CREATE(userInfo._id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
+      
       if (!response.ok) {
         const errData = await response.json();
         console.log('Lỗi khi thêm địa chỉ:', errData);
         throw new Error(errData.message || 'Không thể thêm địa chỉ');
       }
+      
       const result = await response.json();
       console.log('Thêm địa chỉ thành công:', result);
       Alert.alert('Thành công', 'Đã thêm địa chỉ mới!', [
@@ -176,6 +140,85 @@ const AddAddressScreen = () => {
       setSaving(false);
     }
   };
+
+  const handleChooseLocation = () => {
+    const lat = latitude || 21.028511;
+    const lng = longitude || 105.804817;
+    navigation.navigate('MapScreen', {
+      latitude: lat,
+      longitude: lng,
+      fromScreen: 'AddAddress',
+      addressDetail,
+      selectedWard,
+      selectedProvince,
+      wards,
+      provinces,
+    });
+  };
+
+  // Sắp xếp và nhóm tỉnh/thành phố theo chữ cái đầu
+  const sortedProvinces = [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  const provincePickerItems = [
+    <Picker.Item
+      key="province-placeholder"
+      label="Tỉnh/Thành phố"
+      value=""
+      color="#888"
+      enabled={false}
+    />
+  ];
+  let lastProvinceChar = '';
+  sortedProvinces.forEach((province) => {
+    const firstChar = province.name[0].toUpperCase();
+    if (firstChar !== lastProvinceChar) {
+      provincePickerItems.push(
+        <Picker.Item
+          key={`header-province-${firstChar}`}
+          label={`--- ${firstChar} ---`}
+          value={`_header_province_${firstChar}`}
+          enabled={false}
+          color="#888"
+        />
+      );
+      lastProvinceChar = firstChar;
+    }
+    provincePickerItems.push(
+      <Picker.Item
+        key={province.id}
+        label={`${province.name} (${province.type})`}
+        value={province.id}
+        color="#000"
+      />
+    );
+  });
+
+  // Sắp xếp và nhóm xã/phường theo chữ cái đầu
+  const sortedWards = [...wards].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  const wardPickerItems = [];
+  let lastWardChar = '';
+  sortedWards.forEach((ward) => {
+    const firstChar = ward.name[0].toUpperCase();
+    if (firstChar !== lastWardChar) {
+      wardPickerItems.push(
+        <Picker.Item
+          key={`header-ward-${firstChar}`}
+          label={`--- ${firstChar} ---`}
+          value={`_header_ward_${firstChar}`}
+          enabled={false}
+          color="#888"
+        />
+      );
+      lastWardChar = firstChar;
+    }
+    wardPickerItems.push(
+      <Picker.Item
+        key={ward.id}
+        label={`${ward.name} (${ward.type})`}
+        value={ward.id}
+        color="#000"
+      />
+    );
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -190,7 +233,7 @@ const AddAddressScreen = () => {
             resizeMode="contain"
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thêm địa chỉ mới</Text>
+        <Text style={[styles.headerTitle, {color: '#000'}]}>Thêm địa chỉ mới</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -209,62 +252,31 @@ const AddAddressScreen = () => {
                 onValueChange={(itemValue) => setSelectedProvince(itemValue)}
                 style={styles.picker}
               >
-                {provinces.map((province) => (
-                  <Picker.Item
-                    key={province.ProvinceID}
-                    label={province.ProvinceName}
-                    value={province.ProvinceID.toString()}
-                  />
-                ))}
+                {provincePickerItems}
               </Picker>
             </View>
           </View>
-          {/* District */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Quận/Huyện</Text>
-            <View style={styles.pickerWrapper}>
-              {loadingDistrict ? (
-                <ActivityIndicator size="small" color="#000" />
-              ) : (
-                <Picker
-                  selectedValue={selectedDistrict}
-                  onValueChange={(itemValue) => setSelectedDistrict(itemValue)}
-                  style={styles.picker}
-                >
-                  {districts.map((district) => (
-                    <Picker.Item
-                      key={district.DistrictID}
-                      label={district.DistrictName}
-                      value={district.DistrictID.toString()}
-                    />
-                  ))}
-                </Picker>
-              )}
-            </View>
-          </View>
+          
           {/* Ward */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Phường/Xã</Text>
+            <Text style={styles.label}>Xã/Phường</Text>
             <View style={styles.pickerWrapper}>
               {loadingWard ? (
                 <ActivityIndicator size="small" color="#000" />
               ) : (
-                <Picker
-                  selectedValue={selectedWard}
-                  onValueChange={(itemValue) => setSelectedWard(itemValue)}
-                  style={styles.picker}
-                >
-                  {wards.map((ward) => (
-                    <Picker.Item
-                      key={ward.WardCode}
-                      label={ward.WardName}
-                      value={ward.WardCode.toString()}
-                    />
-                  ))}
-                </Picker>
+                selectedProvince && wardPickerItems.length > 0 ? (
+                  <Picker
+                    selectedValue={selectedWard}
+                    onValueChange={(itemValue) => setSelectedWard(itemValue)}
+                    style={styles.picker}
+                  >
+                    {wardPickerItems}
+                  </Picker>
+                ) : null
               )}
             </View>
           </View>
+          
           {/* Address detail */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Địa chỉ cụ thể</Text>
@@ -275,6 +287,7 @@ const AddAddressScreen = () => {
               onChangeText={setAddressDetail}
             />
           </View>
+          
           {/* Full name */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Họ tên</Text>
@@ -285,6 +298,7 @@ const AddAddressScreen = () => {
               onChangeText={setFullName}
             />
           </View>
+          
           {/* Phone number */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Số điện thoại</Text>
@@ -297,6 +311,7 @@ const AddAddressScreen = () => {
               maxLength={10}
             />
           </View>
+          
           {/* Default address checkbox */}
           <View style={styles.checkboxRow}>
             <Checkbox
@@ -305,10 +320,25 @@ const AddAddressScreen = () => {
             />
             <Text style={styles.checkboxLabel}>Đặt làm địa chỉ mặc định</Text>
           </View>
+          
           {/* Save button */}
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
             <Text style={styles.saveBtnText}>{saving ? 'Đang lưu...' : 'Lưu địa chỉ'}</Text>
           </TouchableOpacity>
+          
+          {/* Map button */}
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: '#2196F3', marginBottom: 10 }]}
+            onPress={handleChooseLocation}
+          >
+            <Text style={styles.saveBtnText}>Chọn vị trí trên bản đồ</Text>
+          </TouchableOpacity>
+          
+          {/* Coordinates display */}
+          <View style={{ alignItems: 'center', marginBottom: 10 }}>
+            <Text>Latitude: {latitude}</Text>
+            <Text>Longitude: {longitude}</Text>
+          </View>
         </>
       )}
     </SafeAreaView>

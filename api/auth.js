@@ -1,9 +1,10 @@
 // src/api/auth.js
-const API_BASE_URL = 'http://192.168.1.41:5000/api/auth'; // THAY THẾ BẰNG URL BACKEND THẬT CỦA BẠN
+import { API_BASE_URL, API_ENDPOINTS } from '../src/config/api';
+
 
 export const apiRegister = async (username, email, password, fullname) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/register`, {
+        const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -30,7 +31,7 @@ export const apiRegister = async (username, email, password, fullname) => {
 // Bạn cũng có thể thêm apiLogin vào đây
 export const apiLogin = async (email, password) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/login-email`, {
+        const response = await fetch(`${API_BASE_URL}/auth/login-email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),

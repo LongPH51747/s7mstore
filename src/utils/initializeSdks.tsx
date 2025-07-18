@@ -1,11 +1,13 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import firebase from '@react-native-firebase/app';
+import databaseService from '../services/database';
+import dataImporter from '../services/dataImporter';
 
 /**
  * Hàm khởi tạo các SDK cần thiết cho ứng dụng
- * Bao gồm Firebase và Google Sign-In
+ * Bao gồm Firebase, Google Sign-In và SQLite Database
  */
-export const initializeSdks = () => {
+export const initializeSdks = async () => {
   // Khởi tạo Firebase
   try {
     // Kiểm tra xem Firebase đã được khởi tạo chưa
@@ -36,5 +38,21 @@ export const initializeSdks = () => {
     console.log('GoogleSignin configured successfully');
   } catch (error) {
     console.error('Error configuring GoogleSignin:', error);
+  }
+
+  // Khởi tạo SQLite Database và import dữ liệu location
+  try {
+    console.log('Initializing SQLite database...');
+    await databaseService.initDatabase();
+    
+    // Import dữ liệu location nếu chưa có
+    const importResult = await dataImporter.importLocationData();
+    if (importResult.success) {
+      console.log('Location data import result:', importResult.message);
+    } else {
+      console.error('Location data import failed:', importResult.error);
+    }
+  } catch (error) {
+    console.error('Error initializing database:', error);
   }
 };
