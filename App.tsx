@@ -3,7 +3,7 @@ import { SafeAreaView, StatusBar, useColorScheme, View, ActivityIndicator, Text 
 import { NavigationContainer } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { initializeSdks } from './src/utils/initializeSdks';
-import { AuthProvider } from './src/contexts/AuthContext';
+
 import { SocketProvider } from './src/contexts/SocketContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -42,11 +42,11 @@ const App: React.FC = () => {
         backgroundColor={backgroundStyle.backgroundColor}
       />
       <NavigationContainer>
-        <AuthProvider>
+        
           <SocketProvider>
             <AppNavigator />
           </SocketProvider>
-        </AuthProvider>
+       
       </NavigationContainer>
     </SafeAreaView>
   );

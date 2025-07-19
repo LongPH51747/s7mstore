@@ -112,7 +112,7 @@ const RegisterScreen = () => {
                 Alert.alert('Success', 'Account created successfully', [
                     {
                         text: 'OK',
-                        onPress: () => navigation.navigate('login'),
+                        onPress: () => navigation.navigate('Login'),
                     },
                 ]);
             } else {
