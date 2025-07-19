@@ -214,7 +214,7 @@ const LoginScreen = () => {
                 <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
             </TouchableOpacity>
             <Text style={styles.orText}>or continue with</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('register')}>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                 <Text style={styles.bottomLink}>Bạn chưa có tài khoản? <Text style={styles.linkText}>Đăng kí ngay</Text></Text>
             </TouchableOpacity>
         </View>
