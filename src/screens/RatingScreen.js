@@ -33,6 +33,18 @@ const RatingScreen = () => {
 
   // Initialize ratings for each product
   useEffect(() => {
+    console.log('=== RATING SCREEN INITIALIZATION ===');
+    console.log('Order data received:', {
+      orderId: order._id,
+      orderItemsCount: order.orderItems.length,
+      orderItems: order.orderItems.map(item => ({
+        id: item.id_variant || item._id,
+        name: item.name_product,
+        quantity: item.quantity,
+        image: item.image
+      }))
+    });
+
     const initialRatings = {};
     const initialComments = {};
     const initialImages = {};
@@ -44,6 +56,22 @@ const RatingScreen = () => {
       initialComments[itemId] = '';
       initialImages[itemId] = [];
       initialVideos[itemId] = [];
+      
+      console.log('Initialized state for item:', {
+        itemId,
+        name: item.name_product,
+        initialRating: 0,
+        initialComment: '',
+        initialImages: [],
+        initialVideos: []
+      });
+    });
+
+    console.log('Setting initial state:', {
+      ratings: initialRatings,
+      comments: initialComments,
+      images: initialImages,
+      videos: initialVideos
     });
 
     setRatings(initialRatings);
@@ -176,36 +204,55 @@ const RatingScreen = () => {
 
       if (result.assets && result.assets.length > 0) {
         const newImages = [...(images[itemId] || []), { uri: result.assets[0].uri }];
-        console.log('Adding image to state:', {
+        console.log('=== IMAGE CAPTURE SUCCESS ===');
+        console.log('Image capture result:', {
           itemId,
+          source,
           newImageUri: result.assets[0].uri,
-          totalImages: newImages.length,
-          allImages: newImages
+          imageSize: result.assets[0].fileSize,
+          imageType: result.assets[0].type,
+          imageWidth: result.assets[0].width,
+          imageHeight: result.assets[0].height,
+          totalImagesForItem: newImages.length,
+          allImagesForItem: newImages.map(img => img.uri)
         });
         setImages(prev => ({
           ...prev,
           [itemId]: newImages
         }));
-        console.log('Image added successfully');
+        console.log('Image added to state successfully');
+        console.log('Current images state for item', itemId, ':', newImages);
       } else if (result.uri) {
         // Fallback for older version structure
         const newImages = [...(images[itemId] || []), { uri: result.uri }];
-        console.log('Adding image to state (fallback):', {
+        console.log('=== IMAGE CAPTURE SUCCESS (FALLBACK) ===');
+        console.log('Image capture result (fallback):', {
           itemId,
+          source,
           newImageUri: result.uri,
-          totalImages: newImages.length,
-          allImages: newImages
+          totalImagesForItem: newImages.length,
+          allImagesForItem: newImages.map(img => img.uri)
         });
         setImages(prev => ({
           ...prev,
           [itemId]: newImages
         }));
-        console.log('Image added successfully (fallback)');
+        console.log('Image added to state successfully (fallback)');
+        console.log('Current images state for item', itemId, ':', newImages);
       } else if (result.didCancel) {
-        console.log('User cancelled image capture');
+        console.log('=== IMAGE CAPTURE CANCELLED ===');
+        console.log('User cancelled image capture for item:', itemId);
       } else {
+        console.log('=== IMAGE CAPTURE ERROR ===');
         console.log('No image selected or error occurred');
-        console.log('Full result object:', result);
+        console.log('Full image picker result object:', result);
+        console.log('Error details:', {
+          itemId,
+          source,
+          didCancel: result.didCancel,
+          errorCode: result.errorCode,
+          errorMessage: result.errorMessage
+        });
         Toast.show({
           type: 'error',
           text1: 'Không có ảnh được chọn',
@@ -245,23 +292,54 @@ const RatingScreen = () => {
 
       if (result.assets && result.assets.length > 0) {
         const newVideos = [...(videos[itemId] || []), { uri: result.assets[0].uri }];
+        console.log('=== VIDEO CAPTURE SUCCESS ===');
+        console.log('Video capture result:', {
+          itemId,
+          source,
+          newVideoUri: result.assets[0].uri,
+          videoSize: result.assets[0].fileSize,
+          videoType: result.assets[0].type,
+          videoDuration: result.assets[0].duration,
+          totalVideosForItem: newVideos.length,
+          allVideosForItem: newVideos.map(vid => vid.uri)
+        });
         setVideos(prev => ({
           ...prev,
           [itemId]: newVideos
         }));
-        console.log('Video added successfully');
+        console.log('Video added to state successfully');
+        console.log('Current videos state for item', itemId, ':', newVideos);
       } else if (result.uri) {
         // Fallback for older version structure
         const newVideos = [...(videos[itemId] || []), { uri: result.uri }];
+        console.log('=== VIDEO CAPTURE SUCCESS (FALLBACK) ===');
+        console.log('Video capture result (fallback):', {
+          itemId,
+          source,
+          newVideoUri: result.uri,
+          totalVideosForItem: newVideos.length,
+          allVideosForItem: newVideos.map(vid => vid.uri)
+        });
         setVideos(prev => ({
           ...prev,
           [itemId]: newVideos
         }));
-        console.log('Video added successfully (fallback)');
+        console.log('Video added to state successfully (fallback)');
+        console.log('Current videos state for item', itemId, ':', newVideos);
       } else if (result.didCancel) {
-        console.log('User cancelled video capture');
+        console.log('=== VIDEO CAPTURE CANCELLED ===');
+        console.log('User cancelled video capture for item:', itemId);
       } else {
+        console.log('=== VIDEO CAPTURE ERROR ===');
         console.log('No video selected or error occurred');
+        console.log('Full video picker result object:', result);
+        console.log('Error details:', {
+          itemId,
+          source,
+          didCancel: result.didCancel,
+          errorCode: result.errorCode,
+          errorMessage: result.errorMessage
+        });
         Toast.show({
           type: 'error',
           text1: 'Không có video được chọn',
@@ -293,15 +371,36 @@ const RatingScreen = () => {
   };
 
   const validateRatings = () => {
+    console.log('=== VALIDATING RATINGS ===');
     const itemIds = Object.keys(ratings);
     console.log('Validating ratings for items:', itemIds);
+    console.log('Current ratings state:', ratings);
     
+    const validationResults = [];
     for (const itemId of itemIds) {
-      if (ratings[itemId] === 0) {
+      const rating = ratings[itemId];
+      const isValid = rating > 0;
+      validationResults.push({
+        itemId,
+        rating,
+        isValid,
+        message: isValid ? 'Valid' : 'No rating provided'
+      });
+      
+      if (!isValid) {
         console.error('Validation failed: No rating for item', itemId);
-        Alert.alert('Lỗi', 'Vui lòng đánh giá tất cả sản phẩm');
-        return false;
+      } else {
+        console.log('Item', itemId, 'has valid rating:', rating);
       }
+    }
+    
+    console.log('Validation results:', validationResults);
+    const allValid = validationResults.every(result => result.isValid);
+    
+    if (!allValid) {
+      console.error('Validation failed - showing alert');
+      Alert.alert('Lỗi', 'Vui lòng đánh giá tất cả sản phẩm');
+      return false;
     }
     
     console.log('All ratings validated successfully');
@@ -343,44 +442,8 @@ const RatingScreen = () => {
           videoCount: productVideos.length
         });
 
-        // Convert images to base64
-        const base64Images = [];
-        for (const image of productImages) {
-          try {
-            if (image.uri && image.uri.startsWith('http')) {
-              // For placeholder images, skip base64 conversion
-              console.log('Skipping base64 conversion for placeholder image');
-              continue;
-            }
-            
-            // For local images, convert to base64
-            console.log('Converting image to base64:', image.uri);
-            
-            // Use XMLHttpRequest for better React Native compatibility
-            const base64 = await new Promise((resolve, reject) => {
-              const xhr = new XMLHttpRequest();
-              xhr.onload = function() {
-                const reader = new FileReader();
-                reader.onloadend = function() {
-                  resolve(reader.result);
-                };
-                reader.readAsDataURL(xhr.response);
-              };
-              xhr.onerror = function() {
-                reject(new Error('Failed to load image'));
-              };
-              xhr.open('GET', image.uri);
-              xhr.responseType = 'blob';
-              xhr.send();
-            });
-            
-            base64Images.push(base64);
-            console.log('Image converted to base64 successfully');
-          } catch (error) {
-            console.error('Error converting image to base64:', error);
-            // Continue with other images even if one fails
-          }
-        }
+        // Use images directly without base64 conversion
+        const imageUrls = productImages.map(image => image.uri).filter(uri => uri);
 
         // Get first video (if any)
         const videoUrl = productVideos.length > 0 ? productVideos[0].uri : '';
@@ -389,7 +452,7 @@ const RatingScreen = () => {
           review_user_id: userInfo._id,
           review_product_id: itemId,
           review_comment: comment,
-          review_image: base64Images,
+          review_image: imageUrls,
           review_video: videoUrl,
           review_rate: rating
         };
@@ -460,19 +523,73 @@ const RatingScreen = () => {
 
           // Include token in headers
           const headersWithToken = {
-            ...API_HEADERS,
-            'Content-Type': 'application/json',
+            'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${userToken}`,
           };
 
           console.log(`Review ${i + 1} request headers:`, headersWithToken);
           console.log(`Review ${i + 1} request URL:`, API_ENDPOINTS.RATINGS.CREATE);
-          console.log(`Review ${i + 1} request body:`, JSON.stringify(review, null, 2));
+          
+          // Create FormData for multipart/form-data
+          const formData = new FormData();
+          formData.append('review_user_id', review.review_user_id);
+          formData.append('review_product_id', review.review_product_id);
+          formData.append('review_comment', review.review_comment);
+          formData.append('review_rate', review.review_rate.toString());
+          
+          console.log(`Review ${i + 1} - FormData basic fields:`, {
+            user_id: review.review_user_id,
+            product_id: review.review_product_id,
+            comment: review.review_comment,
+            rate: review.review_rate
+          });
+          
+          // Add images to FormData
+          if (review.review_image && review.review_image.length > 0) {
+            console.log(`Review ${i + 1} - Processing ${review.review_image.length} images:`, review.review_image);
+            review.review_image.forEach((imageUri, index) => {
+              // Create file object from URI
+              const imageFile = {
+                uri: imageUri,
+                type: 'image/jpeg',
+                name: `image_${index}.jpg`
+              };
+              console.log(`Review ${i + 1} - Adding image ${index + 1}:`, {
+                uri: imageUri,
+                type: imageFile.type,
+                name: imageFile.name
+              });
+              formData.append('review_image', imageFile);
+            });
+          } else {
+            console.log(`Review ${i + 1} - No images to add`);
+          }
+          
+          // Add video to FormData if exists
+          if (review.review_video) {
+            console.log(`Review ${i + 1} - Processing video:`, review.review_video);
+            const videoFile = {
+              uri: review.review_video,
+              type: 'video/mp4',
+              name: 'video.mp4'
+            };
+            console.log(`Review ${i + 1} - Adding video:`, {
+              uri: review.review_video,
+              type: videoFile.type,
+              name: videoFile.name
+            });
+            formData.append('review_video', videoFile);
+          } else {
+            console.log(`Review ${i + 1} - No video to add`);
+          }
+
+          console.log(`Review ${i + 1} - FormData created successfully with ${review.review_image.length} images and ${review.review_video ? '1' : '0'} video`);
+          console.log(`Review ${i + 1} - FormData entries:`, Array.from(formData._parts || []).map(part => ({ name: part[0], value: typeof part[1] === 'object' ? 'File object' : part[1] })));
 
           const response = await fetch(API_ENDPOINTS.RATINGS.CREATE, {
             method: 'POST',
             headers: headersWithToken,
-            body: JSON.stringify(review),
+            body: formData,
             signal: controller.signal,
           });
           clearTimeout(timeoutId);

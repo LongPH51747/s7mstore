@@ -128,7 +128,7 @@ const ProfileScreen = () => {
         </TouchableOpacity>
 
         <View style={{ marginVertical: 12, paddingVertical: 5 }}>
-          <TouchableOpacity style={styles.orderHistory} onPress={() => navigation.navigate('OrderHistory')}>
+          <TouchableOpacity style={styles.orderHistory} onPress={() => navigation.navigate('Orders')}>
             <Text style={styles.orderHistoryTitle}>Đơn mua</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.orderHistoryLink}>Xem lịch sử mua hàng</Text>
