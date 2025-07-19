@@ -38,7 +38,7 @@ const RatingScreen = () => {
       orderId: order._id,
       orderItemsCount: order.orderItems.length,
       orderItems: order.orderItems.map(item => ({
-        id: item.id_variant || item._id,
+        id: item.id_product || item._id,
         name: item.name_product,
         quantity: item.quantity,
         image: item.image
@@ -51,7 +51,7 @@ const RatingScreen = () => {
     const initialVideos = {};
 
     order.orderItems.forEach((item) => {
-      const itemId = item.id_variant || item._id;
+      const itemId = item.id_product || item._id;
       initialRatings[itemId] = 0;
       initialComments[itemId] = '';
       initialImages[itemId] = [];
@@ -845,7 +845,7 @@ const RatingScreen = () => {
         </View>
 
         {order.orderItems.map((item, index) => {
-          const itemId = item.id_variant || item._id;
+          const itemId = item.id_product || item._id;
           const currentRating = ratings[itemId] || 0;
           const currentComment = comments[itemId] || '';
 
