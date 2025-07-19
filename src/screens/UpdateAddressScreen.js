@@ -208,7 +208,7 @@ const UpdateAddressScreen = () => {
       const result = await response.json();
       console.log('Cập nhật địa chỉ thành công:', result);
       Alert.alert('Thành công', 'Đã cập nhật địa chỉ!', [
-        { text: 'OK', onPress: () => navigation.navigate('Address', { refresh: true }) }
+        { text: 'OK', onPress: () => navigation.navigate('AddressScreen', { refresh: true }) }
       ]);
     } catch (err) {
       console.log('Lỗi khi cập nhật địa chỉ:', err);

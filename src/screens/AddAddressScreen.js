@@ -132,7 +132,7 @@ const AddAddressScreen = ({ route }) => {
       const result = await response.json();
       console.log('Thêm địa chỉ thành công:', result);
       Alert.alert('Thành công', 'Đã thêm địa chỉ mới!', [
-        { text: 'OK', onPress: () => navigation.navigate('Address', { refresh: true }) }
+        { text: 'OK', onPress: () => navigation.navigate('AddressScreen', { refresh: true }) }
       ]);
     } catch (err) {
       console.log('Lỗi khi lưu địa chỉ:', err);

@@ -73,7 +73,7 @@ const OtpVerificationScreen = () => {
       // Ví dụ:
       if (fullOtp === '123456') { // Thay thế bằng mã OTP đúng từ backend
         Alert.alert('Thành công', 'Xác thực OTP thành công!');
-        navigation.navigate('reset'); // Chuyển sang màn hình đặt lại mật khẩu
+        navigation.navigate('ResetPasswordScreen'); // Chuyển sang màn hình đặt lại mật khẩu
       } else {
         Alert.alert('Lỗi', 'Mã xác thực không hợp lệ. Vui lòng thử lại.');
          setOtp(['', '', '', '', '', '']); // Xóa mã cũ

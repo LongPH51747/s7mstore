@@ -151,7 +151,7 @@ const ChangePasswordScreen = () => {
 
       if (updateResponse.ok) {
         Alert.alert('Thành công', 'Mật khẩu của bạn đã được đổi thành công.');
-        navigation.navigate('profile'); // Chuyển về màn hình profile (đảm bảo route 'profile' tồn tại)
+        navigation.navigate('ProfileScreen'); // Chuyển về màn hình profile
       } else {
         Alert.alert('Lỗi', 'Không thể đổi mật khẩu. Vui lòng thử lại sau.');
       }
@@ -209,7 +209,7 @@ const ChangePasswordScreen = () => {
         {currentPasswordError ? <Text style={styles.errorText}>{currentPasswordError}</Text> : null}
 
         {/* <Text // Không cần dòng này nếu bạn đã xử lý lỗi mật khẩu cũ bằng currentPasswordError
-          onPress={() =>navigation.navigate('forgot')}
+          onPress={() =>navigation.navigate('ForgotPasswordScreen')}
           style={{color: 'blue', fontWeight: '500'}}>{forgot}
         </Text> */}
       </View>

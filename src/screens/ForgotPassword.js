@@ -23,7 +23,7 @@ const ForgotPasswordScreen = () => {
         <Text style={styles.instruction}>* Chúng tôi sẽ gửi cho bạn 1 mã OTP sau đó tiến hành nhập OTP để đổi mật khẩu</Text>
         
         <TouchableOpacity
-        onPress={() =>navigation.navigate('otp')}
+        onPress={() =>navigation.navigate('OtpScreen')}
         style={styles.submitButton}>
           <Text style={styles.submitButtonText}>Gửi</Text>
         </TouchableOpacity>

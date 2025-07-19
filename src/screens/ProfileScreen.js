@@ -109,7 +109,7 @@ const ProfileScreen = () => {
             <Ionicons name="chevron-back-outline" size={26} color="black" />
           </TouchableOpacity>
           <Text style={styles.title}>My account</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.iconButton}>
+          <TouchableOpacity onPress={() => navigation.navigate('CartScreen')} style={styles.iconButton}>
             <Feather name="shopping-bag" size={24} color="black" />
           </TouchableOpacity>
         </View>
@@ -128,7 +128,7 @@ const ProfileScreen = () => {
         </TouchableOpacity>
 
         <View style={{ marginVertical: 12, paddingVertical: 5 }}>
-          <TouchableOpacity style={styles.orderHistory} onPress={() => navigation.navigate('Orders')}>
+          <TouchableOpacity style={styles.orderHistory} onPress={() => navigation.navigate('OrderScreen')}>
             <Text style={styles.orderHistoryTitle}>Đơn mua</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.orderHistoryLink}>Xem lịch sử mua hàng</Text>
@@ -165,7 +165,7 @@ const ProfileScreen = () => {
             <Feather name="gift" size={24} color="white" />
             <Text style={styles.activityText}>Voucher</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.activityButton} onPress={() => navigation.navigate('OrderHistory')}>
+          <TouchableOpacity style={styles.activityButton} onPress={() => navigation.navigate('OrderScreen')}>
             <Feather name="box" size={20} color="#fff" />
             <Text style={styles.activityText}>Đơn hàng</Text>
           </TouchableOpacity>
@@ -177,7 +177,7 @@ const ProfileScreen = () => {
 
       
         <Text style={styles.sectionTitle}>Địa chỉ</Text>
-        <TouchableOpacity style={styles.itemRow} onPress={() => navigation.navigate('Address')}>
+        <TouchableOpacity style={styles.itemRow} onPress={() => navigation.navigate('AddressScreen')}>
           <Feather name="map-pin" size={20} color="black" />
           <Text style={styles.itemText}>Chỉnh sửa địa chỉ giao hàng</Text>
           <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
@@ -191,14 +191,14 @@ const ProfileScreen = () => {
             <Text style={styles.gridText}>LiveStream</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Chat')}
+            onPress={() => navigation.navigate('ChatScreen')}
             style={styles.gridItem}>
             <Feather name="message-circle" size={20} color="black" />
             <Text style={styles.gridText}>Chat with us</Text>
           </TouchableOpacity>
         
           {user.phoneNumber && ( // Kiểm tra xem user có phoneNumber không
-            <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('ChangePassword')}>
+            <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('ChangePasswordScreen')}>
               <Feather name="lock" size={20} color="black" />
               <Text style={styles.gridText}>Đổi mật khẩu</Text>
             </TouchableOpacity>
@@ -217,7 +217,7 @@ const ProfileScreen = () => {
         <Text style={styles.sectionTitle}>Cài đặt</Text>
         {/* Nút "Quên mật khẩu" chỉ nên hiện nếu user có thông tin phoneNumber (đăng nhập SĐT) */}
         {user.phoneNumber && ( // Kiểm tra xem user có phoneNumber không
-          <TouchableOpacity style={styles.itemRow} onPress={() => navigation.navigate('ForgotPassword')}>
+          <TouchableOpacity style={styles.itemRow} onPress={() => navigation.navigate('ForgotPasswordScreen')}>
             <Feather name="lock" size={20} color="black" />
             <Text style={styles.itemText}>Quên mật khẩu</Text>
             <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
