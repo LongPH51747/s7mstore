@@ -9,7 +9,7 @@ const PaymentSuccessScreen = () => {
   const orderId = route.params?.orderId || '24587745633248'; // Fallback to default if no orderId passed
 
   const handleContinue = () => {
-    navigation.navigate('Home'); // Navigate to the Home screen
+    navigation.navigate('HomeScreen'); // Navigate to the Home screen
   };
 
   return (

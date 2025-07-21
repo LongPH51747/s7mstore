@@ -3,7 +3,7 @@ import { SafeAreaView, StatusBar, useColorScheme, View, ActivityIndicator, Text 
 import { NavigationContainer } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { initializeSdks } from './src/utils/initializeSdks';
-import { AuthProvider } from './src/contexts/AuthContext';
+
 import { SocketProvider } from './src/contexts/SocketContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -40,7 +40,7 @@ const App: React.FC = () => {
   config: {
     screens: {
       // Ánh xạ đường dẫn trong URL với tên màn hình trong Stack Navigator
-      PaymentSuccess: 'PaymentSuccess', // s7mstore://paymentsuccess
+      PaymentSuccess: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
       OrderDetail: 'order/:orderId', // s7mstore://order/123
       // ... ánh xạ các màn hình khác nếu cần
     },
@@ -54,11 +54,11 @@ const App: React.FC = () => {
         backgroundColor={backgroundStyle.backgroundColor}
       />
       <NavigationContainer linking={linking} fallback={<Text>Loading...</Text>}>
-        <AuthProvider>
+        
           <SocketProvider>
             <AppNavigator />
           </SocketProvider>
-        </AuthProvider>
+       
       </NavigationContainer>
     </SafeAreaView>
   );

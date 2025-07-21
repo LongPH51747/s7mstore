@@ -63,11 +63,13 @@ const LoginScreen = () => {
                     photoURL: backendUser.avatar || '',
                     _id: backendUser._id,
                     is_allowed: backendUser.is_allowed,
+                    provider: 'local', // Đánh dấu provider là local/email
                     ...backendUser
                 };
                 await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                 await AsyncStorage.setItem('shouldAutoLogin', 'true');
                 await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
+                try { await getAuth().signOut(); } catch (e) {} // Đảm bảo signOut Firebase
                 console.log('[LOGIN] Đăng nhập thành công, chuyển sang Home');
                 navigation.replace('Home');
             } else {
@@ -134,6 +136,12 @@ const LoginScreen = () => {
                     await AsyncStorage.setItem('shouldAutoLogin', 'true');
                     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
                     console.log('[GOOGLE] Đăng nhập Google thành công, chuyển sang Home');
+                    console.log('[GOOGLE] Access Token nhận từ backend và đã lưu vào AsyncStorage:', backendResponseData.access_token ? backendResponseData.access_token.substring(0, 30) + '...' : 'null');
+
+                    const tokenJustRead = await AsyncStorage.getItem('userToken');
+                    const userInfoJustRead = await AsyncStorage.getItem('userInfo');
+                    console.log('[GOOGLE] Token VỪA ĐỌC LẠI TỪ AsyncStorage:', tokenJustRead ? tokenJustRead.substring(0, 30) + '...' : 'null');
+                    console.log('[GOOGLE] User Info VỪA ĐỌC LẠI TỪ AsyncStorage (parsed ._id):', userInfoJustRead ? JSON.parse(userInfoJustRead)._id : 'null');
                     navigation.replace('Home');
                 } else {
                     console.log('[GOOGLE] Đăng nhập Google thất bại, response không hợp lệ:', response.data);
@@ -214,7 +222,7 @@ const LoginScreen = () => {
                 <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
             </TouchableOpacity>
             <Text style={styles.orText}>or continue with</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('register')}>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUpScreen')}>
                 <Text style={styles.bottomLink}>Bạn chưa có tài khoản? <Text style={styles.linkText}>Đăng kí ngay</Text></Text>
             </TouchableOpacity>
         </View>

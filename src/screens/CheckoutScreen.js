@@ -149,7 +149,7 @@ export default function CheckoutScreen() {
 
       const result_cod = await response.json();
       console.log('Order created:', result_cod);
-      navigation.navigate('PaymentSuccess', { orderId: result_cod._id || result_cod.id });
+      navigation.navigate('PaymentSuccessScreen', { orderId: result_cod._id || result_cod.id });
       }else if( paymentMethod === 'MOMO'){
         console.log('Tiến hành thanh toán với MOMO...');
 
@@ -198,7 +198,7 @@ export default function CheckoutScreen() {
 
         console.log('Data:', result.data);
         
-
+     
         const { deeplink } = result?.data?.data
         console.log('LINK:', deeplink);
         
@@ -208,6 +208,7 @@ export default function CheckoutScreen() {
       }else{
         throw new Error('MOMO payUrl not received from server')
       }
+      // Đã xử lý response và navigation trong từng block, không cần xử lý ở ngoài nữa
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');
@@ -238,7 +239,7 @@ export default function CheckoutScreen() {
           <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
           <TouchableOpacity 
             style={styles.addressContainer}
-            onPress={() => navigation.navigate('Address')}
+            onPress={() => navigation.navigate('AddressScreen')}
           >
             {selectedAddress ? (
               <>

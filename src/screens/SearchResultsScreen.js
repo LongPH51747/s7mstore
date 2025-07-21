@@ -124,7 +124,7 @@ const SearchResultsScreen = ({ route, navigation }) => {
     return (
       <TouchableOpacity 
         style={styles.card}
-        onPress={() => navigation.navigate('ProductDetail', { product: item })}
+        onPress={() => navigation.navigate('ProductDetailScreen', { product: item })}
       >
         <Image 
           source={productImageSource} 

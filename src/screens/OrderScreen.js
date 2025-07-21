@@ -242,13 +242,13 @@ const OrdersScreen = () => {
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
                       style={styles.buttonPrimary}
-                      onPress={() => navigation.navigate('OrderDetail', { order: order, onOrderUpdate: getOrders })}
+                      onPress={() => navigation.navigate('OrderDetailScreen', { order: order, onOrderUpdate: getOrders })}
                     >
                       <Text style={styles.buttonPrimaryText}>Xem chi tiết</Text>
                     </TouchableOpacity>
                     {order.status === 'Giao thành công' && (
                       <>
-                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Checkout', { cartItems: order.orderItems })}>
+                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('CheckoutScreen', { cartItems: order.orderItems })}>
                           <Text style={styles.buttonSecondaryText}>Mua lại</Text>
                         </TouchableOpacity>
                       </>

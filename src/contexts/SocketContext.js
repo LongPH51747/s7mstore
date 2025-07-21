@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { API_BASE_URL } from '../config/api';
 
+// const API_URL = 'http://172.20.10.3:3000';
 
 const SocketContext = createContext(null);
 

@@ -265,7 +265,7 @@ const CartScreen = (props) => {
       return;
     }
     
-    navigation.navigate('Checkout', { cartItems: selectedProducts, cartId: cart._id });
+            navigation.navigate('CheckoutScreen', { cartItems: selectedProducts, cartId: cart._id });
   };
 
   const handleSelectAll = () => {
@@ -450,7 +450,7 @@ const CartScreen = (props) => {
               style={{backgroundColor:'#1c2b38', padding:12, borderRadius:8}}
               onPress={() => {
                 setShowLoginModal(false);
-                navigation.navigate('Login');
+                navigation.navigate('LoginScreen');
               }}
             >
               <Text style={{color:'#fff', fontWeight:'bold'}}>Đăng nhập</Text>
@@ -474,7 +474,7 @@ const CartScreen = (props) => {
                 />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>{"Cart"}</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
+              <TouchableOpacity onPress={() => navigation.navigate('OrderScreen')}>
                 <Image 
                   source={require('../assets/search.png')} 
                   style={styles.headerIcon}
