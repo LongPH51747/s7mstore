@@ -69,9 +69,14 @@ const LoginScreen = () => {
                 await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                 await AsyncStorage.setItem('shouldAutoLogin', 'true');
                 await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
+                console.log('[LOGIN] userInfoToStore:', userInfoToStore); // Log thông tin user vừa lưu
+                // Thử lưu một giá trị testKey vào AsyncStorage
+                await AsyncStorage.setItem('testKey', 'testValue');
+                const testValue = await AsyncStorage.getItem('testKey');
+                console.log('[LOGIN] testKey value:', testValue);
                 try { await getAuth().signOut(); } catch (e) {} // Đảm bảo signOut Firebase
                 console.log('[LOGIN] Đăng nhập thành công, chuyển sang Home');
-                navigation.replace('Home');
+                navigation.replace('HomeScreen');
             } else {
                 console.log('[LOGIN] Đăng nhập thất bại, response không hợp lệ:', response.data);
                 throw new Error('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');

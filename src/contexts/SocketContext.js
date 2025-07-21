@@ -133,7 +133,14 @@ export const SocketProvider = ({ children }) => {
             if (firebaseUser) {
                 await loadAuthDataFromAsyncStorage();
             } else {
-                handleLocalLogout();
+                // KHÔNG gọi handleLocalLogout ở đây nữa để tránh xóa userToken/userInfo backend
+                // Nếu muốn reset chỉ state Firebase, có thể setAccessToken(null), setUser(null), ... ở đây nếu cần
+                // handleLocalLogout();
+                // Ví dụ:
+                // setAccessToken(null);
+                // setUser(null);
+                // setIsAuthenticated(false);
+                // setIsAdmin(false);
             }
         });
         return () => {

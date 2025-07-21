@@ -15,6 +15,8 @@ import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import CustomNavBottom from '../components/CustomNavBottom';
+import axios from 'axios';
+import { API_ENDPOINTS, API_HEADERS } from '../config/api';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -26,27 +28,53 @@ const ProfileScreen = () => {
   const fetchUserInfo = useCallback(async () => {
     setLoading(true);
     try {
+      // Kiểm tra testKey
+      const testValue = await AsyncStorage.getItem('testKey');
+      console.log('[PROFILE] testKey value after restart:', testValue);
       const userInfoString = await AsyncStorage.getItem('userInfo');
+      console.log('[PROFILE] userInfoString lấy từ AsyncStorage:', userInfoString);
       if (userInfoString) {
         const userInfo = JSON.parse(userInfoString);
         setUser(userInfo);
+        console.log('[PROFILE] userInfo object sau khi parse:', userInfo);
+        // Nếu có _id thì gọi API lấy user mới nhất
+        if (userInfo._id) {
+          await fetchUserById(userInfo._id);
+        }
       } else {
-        setUser(null); // Không có userInfo trong AsyncStorage
+        console.log('[PROFILE] Không có userInfo trong AsyncStorage, thử lấy userToken...');
+        const token = await AsyncStorage.getItem('userToken');
+        console.log('[PROFILE] userToken lấy từ AsyncStorage:', token);
+        if (token) {
+          console.log('[PROFILE] Có userToken, gọi fetchUserFromToken...');
+          await fetchUserFromToken(token); // Hàm này gọi API profile với Bearer token
+        } else {
+          console.log('[PROFILE] Không có userToken trong AsyncStorage.');
+          setUser(null);
+        }
       }
     } catch (error) {
-      console.error('Lỗi khi đọc thông tin người dùng từ AsyncStorage:', error);
+      console.error('[PROFILE] Lỗi khi đọc thông tin người dùng từ AsyncStorage:', error);
       Alert.alert('Lỗi', 'Không thể tải thông tin người dùng.');
       setUser(null);
     } finally {
       setLoading(false);
     }
-  }, []); // useCallback để tránh tạo lại hàm không cần thiết
+  }, [fetchUserById, fetchUserFromToken]); // useCallback để tránh tạo lại hàm không cần thiết
 
+  // 1. useEffect để fetch user info khi màn hình focus
   useEffect(() => {
     if (isFocused) {
-      fetchUserInfo(); // Tải thông tin người dùng mỗi khi màn hình được focus
+      fetchUserInfo();
     }
-  }, [isFocused, fetchUserInfo]); // Chạy lại khi màn hình focus hoặc fetchUserInfo thay đổi
+  }, [isFocused, fetchUserInfo]);
+
+  // 2. useEffect riêng để log user khi user thay đổi
+  useEffect(() => {
+    if (user) {
+      console.log('[PROFILE] user state:', user);
+    }
+  }, [user]);
 
   // Hàm xử lý đăng xuất
   const handleLogout = async () => {
@@ -67,7 +95,7 @@ const ProfileScreen = () => {
               await AsyncStorage.removeItem('shouldAutoLogin'); // Nếu bạn có biến này
               setUser(null); // Xóa user khỏi state
               Alert.alert('Thành công', 'Bạn đã đăng xuất.');
-              navigation.replace('Login'); // Điều hướng về màn hình đăng nhập
+              navigation.replace('LoginScreen'); // Điều hướng về màn hình đăng nhập
             } catch (error) {
               console.error("Lỗi khi đăng xuất:", error);
               Alert.alert("Lỗi", "Không thể đăng xuất. Vui lòng thử lại.");
@@ -77,6 +105,54 @@ const ProfileScreen = () => {
       ]
     );
   };
+
+  // Hàm lấy thông tin user từ token
+  const fetchUserFromToken = useCallback(async (token) => {
+    try {
+      const response = await axios.get(API_ENDPOINTS.USERS.GET_PROFILE, {
+        headers: {
+          ...API_HEADERS,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.data && response.data.user) {
+        const userInfo = response.data.user;
+        await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
+        setUser(userInfo);
+        console.log('[PROFILE] userInfo lấy từ API bằng token:', userInfo);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy user từ token:', error);
+      setUser(null);
+      // Nếu token hết hạn, xóa token và userInfo
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userInfo');
+    }
+  }, []);
+
+  // Hàm lấy thông tin user bằng _id
+  const fetchUserById = useCallback(async (id) => {
+    try {
+      console.log('[PROFILE] Gọi API GET_BY_ID với id:', id);
+      const response = await axios.get(API_ENDPOINTS.USERS.GET_BY_ID(id), {
+        headers: API_HEADERS,
+      });
+      console.log('[PROFILE] Response từ API GET_BY_ID:', response.data);
+      if (response.data && response.data._id) {
+        const userInfo = response.data;
+        await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
+        setUser(userInfo);
+        console.log('[PROFILE] userInfo sau khi lấy từ API bằng _id:', userInfo);
+      } else {
+        console.log('[PROFILE] Không tìm thấy user hợp lệ trong response:', response.data);
+      }
+    } catch (error) {
+      console.error('[PROFILE] Lỗi khi lấy user bằng _id:', error, error?.response?.data);
+      // Nếu lỗi, có thể giữ nguyên user cũ hoặc xử lý khác tùy ý bạn
+    }
+  }, []);
 
   // Hiển thị loading
   if (loading) {
@@ -93,7 +169,7 @@ const ProfileScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <Text>Bạn chưa đăng nhập hoặc thông tin người dùng không hợp lệ.</Text>
-        <TouchableOpacity style={styles.loginAgainButton} onPress={() => navigation.replace('Login')}>
+        <TouchableOpacity style={styles.loginAgainButton} onPress={() => navigation.replace('LoginScreen')}>
           <Text style={styles.loginAgainButtonText}>Đăng nhập ngay</Text>
         </TouchableOpacity>
       </View>
