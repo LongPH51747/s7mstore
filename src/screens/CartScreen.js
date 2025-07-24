@@ -474,7 +474,7 @@ const CartScreen = (props) => {
                 />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>{"Cart"}</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('OrderScreen')}>
+              <TouchableOpacity onPress={() => navigation.navigate('UserReviewScreen')}>
                 <Image 
                   source={require('../assets/search.png')} 
                   style={styles.headerIcon}

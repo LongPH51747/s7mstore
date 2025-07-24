@@ -248,8 +248,8 @@ const OrdersScreen = () => {
                     </TouchableOpacity>
                     {order.status === 'Giao thành công' && (
                       <>
-                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('CheckoutScreen', { cartItems: order.orderItems })}>
-                          <Text style={styles.buttonSecondaryText}>Mua lại</Text>
+                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Rating', { order })}>
+                          <Text style={styles.buttonSecondaryText}>Đánh giá</Text>
                         </TouchableOpacity>
                       </>
                     )}

@@ -66,10 +66,10 @@ export const API_ENDPOINTS = {
   },
 
   RATINGS: {
-    CREATE: `${API_BASE_URL}/api/review/create-review`,
+    CREATE: `${API_BASE_URL}/api/review/create-review/id_order`,
     GET_BY_PRODUCT: (productId) => `${API_BASE_URL}/api/ratings/product/${productId}`,
-    GET_BY_USER: (userId) => `${API_BASE_URL}/api/ratings/user/${userId}`,
-    UPDATE: (ratingId) => `${API_BASE_URL}/api/ratings/update/${ratingId}`,
+    GET_BY_USER: (userId) => `${API_BASE_URL}/api/review/get-review-by-id/id_user/${userId}`,
+    UPDATE: (ratingId) => `${API_BASE_URL}/api/review/update-review-id/id_review/${id_review}`,
     DELETE: (ratingId) => `${API_BASE_URL}/api/ratings/delete/${ratingId}`,
   },
 

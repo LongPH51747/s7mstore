@@ -147,7 +147,7 @@ const LoginScreen = () => {
                     const userInfoJustRead = await AsyncStorage.getItem('userInfo');
                     console.log('[GOOGLE] Token VỪA ĐỌC LẠI TỪ AsyncStorage:', tokenJustRead ? tokenJustRead.substring(0, 30) + '...' : 'null');
                     console.log('[GOOGLE] User Info VỪA ĐỌC LẠI TỪ AsyncStorage (parsed ._id):', userInfoJustRead ? JSON.parse(userInfoJustRead)._id : 'null');
-                    navigation.replace('Home');
+                    navigation.replace('HomeScreen');
                 } else {
                     console.log('[GOOGLE] Đăng nhập Google thất bại, response không hợp lệ:', response.data);
                     throw new Error('Không nhận được token từ server');

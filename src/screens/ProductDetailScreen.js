@@ -89,6 +89,7 @@ const ProductDetailScreen = () => {
           
           // Cập nhật ảnh hiển thị cho biến thể được chọn
           if (availableVariant.variant_image_url) {
+            console.log('Check variant_image_url:', availableVariant.variant_image_url, typeof availableVariant.variant_image_url);
             if (typeof availableVariant.variant_image_url === 'string' && availableVariant.variant_image_url.startsWith('/uploads_product/')) {
               setCurrentDisplayImage(`${API_BASE_URL}${availableVariant.variant_image_url}`);
             } else {
@@ -99,6 +100,7 @@ const ProductDetailScreen = () => {
           } else {
             // Nếu biến thể không có ảnh riêng, sử dụng ảnh sản phẩm chính
             if (fetchedProduct.product_image) {
+              console.log('Check product_image:', fetchedProduct.product_image, typeof fetchedProduct.product_image);
               if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
                 setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
               } else {
@@ -111,6 +113,7 @@ const ProductDetailScreen = () => {
           setSelectedVariant(null);
           // Ảnh lớn mặc định là ảnh sản phẩm chính
           if (fetchedProduct.product_image) {
+            console.log('Check product_image:', fetchedProduct.product_image, typeof fetchedProduct.product_image);
             if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
               setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
             } else {
@@ -123,6 +126,7 @@ const ProductDetailScreen = () => {
         setSelectedVariant(null);
         // Ảnh lớn mặc định là ảnh sản phẩm chính
         if (fetchedProduct.product_image) {
+          console.log('Check product_image:', fetchedProduct.product_image, typeof fetchedProduct.product_image);
           if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
             setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
           } else {
@@ -172,6 +176,7 @@ const ProductDetailScreen = () => {
         setSelectedVariant(nextAvailableVariant);
         // Update image for the new variant
         if (nextAvailableVariant.variant_image_url) {
+          console.log('Check nextAvailableVariant.variant_image_url:', nextAvailableVariant.variant_image_url, typeof nextAvailableVariant.variant_image_url);
           if (typeof nextAvailableVariant.variant_image_url === 'string' && nextAvailableVariant.variant_image_url.startsWith('/uploads_product/')) {
             setCurrentDisplayImage(`${API_BASE_URL}${nextAvailableVariant.variant_image_url}`);
           } else {
@@ -180,6 +185,7 @@ const ProductDetailScreen = () => {
         } else if (nextAvailableVariant.variant_image_base64 && nextAvailableVariant.variant_image_type) {
           setCurrentDisplayImage(`data:${nextAvailableVariant.variant_image_type};base64,${nextAvailableVariant.variant_image_base64}`);
         } else {
+          console.log('Check product_image:', product.product_image, typeof product.product_image);
           if (typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')) {
             setCurrentDisplayImage(`${API_BASE_URL}${product.product_image}`);
           } else {
@@ -201,6 +207,7 @@ const ProductDetailScreen = () => {
     });
 
     if (variant.variant_image_url) {
+      console.log('Check variant_image_url:', variant.variant_image_url, typeof variant.variant_image_url);
       if (typeof variant.variant_image_url === 'string' && variant.variant_image_url.startsWith('/uploads_product/')) {
         setCurrentDisplayImage(`${API_BASE_URL}${variant.variant_image_url}`);
       } else {
@@ -209,6 +216,7 @@ const ProductDetailScreen = () => {
     } else if (variant.variant_image_base64 && variant.variant_image_type) {
       setCurrentDisplayImage(`data:${variant.variant_image_type};base64,${variant.variant_image_base64}`);
     } else {
+      console.log('Check product_image:', product.product_image, typeof product.product_image);
       if (typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')) {
         setCurrentDisplayImage(`${API_BASE_URL}${product.product_image}`);
       } else {
@@ -429,7 +437,8 @@ const ProductDetailScreen = () => {
 
   const displayImageSource = (
     typeof currentDisplayImage === 'string' && 
-    (currentDisplayImage.startsWith('http://') || 
+    (console.log('Check currentDisplayImage:', currentDisplayImage, typeof currentDisplayImage),
+     currentDisplayImage.startsWith('http://') || 
      currentDisplayImage.startsWith('https://') || 
      currentDisplayImage.startsWith('data:image'))
   )
@@ -464,24 +473,29 @@ const ProductDetailScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={26} color="#222" />
-        </TouchableOpacity>
-      </View>
+      
 
       {/* 1. Ảnh sản phẩm lớn */}
-      <Image
-        source={displayImageSource}
-        style={styles.productMainImage}
-        resizeMode="cover"
-        onError={(e) => {
-          console.error('Product detail image loading error:', e.nativeEvent.error);
-          e.target.setNativeProps({ source: require('../assets/errorimg.webp') });
-        }}
-      />
+      <View style={styles.mainImageWrapper}>
+        <View style={styles.productMainImageShadow}>
+          <Image
+            source={displayImageSource}
+            style={styles.productMainImage}
+            resizeMode="cover"
+            onError={(e) => {
+              console.error('Product detail image loading error:', e.nativeEvent.error);
+              e.target.setNativeProps({ source: require('../assets/errorimg.webp') });
+            }}
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.floatingBackButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#222" />
+        </TouchableOpacity>
+      </View>
 
       {/* Các phiên bản sản phẩm - Gộp với phần chọn biến thể */}
       {product?.product_variant && product.product_variant.length > 0 && (
@@ -496,6 +510,7 @@ const ProductDetailScreen = () => {
               // Lấy ảnh variant
               let variantImgSrc = require('../assets/errorimg.webp');
               if (variant.variant_image_url) {
+                console.log('Check variant.variant_image_url:', variant.variant_image_url, typeof variant.variant_image_url);
                 variantImgSrc =
                   typeof variant.variant_image_url === 'string' && variant.variant_image_url.startsWith('/uploads_product/')
                     ? { uri: `${API_BASE_URL}${variant.variant_image_url}` }
@@ -503,6 +518,7 @@ const ProductDetailScreen = () => {
               } else if (variant.variant_image_base64 && variant.variant_image_type) {
                 variantImgSrc = { uri: `data:${variant.variant_image_type};base64,${variant.variant_image_base64}` };
               } else if (product.product_image) {
+                console.log('Check product.product_image:', product.product_image, typeof product.product_image);
                 variantImgSrc =
                   typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')
                     ? { uri: `${API_BASE_URL}${product.product_image}` }
@@ -574,46 +590,39 @@ const ProductDetailScreen = () => {
             ({validReviews.length} đánh giá)
           </Text>
         </View>
-        <Text style={styles.productPrice}>
-          {selectedVariant ? selectedVariant.variant_price?.toLocaleString('vi-VN') : product.product_price?.toLocaleString('vi-VN')}đ
-          {selectedVariant && (
-            <Text style={styles.variantInfo}>
-              {' '}({selectedVariant.variant_color} - {selectedVariant.variant_size})
-            </Text>
+        <View style={styles.priceAndQuantityRow}>
+          <Text style={styles.productPrice}>
+            {selectedVariant ? selectedVariant.variant_price?.toLocaleString('vi-VN') : product.product_price?.toLocaleString('vi-VN')}đ
+            {selectedVariant && (
+              <Text style={styles.variantInfo}>
+                {' '}({selectedVariant.variant_color} - {selectedVariant.variant_size})
+              </Text>
+            )}
+          </Text>
+          {selectedVariant && isSelectedVariantInStock && (
+            <View style={styles.quantityInlineContainer}>
+              <TouchableOpacity
+                style={[styles.quantityButtonInline, quantity <= 1 && styles.quantityButtonInlineDisabled]}
+                onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={quantity <= 1}
+              >
+                <Text style={[styles.quantityButtonInlineText, quantity <= 1 && styles.quantityButtonInlineTextDisabled]}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.quantityNumberInline}>{quantity}</Text>
+              <TouchableOpacity
+                style={[styles.quantityButtonInline, quantity >= selectedVariantStock && styles.quantityButtonInlineDisabled]}
+                onPress={() => {
+                  if (quantity < selectedVariantStock) setQuantity(quantity + 1);
+                }}
+                disabled={quantity >= selectedVariantStock}
+              >
+                <Text style={[styles.quantityButtonInlineText, quantity >= selectedVariantStock && styles.quantityButtonInlineTextDisabled]}>+</Text>
+              </TouchableOpacity>
+            </View>
           )}
-        </Text>
+        </View>
         <Text style={styles.description}>{product.product_description}</Text>
       </View>
-
-      {/* 3. Chọn số lượng */}
-      {selectedVariant && isSelectedVariantInStock && (
-        <View style={styles.quantityContainerModern}>
-          <TouchableOpacity
-            style={[styles.quantityButtonModern, quantity <= 1 && styles.quantityButtonModernDisabled]}
-            onPress={() => setQuantity(Math.max(1, quantity - 1))}
-            disabled={quantity <= 1}
-          >
-            <Text style={[styles.quantityButtonModernText, quantity <= 1 && styles.quantityButtonModernTextDisabled]}>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.quantityNumberModern}>{quantity}</Text>
-          <TouchableOpacity
-            style={[styles.quantityButtonModern, quantity >= selectedVariantStock && styles.quantityButtonModernDisabled]}
-            onPress={() => {
-              if (quantity < selectedVariantStock) {
-                setQuantity(quantity + 1);
-              } else {
-                Alert.alert('Thông báo', `Chỉ còn ${selectedVariantStock} sản phẩm trong kho. Không thể tăng thêm số lượng.`);
-              }
-            }}
-            disabled={quantity >= selectedVariantStock}
-          >
-            <Text style={[styles.quantityButtonModernText, quantity >= selectedVariantStock && styles.quantityButtonModernTextDisabled]}>+</Text>
-          </TouchableOpacity>
-          <Text style={styles.stockLimitTextModern}>
-            {`Còn lại: ${selectedVariantStock} sản phẩm`}
-          </Text>
-        </View>
-      )}
 
       {/* 4. Nút thêm vào giỏ hàng */}
       <TouchableOpacity
@@ -659,10 +668,17 @@ const ProductDetailScreen = () => {
               <View key={review._id} style={styles.reviewCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   {user?.avatar && (
-                    <Image
-                      source={{ uri: user.asvatar.startsWith('http') ? user.avatar : `${API_BASE_URL}/${user.avatar.replace(/\\/g, '/')}` }}
-                      style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }}
-                    />
+                    <>
+                      {console.log('Review user avatar:', { avatar: user.avatar, type: typeof user.avatar })}
+                      <Image
+                        source={{
+                          uri: typeof user.avatar === 'string' && user.avatar.startsWith('http')
+                            ? user.avatar
+                            : `${API_BASE_URL}/${(user.avatar || '').replace(/\\/g, '/')}`
+                        }}
+                        style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }}
+                      />
+                    </>
                   )}
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15 }}>{user?.fullname || 'Người dùng'}</Text>
@@ -684,6 +700,29 @@ const ProductDetailScreen = () => {
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
+                )}
+                {/* Admin reply section */}
+                {review.admin_reply && review.admin_reply.content && (
+                  <View style={{
+                    backgroundColor: '#f0f6ff',
+                    borderRadius: 8,
+                    padding: 10,
+                    marginTop: 8,
+                    borderLeftWidth: 4,
+                    borderLeftColor: '#2e7be4'
+                  }}>
+                    <Text style={{ color: '#2e7be4', fontWeight: 'bold', marginBottom: 2 }}>
+                      Phản hồi từ Admin:
+                    </Text>
+                    <Text style={{ color: '#222', fontSize: 14 }}>
+                      {review.admin_reply.content}
+                    </Text>
+                    {review.admin_reply.createdAt && (
+                      <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>
+                        {new Date(review.admin_reply.createdAt).toLocaleString('vi-VN')}
+                      </Text>
+                    )}
+                  </View>
                 )}
               </View>
             );
@@ -738,31 +777,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    padding: 16,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    padding: 8,
+    padding: 4,
   },
   productImage: {
     width: width,
     height: width * 0.9,
   },
-  productMainImage: {
-    width: '92%',
-    height: 260,
-    borderRadius: 18,
-    alignSelf: 'center',
-    marginTop: 18,
+  mainImageWrapper: {
+    width: '100%',
+    height: 345,
+    position: 'relative',
     marginBottom: 10,
+  },
+  productMainImageShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 20,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 0,
+    width: '98%',
+    height: 345,
+    marginLeft: 40,
     backgroundColor: '#f5f5f5',
+    overflow: 'hidden',
+  },
+  productMainImage: {
+    width: '100%',
+    height: '100%',
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 0,
+  },
+  floatingBackButton: {
+    position: 'absolute',
+    top: 24,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.13,
-    shadowRadius: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
     elevation: 6,
-},
+    zIndex: 10,
+  },
   detailsContainer: {
     padding: 16,
   },
@@ -1124,6 +1196,53 @@ ratingCount: {
   color: '#888',
   marginLeft: 6,
 },
+  priceAndQuantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  quantityInlineContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f6f6f6',
+    borderRadius: 22,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 8,
+  },
+  quantityButtonInline: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 2,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    elevation: 1,
+  },
+  quantityButtonInlineDisabled: {
+    backgroundColor: '#f0f0f0',
+    borderColor: '#eee',
+  },
+  quantityButtonInlineText: {
+    fontSize: 20,
+    color: '#222',
+    fontWeight: 'bold',
+  },
+  quantityButtonInlineTextDisabled: {
+    color: '#bbb',
+  },
+  quantityNumberInline: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginHorizontal: 8,
+    minWidth: 24,
+    textAlign: 'center',
+  },
 });
 
 export default ProductDetailScreen; 
