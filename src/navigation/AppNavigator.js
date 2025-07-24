@@ -25,6 +25,7 @@ import OtpVerificationScreen from '../screens/OtpScreen';
 import ResetPasswordScreen from '../screens/ResetPassword';
 import ChangePasswordScreen from '../screens/ChangePassword';
 import RefundReturnScreen from '../screens/TraHangScreen';
+import UserReviewsScreen from '../screens/UserReviewsScreen';
 
 const Stack = createStackNavigator();
 
@@ -72,6 +73,7 @@ const AppNavigator = () => {
         <Stack.Screen name="UpdateAddress" component={UpdateAddressScreen} />
         <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
         <Stack.Screen name="MapScreen" component={MapScreen} />
+        <Stack.Screen name="UserReviewScreen" component={UserReviewsScreen}/>
         
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="Orders" component={OrderScreen} />

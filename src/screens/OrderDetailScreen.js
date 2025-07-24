@@ -177,8 +177,8 @@ const OrderDetailScreen = ({ route }) => {
           <TouchableOpacity style={styles.halfWidthButtonSecondary} onPress={handleReturnOrder}>
             <Text style={styles.buttonTextSecondary}>Trả hàng</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.halfWidthButtonPrimary} onPress={handleRateOrder}>
-            <Text style={styles.buttonTextPrimary}>Đánh giá</Text>
+          <TouchableOpacity style={styles.halfWidthButtonPrimary} onPress={() => navigation.navigate('Checkout', { cartItems: order.orderItems })}>
+            <Text style={styles.buttonTextPrimary}>Mua lại</Text>
           </TouchableOpacity>
         </View>
       )}

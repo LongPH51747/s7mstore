@@ -428,18 +428,28 @@ const RatingScreen = () => {
       console.log('User token found:', userToken ? 'Yes' : 'No');
       console.log('Token validation skipped, will rely on server response');
       
+      // Chuẩn bị map itemId -> orderItem để lấy id_variant
+      const itemIdToOrderItem = {};
+      order.orderItems.forEach(item => {
+        const itemId = item.id_product || item._id;
+        itemIdToOrderItem[itemId] = item;
+      });
+
       // Process each product rating
       const reviewPromises = Object.keys(ratings).map(async (itemId) => {
         const rating = ratings[itemId];
         const comment = comments[itemId] || '';
         const productImages = images[itemId] || [];
         const productVideos = videos[itemId] || [];
+        const orderItem = itemIdToOrderItem[itemId];
+        const id_variant = orderItem && orderItem.id_variant ? orderItem.id_variant : '';
         
         console.log(`Processing review for product ${itemId}:`, {
           rating,
           comment,
           imageCount: productImages.length,
-          videoCount: productVideos.length
+          videoCount: productVideos.length,
+          id_variant
         });
 
         // Use images directly without base64 conversion
@@ -454,7 +464,8 @@ const RatingScreen = () => {
           review_comment: comment,
           review_image: imageUrls,
           review_video: videoUrl,
-          review_rate: rating
+          review_rate: rating,
+          id_variant: id_variant
         };
 
         // Validate review data
@@ -469,6 +480,9 @@ const RatingScreen = () => {
         }
         if (!Array.isArray(reviewData.review_image)) {
           console.error('Invalid image array for product:', itemId);
+        }
+        if (!reviewData.id_variant) {
+          console.error('Missing id_variant for product:', itemId);
         }
 
         console.log('Review data prepared:', {
@@ -485,7 +499,8 @@ const RatingScreen = () => {
           review_image_count: reviewData.review_image.length,
           review_image_sample: reviewData.review_image.length > 0 ? reviewData.review_image[0].substring(0, 100) + '...' : 'No images',
           review_video: reviewData.review_video,
-          review_rate: reviewData.review_rate
+          review_rate: reviewData.review_rate,
+          id_variant: reviewData.id_variant
         });
 
         return reviewData;
@@ -500,7 +515,8 @@ const RatingScreen = () => {
         rating: review.review_rate,
         comment_length: review.review_comment.length,
         image_count: review.review_image.length,
-        has_video: !!review.review_video
+        has_video: !!review.review_video,
+        id_variant: review.id_variant
       })));
 
       // Submit each review individually
@@ -514,7 +530,8 @@ const RatingScreen = () => {
           rating: review.review_rate,
           comment_length: review.review_comment.length,
           image_count: review.review_image.length,
-          has_video: !!review.review_video
+          has_video: !!review.review_video,
+          id_variant: review.id_variant
         });
         
         try {
@@ -527,8 +544,10 @@ const RatingScreen = () => {
             'Authorization': `Bearer ${userToken}`,
           };
 
+          // Endpoint url có thêm id_order
+          const endpointUrl = `${API_ENDPOINTS.RATINGS.CREATE}/${order._id}`;
           console.log(`Review ${i + 1} request headers:`, headersWithToken);
-          console.log(`Review ${i + 1} request URL:`, API_ENDPOINTS.RATINGS.CREATE);
+          console.log(`Review ${i + 1} request URL:`, endpointUrl);
           
           // Create FormData for multipart/form-data
           const formData = new FormData();
@@ -536,12 +555,14 @@ const RatingScreen = () => {
           formData.append('review_product_id', review.review_product_id);
           formData.append('review_comment', review.review_comment);
           formData.append('review_rate', review.review_rate.toString());
+          formData.append('id_variant', review.id_variant);
           
           console.log(`Review ${i + 1} - FormData basic fields:`, {
             user_id: review.review_user_id,
             product_id: review.review_product_id,
             comment: review.review_comment,
-            rate: review.review_rate
+            rate: review.review_rate,
+            id_variant: review.id_variant
           });
           
           // Add images to FormData
@@ -586,7 +607,7 @@ const RatingScreen = () => {
           console.log(`Review ${i + 1} - FormData created successfully with ${review.review_image.length} images and ${review.review_video ? '1' : '0'} video`);
           console.log(`Review ${i + 1} - FormData entries:`, Array.from(formData._parts || []).map(part => ({ name: part[0], value: typeof part[1] === 'object' ? 'File object' : part[1] })));
 
-          const response = await fetch(API_ENDPOINTS.RATINGS.CREATE, {
+          const response = await fetch(endpointUrl, {
             method: 'POST',
             headers: headersWithToken,
             body: formData,
