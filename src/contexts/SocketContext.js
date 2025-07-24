@@ -5,8 +5,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { API_BASE_URL } from '../config/api';
 
-// const API_URL = 'http://172.20.10.3:3000';
-
 const SocketContext = createContext(null);
 
 export const useSocket = () => {
@@ -33,22 +31,37 @@ export const SocketProvider = ({ children }) => {
     const [messagesError, setMessagesError] = useState(null);
     const [chatRooms, setChatRooms] = useState([]);
 
-    // NEW: ChatRoomId cho user thường (user - admin)
+    // ChatRoomId cho user thường (user - admin)
     const [currentUserChatRoomId, setCurrentUserChatRoomId] = useState(null);
 
-    // Refs cho giá trị mới nhất
+    // Refs cho giá trị mới nhất của state để dùng trong useCallback
     const latestUserRef = useRef(user);
     useEffect(() => { latestUserRef.current = user; }, [user]);
     const latestAccessTokenRef = useRef(accessToken);
     useEffect(() => { latestAccessTokenRef.current = accessToken; }, [accessToken]);
-    // Ref chatRoomId cho admin
     const latestCurrentChatRoomIdRef = useRef(null); 
+    useEffect(() => { latestCurrentChatRoomIdRef.current = currentUserChatRoomId; }, [currentUserChatRoomId]);
 
-    // Xử lý logout local
+
+    // --- Xử lý Đăng xuất cục bộ ---
     const handleLocalLogout = useCallback(async () => {
         try {
+            console.log("[SocketContext] Bắt đầu quá trình đăng xuất cục bộ.");
+            // Xóa tất cả các item liên quan đến user và token
             await AsyncStorage.multiRemove(['userToken', 'userInfo', 'shouldAutoLogin', 'userPhone']);
-            try { await getAuth().signOut(); } catch (e) { }
+            
+            // Chỉ gọi signOut() nếu có người dùng Firebase đang đăng nhập
+            const firebaseAuth = getAuth();
+            if (firebaseAuth.currentUser) {
+                try { 
+                    await firebaseAuth.signOut(); 
+                    console.log("[Firebase Auth] Đã đăng xuất khỏi Firebase.");
+                } catch (e) { 
+                    console.error("[Firebase Auth] Lỗi khi đăng xuất Firebase:", e); 
+                }
+            }
+            
+            // Reset tất cả các state liên quan đến authentication và chat
             setAccessToken(null);
             setUser(null);
             setIsAuthenticated(false);
@@ -56,109 +69,188 @@ export const SocketProvider = ({ children }) => {
             setMessages([]);
             setChatRooms([]);
             setCurrentUserChatRoomId(null);
-            latestCurrentChatRoomIdRef.current = null;
+            latestCurrentChatRoomIdRef.current = null; // Reset ref
             setLoadingAuth(false);
+
+            // Ngắt kết nối socket nếu đang kết nối
             if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current.removeAllListeners();
                 socketRef.current = null;
+                console.log("[Socket.js] Socket đã ngắt kết nối và xóa listeners.");
             }
             setIsSocketReady(false);
             isConnecting.current = false;
+            console.log("[SocketContext] Đã hoàn tất quá trình đăng xuất cục bộ.");
+
         } catch (error) {
+            console.error("[SocketContext] Lỗi đăng xuất cục bộ:", error);
             Alert.alert("Lỗi đăng xuất", "Không thể hoàn tất đăng xuất. Vui lòng thử lại.");
         }
     }, []);
 
-    // Load dữ liệu xác thực từ AsyncStorage
-   const loadAuthDataFromAsyncStorage = useCallback(async () => {
-    setLoadingAuth(true);
-    try {
-        const firebaseAuth = getAuth();
-        const firebaseUser = firebaseAuth.currentUser; // Lấy người dùng Firebase hiện tại
 
-        let newToken = null;
-        if (firebaseUser) {
-            // Bước quan trọng: Buộc Firebase làm mới token
-            // 'true' nghĩa là yêu cầu làm mới token nếu cần
-            newToken = await firebaseUser.getIdToken(true); 
-            console.log("[Firebase] Đã làm mới và lấy token mới nhất.");
-        }
+    // --- Load dữ liệu xác thực từ AsyncStorage và Firebase Auth ---
+    const loadAuthDataFromAsyncStorage = useCallback(async () => {
+        setLoadingAuth(true);
+        try {
+            const firebaseAuth = getAuth();
+            const firebaseUser = firebaseAuth.currentUser; 
 
-        const [userToken, userInfoString] = await Promise.all([
-            // Lấy token từ Firebase thay vì AsyncStorage nếu có
-            newToken || AsyncStorage.getItem('userToken'), // Ưu tiên token mới từ Firebase
-            AsyncStorage.getItem('userInfo'),
-        ]);
+            let finalUserObject = null;
+            let finalAccessToken = null;
 
-        let newStoredUser = userInfoString ? JSON.parse(userInfoString) : null;
-        
-        // Cập nhật thông tin người dùng nếu cần, đặc biệt là role
-        if (newStoredUser && firebaseUser) {
-            // Cập nhật Firebase UID vào user object nếu nó chưa có hoặc khác
-            newStoredUser = { ...newStoredUser, firebaseUid: firebaseUser.uid };
-        }
+            const [tokenFromStorage, userInfoStringFromStorage] = await Promise.all([
+                AsyncStorage.getItem('userToken'),
+                AsyncStorage.getItem('userInfo'),
+            ]);
 
-        const newAuthStatus = !!userToken && !!newStoredUser && !!newStoredUser._id; 
-        const newAdminStatus = newStoredUser?.role === 'admin';
-
-        setAccessToken(userToken || null);
-        setUser(newStoredUser);
-        setIsAuthenticated(newAuthStatus);
-        setIsAdmin(newAdminStatus);
-
-        // Lưu lại token và userInfo mới (nếu có) vào AsyncStorage để sử dụng sau này
-        if (userToken) {
-            await AsyncStorage.setItem('userToken', userToken);
-        }
-        if (newStoredUser) {
-            await AsyncStorage.setItem('userInfo', JSON.stringify(newStoredUser));
-        }
-
-    } catch (e) {
-        console.error("[SocketContext] Lỗi khi tải dữ liệu xác thực hoặc làm mới token:", e);
-        setAccessToken(null);
-        setUser(null);
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        // Có thể muốn gọi handleLocalLogout() ở đây nếu lỗi nghiêm trọng
-    } finally {
-        setLoadingAuth(false);
-    }
-}, []);
-
-    // Lắng nghe Firebase Auth
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(getAuth(), async (firebaseUser) => {
-            if (firebaseUser) {
-                await loadAuthDataFromAsyncStorage();
-            } else {
-                // KHÔNG gọi handleLocalLogout ở đây nữa để tránh xóa userToken/userInfo backend
-                // Nếu muốn reset chỉ state Firebase, có thể setAccessToken(null), setUser(null), ... ở đây nếu cần
-                // handleLocalLogout();
-                // Ví dụ:
-                // setAccessToken(null);
-                // setUser(null);
-                // setIsAuthenticated(false);
-                // setIsAdmin(false);
+            if (userInfoStringFromStorage) {
+                try {
+                    const storedUserInfo = JSON.parse(userInfoStringFromStorage);
+                    // Ưu tiên MongoDB _id từ AsyncStorage nếu có
+                    if (storedUserInfo && storedUserInfo._id) {
+                        finalUserObject = { ...storedUserInfo };
+                        console.log("[SocketContext][LoadAuth] Đã tải UserInfo từ AsyncStorage (MongoDB _id):", storedUserInfo._id);
+                    }
+                } catch (e) {
+                    console.error("[SocketContext][LoadAuth] Lỗi parse userInfo từ AsyncStorage:", e);
+                    await AsyncStorage.removeItem('userInfo');
+                }
             }
+            
+            if (tokenFromStorage) {
+                finalAccessToken = tokenFromStorage;
+                console.log("[SocketContext][LoadAuth] Đã tải Token từ AsyncStorage.");
+            }
+
+            // Nếu có Firebase User, đảm bảo token là Firebase ID Token mới nhất
+            if (firebaseUser) {
+                const firebaseIdToken = await firebaseUser.getIdToken(true);
+                finalAccessToken = firebaseIdToken; // Ưu tiên Firebase ID Token
+
+                // Nếu chưa có user object từ AsyncStorage với MongoDB _id, 
+                // hoặc Firebase UID không khớp, tạo một user object tạm thời từ Firebase data
+                if (!finalUserObject || finalUserObject.firebaseUid !== firebaseUser.uid) {
+                    console.log("[SocketContext][LoadAuth] Tạo hoặc cập nhật UserInfo TẠM THỜI từ Firebase User. UID:", firebaseUser.uid);
+                    // Chỉ dùng Firebase UID làm _id tạm thời nếu chưa có MongoDB _id
+                    finalUserObject = {
+                        _id: firebaseUser.uid, // Tạm thời dùng Firebase UID làm _id
+                        email: firebaseUser.email,
+                        fullname: firebaseUser.displayName || 'Người dùng',
+                        avatar: firebaseUser.photoURL,
+                        provider: 'firebase',
+                        role: 'user', 
+                        firebaseUid: firebaseUser.uid
+                    };
+                } else {
+                    // Nếu đã có user object từ AsyncStorage và khớp với Firebase UID, 
+                    // Cập nhật các trường có thể thay đổi từ Firebase và giữ lại MongoDB _id
+                    console.log("[SocketContext][LoadAuth] Cập nhật UserInfo từ Firebase (giữ MongoDB _id).");
+                    finalUserObject = {
+                        ...finalUserObject,
+                        email: firebaseUser.email || finalUserObject.email,
+                        fullname: firebaseUser.displayName || finalUserObject.fullname,
+                        avatar: firebaseUser.photoURL || finalUserObject.avatar,
+                        provider: finalUserObject.provider || 'firebase',
+                        firebaseUid: firebaseUser.uid 
+                    };
+                }
+            } 
+            // Nếu có finalUserObject nhưng không có finalAccessToken (token hết hạn),
+            // hoặc finalUserObject không có _id hợp lệ (chưa được xác thực backend),
+            // coi như chưa xác thực và xóa thông tin.
+            else if (finalUserObject && (!finalAccessToken || !finalUserObject._id || finalUserObject._id === finalUserObject.firebaseUid)) {
+                console.warn("[SocketContext][LoadAuth] Phát hiện UserInfo nhưng không có Token hợp lệ hoặc MongoDB _id. Xem như chưa xác thực.");
+                finalUserObject = null;
+                finalAccessToken = null;
+            }
+
+
+            // Cập nhật trạng thái Context
+            const newIsAuthenticated = !!finalAccessToken && !!finalUserObject && !!finalUserObject._id;
+            const newIsAdmin = finalUserObject?.role === 'admin';
+
+            setAccessToken(newIsAuthenticated ? finalAccessToken : null);
+            setUser(newIsAuthenticated ? finalUserObject : null); 
+            setIsAuthenticated(newIsAuthenticated);
+            setIsAdmin(newIsAdmin);
+
+            // Luôn lưu thông tin user đã đồng bộ và token vào AsyncStorage
+            if (newIsAuthenticated) {
+                await AsyncStorage.setItem('userToken', finalAccessToken);
+                await AsyncStorage.setItem('userInfo', JSON.stringify(finalUserObject));
+                console.log("[SocketContext][LoadAuth] Đã cập nhật AsyncStorage với User._id:", finalUserObject._id);
+            } else {
+                console.warn("[SocketContext][LoadAuth] Thông tin xác thực không hợp lệ. Xóa dữ liệu cũ trong AsyncStorage.");
+                await AsyncStorage.multiRemove(['userToken', 'userInfo']);
+            }
+
+        } catch (e) {
+            console.error("[SocketContext][LoadAuth] Lỗi khi tải dữ liệu xác thực:", e);
+            setAccessToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+            await AsyncStorage.multiRemove(['userToken', 'userInfo']);
+        } finally {
+            setLoadingAuth(false);
+        }
+    }, []);
+
+
+    // --- Lắng nghe trạng thái Firebase Auth và đồng bộ với Authentication Context ---
+    useEffect(() => {
+        const firebaseAuth = getAuth();
+        let isInitialLoad = true;
+
+        const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+            console.log("[Firebase Auth Listener] onAuthStateChanged fired. firebaseUser:", !!firebaseUser);
+            
+            // Gọi loadAuthDataFromAsyncStorage để đồng bộ trạng thái Auth (cả Firebase và Local)
+            // loadAuthDataFromAsyncStorage sẽ cố gắng đọc MongoDB _id từ AsyncStorage
+            await loadAuthDataFromAsyncStorage();
+
+            // Nếu không có firebaseUser VÀ không có token cục bộ hợp lệ (MongoDB _id),
+            // thì mới gọi handleLocalLogout.
+            // Điều này ngăn chặn việc tự động logout người dùng đăng nhập bằng email/password
+            // nếu firebaseUser tạm thời bị null nhưng user cục bộ vẫn có token/userInfo hợp lệ
+            if (!firebaseUser && isInitialLoad) {
+                const userTokenFromStorage = await AsyncStorage.getItem('userToken');
+                const userInfoStringFromStorage = await AsyncStorage.getItem('userInfo');
+                let storedUserInfo = null;
+                if (userInfoStringFromStorage) {
+                    try {
+                        storedUserInfo = JSON.parse(userInfoStringFromStorage);
+                    } catch (e) { /* ignore */ }
+                }
+                // Chỉ logout nếu KHÔNG có Firebase user VÀ KHÔNG có MongoDB _id trong userInfo
+                const isLocallyAuthenticatedWithMongoId = userTokenFromStorage && storedUserInfo && storedUserInfo._id;
+
+                if (!isLocallyAuthenticatedWithMongoId) {
+                    console.log("[Firebase Auth Listener] Không có Firebase user và không có token/userInfo cục bộ hợp lệ (MongoDB _id). Đang gọi handleLocalLogout.");
+                    handleLocalLogout();
+                }
+            }
+            isInitialLoad = false;
         });
+
         return () => {
             unsubscribe();
         };
-    }, [loadAuthDataFromAsyncStorage, handleLocalLogout]);
+    }, [loadAuthDataFromAsyncStorage, handleLocalLogout]); 
 
-    // SOCKET.IO KẾT NỐI VÀ QUẢN LÝ LIFECYCLE
+    // --- SOCKET.IO KẾT NỐI VÀ QUẢN LÝ LIFECYCLE ---
     useEffect(() => {
         setMessagesError(null);
-        console.log('[SocketContext] ===== BẮT ĐẦU KẾT NỐI SOCKET =====');
-        console.log('[SocketContext] API_BASE_URL:', API_BASE_URL);
-        console.log('[SocketContext] accessToken:', accessToken);
-        console.log('[SocketContext] isAuthenticated:', isAuthenticated);
-        console.log('[SocketContext] user:', user);
-        console.log('[SocketContext] user?._id:', user?._id);
-        if (loadingAuth || !isAuthenticated || !accessToken || !user?._id) {
+        console.log('[SocketContext] ===== BẮT ĐẦU HOẶC KIỂM TRA KẾT NỐI SOCKET =====');
+        console.log('[SocketContext] Current state: loadingAuth=', loadingAuth, 'isAuthenticated=', isAuthenticated, 'accessToken=', !!accessToken, 'user=', user, 'user._id=', user?._id);
+
+        // Điều kiện để KHÔNG kết nối socket hoặc ngắt kết nối hiện có
+        // Rất quan trọng: user._id PHẢI là MongoDB _id hợp lệ để kết nối socket
+        if (loadingAuth || !isAuthenticated || !accessToken || !user?._id || user._id.length < 20) { // Thêm điều kiện user._id hợp lệ
             if (socketRef.current) {
+                console.log('[SocketContext] Ngắt kết nối socket hiện có do thiếu xác thực hoặc đang load.');
                 socketRef.current.disconnect();
                 socketRef.current.removeAllListeners();
                 socketRef.current = null;
@@ -168,14 +260,19 @@ export const SocketProvider = ({ children }) => {
             return;
         }
 
+        // Nếu socket đã tồn tại và đang kết nối/đã kết nối với đúng token và user id, không làm gì cả
         if (socketRef.current && (socketRef.current.connected || socketRef.current.connecting) && 
-            socketRef.current.handshake?.auth?.token === accessToken) {
+            socketRef.current.handshake?.auth?.token === accessToken &&
+            socketRef.current.handshake?.query?.userId === user._id) { // Kiểm tra userId để đảm bảo đúng user
+            console.log('[SocketContext] Socket đã sẵn sàng và đang dùng đúng token/user. Không cần tạo mới.');
             setIsSocketReady(true);
             isConnecting.current = false;
             return;
         }
 
+        // Nếu socket tồn tại nhưng token hoặc trạng thái không khớp, ngắt kết nối cũ
         if (socketRef.current) {
+            console.log('[SocketContext] Socket hiện có không khớp hoặc không hợp lệ. Ngắt kết nối cũ.');
             socketRef.current.removeAllListeners();
             socketRef.current.disconnect();
             socketRef.current = null;
@@ -183,11 +280,14 @@ export const SocketProvider = ({ children }) => {
             setIsSocketReady(false);
         }
 
-        if (!socketRef.current) { 
+        // Chỉ tạo socket mới nếu chưa có socket hoặc socket cũ đã bị ngắt
+        if (!socketRef.current && !isConnecting.current) {
             isConnecting.current = true;
             setIsSocketReady(false);
 
-            console.log('[SocketContext] Tạo socket mới với URL:', API_BASE_URL);
+            const tokenType = user.provider || 'local';
+            console.log(`[SocketContext] Tạo socket mới với URL: ${API_BASE_URL}, Token Type: ${tokenType}, User ID: ${user._id}`);
+
             const newSocket = io(API_BASE_URL, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
@@ -196,32 +296,91 @@ export const SocketProvider = ({ children }) => {
                 reconnectionDelayMax: 5000,
                 timeout: 20000,
                 autoConnect: false,
-                auth: { token: accessToken, tokenType: 'firebase'},
+                auth: { 
+                    token: accessToken, 
+                    tokenType: tokenType,
+                    userId: user._id // Gửi userId lên để backend kiểm tra
+                },
             });
 
             newSocket.onAny((event, ...args) => {
-                console.log('[SocketContext][SOCKET EVENT]', event, args);
+                console.log(`[SocketContext][SOCKET EVENT] ${event}`, args);
             });
 
             socketRef.current = newSocket;
 
-            // Listeners
             const onConnect = () => {
-                console.log('[SocketContext] Đã kết nối socket thành công!');
+                console.log('[SocketContext] Socket đã kết nối thành công!');
+                // Ngay sau khi connect, socket sẽ tự emit 'authenticated' nếu backend config
+                // hoặc bạn có thể emit một sự kiện 'authenticate' riêng nếu cần.
             };
+
             const onAuthenticated = (data) => {
-                console.log('[SocketContext] Đã authenticated:', data);
+                console.log('[SocketContext] Socket đã được xác thực thành công!', data);
                 setIsSocketReady(true);
                 isConnecting.current = false;
+
+                // Đảm bảo data là mảng và có phần tử đầu tiên
+                if (Array.isArray(data) && data.length > 0 && data[0].userId) {
+                    const backendUserData = data[0]; // Lấy dữ liệu user từ backend (chứa MongoDB _id)
+
+                    // Cập nhật lại `user` state với MongoDB _id từ backend
+                    setUser(prevUser => {
+                        if (prevUser && prevUser._id !== backendUserData.userId) {
+                            console.log("[SocketContext] Cập nhật user._id từ Firebase UID sang MongoDB _id:", backendUserData.userId);
+                            
+                            // Cập nhật userInfo trong AsyncStorage
+                            AsyncStorage.getItem('userInfo').then(userInfoString => {
+                                let storedUserInfo = {};
+                                if (userInfoString) {
+                                    try {
+                                        storedUserInfo = JSON.parse(userInfoString);
+                                    } catch (e) {
+                                        console.error("Error parsing stored userInfo:", e);
+                                    }
+                                }
+                                const updatedStoredUserInfo = {
+                                    ...storedUserInfo,
+                                    // Ghi đè các trường từ backend (userId, fullname, userRole)
+                                    _id: backendUserData.userId, // Đảm bảo _id là MongoDB ID
+                                    role: backendUserData.userRole, // Cập nhật role từ backend
+                                    fullname: backendUserData.fullname, // Cập nhật fullname từ backend
+                                    // Giữ lại Firebase UID nếu có, nhưng chỉ khi nó khác với _id mới
+                                    firebaseUid: prevUser.firebaseUid || (prevUser._id && prevUser._id.length > 20 ? prevUser._id : undefined)
+                                };
+                                AsyncStorage.setItem('userInfo', JSON.stringify(updatedStoredUserInfo));
+                            }).catch(e => console.error("Error updating userInfo in AsyncStorage:", e));
+
+                            return {
+                                ...prevUser, // Giữ lại các thông tin Firebase (email, avatar)
+                                _id: backendUserData.userId, // Cập nhật _id thành MongoDB ID
+                                fullname: backendUserData.fullname || prevUser.fullname,
+                                role: backendUserData.userRole || prevUser.role,
+                                // Đảm bảo firebaseUid vẫn được giữ nếu prevUser._id là firebaseUid ban đầu
+                                firebaseUid: prevUser.firebaseUid || (prevUser._id && prevUser._id.length > 20 ? undefined : prevUser._id)
+                            };
+                        }
+                        return prevUser;
+                    });
+                }
+
+                // Yêu cầu dữ liệu ban đầu sau khi xác thực
+                // Dùng `latestUserRef.current` để đảm bảo lấy được user._id đã cập nhật nếu có.
+                // Hoặc có thể trì hoãn việc này cho đến khi `user` state được cập nhật.
+                // Tuy nhiên, việc `setUser` là async, nên emit ngay có thể vẫn dùng UID cũ.
+                // Tốt hơn là đặt request này vào một useEffect riêng biệt phụ thuộc vào `user._id`
                 if (latestUserRef.current?.role === 'admin') {
                     newSocket.emit('request_chat_room_list');
                 } else {
                     newSocket.emit('request_chat_history_for_user_self');
                 }
             };
+
             const onUnauthorized = (reason) => {
                 console.warn('[SocketContext] unauthorized:', reason);
-                Alert.alert('Phiên đăng nhập hết hạn', 'Vui lòng đăng nhập lại để tiếp tục.', [{ text: 'OK', onPress: handleLocalLogout }]);
+                Alert.alert('Phiên đăng nhập hết hạn', 'Vui lòng đăng nhập lại để tiếp tục.', [
+                    { text: 'OK', onPress: handleLocalLogout }
+                ]);
                 if (newSocket && newSocket.connected) { newSocket.disconnect(); }
                 setIsSocketReady(false);
                 isConnecting.current = false;
@@ -235,18 +394,23 @@ export const SocketProvider = ({ children }) => {
                 console.error('[SocketContext] Lỗi connect_error:', error);
                 setIsSocketReady(false);
                 isConnecting.current = false;
-                Alert.alert('Lỗi kết nối', 'Không thể kết nối đến máy chủ chat. Vui lòng thử lại sau.', [{ text: 'OK' }]);
+                if (error.message.includes('Authentication error')) {
+                    Alert.alert('Lỗi xác thực', 'Xác thực không thành công. Vui lòng đăng nhập lại.', [
+                        { text: 'OK', onPress: handleLocalLogout }
+                    ]);
+                } else {
+                    Alert.alert('Lỗi kết nối', 'Không thể kết nối đến máy chủ chat. Vui lòng thử lại sau.', [{ text: 'OK' }]);
+                }
             };
             const onGenericError = (error) => {
-                console.error('[SocketContext] Lỗi error:', error);
+                console.error('[SocketContext] Lỗi chung từ Socket:', error);
+                Alert.alert('Lỗi hệ thống chat', 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.', [{ text: 'OK' }]);
             };
 
             const onChatRoomsList = (rooms) => {
                 console.log('[SocketContext] Nhận danh sách phòng chat:', rooms);
-                setChatRooms(rooms.map(room => ({ ...room, roomId: room._id, userId: room.userId })));
-                if (rooms.length > 0 && !latestCurrentChatRoomIdRef.current) {
-                    latestCurrentChatRoomIdRef.current = rooms[0]._id || rooms[0].id;
-                }
+                setChatRooms(rooms.map(room => ({ ...room, roomId: room._id }))); 
+                // Logic chọn phòng đầu tiên nếu cần có thể ở đây hoặc một useEffect khác
             };
 
             const onReceiveMessage = (message) => {
@@ -260,7 +424,7 @@ export const SocketProvider = ({ children }) => {
                                 ...message,
                                 _id: message._id || message.tempMessageId,
                                 status: 'sent',
-                                tempMessageId: undefined
+                                tempMessageId: undefined 
                             };
                             return updatedMessages;
                         }
@@ -274,10 +438,10 @@ export const SocketProvider = ({ children }) => {
             };
 
             const onChatHistory = (data) => {
-                console.log('[SocketContext] Dữ liệu nhận từ backend:', data);
-                // data có thể là mảng (cũ) hoặc object mới { chatRoomId, messages }
+                console.log('[SocketContext] Dữ liệu lịch sử chat nhận từ backend:', data);
                 let history = [];
                 let chatRoomId = null;
+
                 if (Array.isArray(data)) {
                     history = data;
                     if (history.length > 0) chatRoomId = history[0].chatRoomId;
@@ -294,6 +458,7 @@ export const SocketProvider = ({ children }) => {
             };
 
             const onMessageError = (errorMsg) => {
+                console.error('[SocketContext] Lỗi gửi tin nhắn:', errorMsg);
                 setMessagesError({ error: true, message: errorMsg.message});
                 setIsLoadingMessages(false);
                 setMessages(prevMessages =>
@@ -301,9 +466,55 @@ export const SocketProvider = ({ children }) => {
                         msg.tempMessageId === errorMsg.tempMessageId ? { ...msg, status: 'failed', error: errorMsg.message } : msg
                     )
                 );
+                Alert.alert('Lỗi gửi tin nhắn', errorMsg.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.');
             };
-            const onMessageReadStatusUpdate = (data) => {};
 
+            const onMessageReadStatusUpdate = (data) => {
+                console.log('[SocketContext] Cập nhật trạng thái đọc tin nhắn:', data);
+                const { chatRoomId, messageIds, readerId } = data;
+                const currentUserId = latestUserRef.current?._id; 
+
+                if (!currentUserId || !chatRoomId || !Array.isArray(messageIds) || messageIds.length === 0) {
+                    console.warn('[SocketContext] onMessageReadStatusUpdate: Dữ liệu không hợp lệ hoặc thiếu. Bỏ qua cập nhật.', data);
+                    return;
+                }
+
+                setMessages(prevMessages => 
+                    prevMessages.map(msg => {
+                        if (messageIds.includes(msg._id) && msg.sender?._id !== readerId) {
+                            const currentReadBy = msg.readBy || []; 
+                            if (!currentReadBy.includes(readerId)) {
+                                return { 
+                                    ...msg, 
+                                    readBy: [...currentReadBy, readerId] 
+                                };
+                            }
+                        }
+                        return msg;
+                    })
+                );
+
+                setChatRooms(prevRooms => prevRooms.map(room => {
+                    if (room._id === chatRoomId) {
+                        if (currentUserId === readerId) {
+                            if (latestUserRef.current?.role === 'user') {
+                                return { ...room, unreadCountUser: 0 };
+                            } else if (latestUserRef.current?.role === 'admin') {
+                                return { ...room, unreadCountAdmin: 0 };
+                            }
+                        }
+                    }
+                    return room;
+                }));
+            };
+            
+            const onMessageDeleted = (deletedMessageId) => {
+                console.log(`[SocketContext] Received 'messageDeleted' for ID: ${deletedMessageId}`);
+                setMessages(prevMessages => {
+                  return prevMessages.filter(msg => msg._id !== deletedMessageId)
+                })
+            };;
+ 
             newSocket.on('connect', onConnect);
             newSocket.on('authenticated', onAuthenticated); 
             newSocket.on('unauthorized', onUnauthorized);
@@ -313,18 +524,20 @@ export const SocketProvider = ({ children }) => {
 
             if (isAdmin) {
                 newSocket.on('chat_room_list', onChatRoomsList);
-                newSocket.on('chat_history', onChatHistory);
+                newSocket.on('chat_history', onChatHistory); 
             } else {
-                newSocket.on('chat_history', onChatHistory);
+                newSocket.on('chat_history', onChatHistory); 
             }
             newSocket.on('receive_message', onReceiveMessage);
             newSocket.on('message_error', onMessageError);
             newSocket.on('message_read_status_update', onMessageReadStatusUpdate);
+            newSocket.on('messageDeleted', onMessageDeleted)
 
             newSocket.connect();
 
             return () => {
                 if (newSocket && (newSocket.connected || newSocket.connecting)) {
+                    console.log("[SocketContext] Cleanup: Ngắt kết nối socket.");
                     newSocket.disconnect();
                 }
                 newSocket.off('connect', onConnect);
@@ -340,6 +553,8 @@ export const SocketProvider = ({ children }) => {
                 newSocket.off('receive_message', onReceiveMessage);
                 newSocket.off('message_error', onMessageError);
                 newSocket.off('message_read_status_update', onMessageReadStatusUpdate);
+                newSocket.off('messageDeleted', onMessageDeleted);
+                
                 if (socketRef.current === newSocket) {
                     socketRef.current = null;
                 }
@@ -347,108 +562,119 @@ export const SocketProvider = ({ children }) => {
                 isConnecting.current = false;
             };
         }
-    }, [isAuthenticated, accessToken, user?._id, isAdmin, handleLocalLogout, loadingAuth]);
+    }, [isAuthenticated, accessToken, user, isAdmin, handleLocalLogout, loadingAuth, loadAuthDataFromAsyncStorage]);
 
-    // Hàm gửi tin nhắn
-    const sendUserMessage = useCallback((messageText) => {
+
+    // --- Hàm gửi tin nhắn ---
+    const sendMessage = useCallback((messageObject) => {
         const userId = latestUserRef.current?._id;
         const socket = socketRef.current;
-        let targetIdForServer, roomIdToSend;
-        if (isAdmin) {
-            roomIdToSend = latestCurrentChatRoomIdRef.current;
-            const selectedChatRoom = chatRooms.find(room => room._id === roomIdToSend);
-            if (!selectedChatRoom || !selectedChatRoom.userId) {
-                Alert.alert('Lỗi', 'Không thể gửi tin nhắn. Vui lòng chọn một phòng chat hợp lệ có người dùng.');
-                return;
-            }
-            targetIdForServer = selectedChatRoom.userId;
-        } else {
-            roomIdToSend = currentUserChatRoomId;
-            targetIdForServer = undefined;
-        }
 
-        if (!roomIdToSend) {
-            Alert.alert('Lỗi', 'Phòng chat chưa được khởi tạo. Vui lòng đợi hoặc thử lại sau.');
+        if (!userId || userId.length < 20 || !socket || !socket.connected || !isSocketReady || loadingAuth) {
+            Alert.alert('Lỗi', 'Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối hoặc xác thực.');
             return;
         }
 
-        if (!messageText.trim() || !socket || !socket.connected || !isSocketReady || !userId || loadingAuth) {
-            Alert.alert('Lỗi', 'Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối.', [{ text: 'OK' }]);
+        if (messageObject.messageType === 'text' && !messageObject.content?.trim()) {
+            console.warn('Cannot send empty text message');
+            return;
+        }
+
+        if (messageObject.messageType === 'image' && !messageObject.mediaUrl) {
+            Alert.alert('Lỗi', 'Không thể gửi ảnh do thiếu URL ảnh.');
             return;
         }
 
         const tempMessageId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const messageData = {
-            sender: userId,
-            content: messageText.trim(),
-            messageType: 'text',
-            timestamp: new Date().toISOString(),
+            chatRoomId: currentUserChatRoomId,
+            content: messageObject.content || '',
+            messageType: messageObject.messageType,
+            mediaUrl: messageObject.mediaUrl || null,
             tempMessageId,
-            chatRoomId: roomIdToSend,
         };
-        if (isAdmin) messageData.targetUserId = targetIdForServer;
+
+        setMessages(prevMessages => [...prevMessages, {
+            _id: tempMessageId,
+            sender: { _id: userId, fullname: latestUserRef.current?.fullname, avatar: latestUserRef.current?.avatar },
+            content: messageData.content,
+            messageType: messageData.messageType,
+            mediaUrl: messageData.mediaUrl,
+            createdAt: new Date().toISOString(),
+            chatRoomId: currentUserChatRoomId,
+            status: 'pending',
+            readBy: [userId],
+        }]);
 
         console.log('Gửi tin nhắn:', messageData);
         socket.emit('send_message', messageData);
-    }, [isSocketReady, isAdmin, chatRooms, loadingAuth, currentUserChatRoomId]);
+    }, [isSocketReady, loadingAuth, currentUserChatRoomId]);
 
-    // Hàm chọn phòng chat cho admin
+
+    // --- Hàm chọn phòng chat cho admin (và yêu cầu lịch sử chat) ---
     const selectChatRoom = useCallback((roomId, chattingWithUserId) => {
         if (latestCurrentChatRoomIdRef.current === roomId) {
+            console.log(`[SocketContext] Phòng chat ${roomId} đã được chọn. Không làm gì.`);
             return;
         }
-        setMessages([]);
+        
+        console.log(`[SocketContext] Chọn phòng chat: ${roomId}, Chatting with: ${chattingWithUserId}`);
+        setMessages([]); 
         latestCurrentChatRoomIdRef.current = roomId;
-    }, []);
-
-    // Đánh dấu tin nhắn đã đọc
-    const markMessagesAsRead = useCallback(async (chatRoomId) => {
-        const readerId = latestUserRef.current?._id;
+        
         const socket = socketRef.current;
+        if (socket && socket.connected && isSocketReady && roomId) {
+            setIsLoadingMessages(true);
+            socket.emit('request_chat_history_for_admin', { chatRoomId: roomId });
+        } else {
+            console.warn("[SocketContext] Không thể yêu cầu lịch sử chat: Socket không sẵn sàng hoặc thiếu roomId.");
+            // Có thể Alert.alert ở đây nếu muốn thông báo cho người dùng
+        }
+    }, [isSocketReady]); // Depend on isSocketReady
 
-        if (!socket || !socket.connected || !isSocketReady || !readerId || !chatRoomId || loadingAuth) {
+
+    // --- Hàm đánh dấu tin nhắn đã đọc (client side) ---
+    // UserChatScreen sẽ gọi hàm này
+    const markMessagesAsRead = useCallback((messageIdsToMark, chatRoomId) => {
+        const socket = socketRef.current;
+        const currentUserId = latestUserRef.current?._id;
+
+        if (!socket || !socket.connected || !isSocketReady || !currentUserId || currentUserId.length < 20) {
+            console.warn('[SocketContext] Không thể đánh dấu tin nhắn đã đọc: Socket không sẵn sàng hoặc User ID không hợp lệ.');
+            return;
+        }
+        if (!Array.isArray(messageIdsToMark) || messageIdsToMark.length === 0 || !chatRoomId) {
+            console.warn('[SocketContext] markMessagesAsRead: Dữ liệu đầu vào không hợp lệ.');
             return;
         }
 
-        socket.emit('mark_as_read', { chatRoomId, readerId });
+        console.log(`[SocketContext] Đang gửi yêu cầu đánh dấu tin nhắn đã đọc: Room ${chatRoomId}, Messages: ${messageIdsToMark}, Reader: ${currentUserId}`);
+        socket.emit('mark_messages_as_read', { 
+            chatRoomId: chatRoomId, 
+            messageIds: messageIdsToMark, 
+            readerId: currentUserId 
+        });
+    }, [isSocketReady]);
 
-        setMessages(prevMessages => 
-            prevMessages.map(msg => 
-                (msg.chatRoomId === chatRoomId && msg.receiver?._id === readerId && !msg.readBy?.includes(readerId))
-                ? { ...msg, readBy: [...(msg.readBy || []), readerId] } 
-                : msg
-            )
-        );
-
-        setChatRooms(prevRooms => prevRooms.map(room => {
-            if (room._id === chatRoomId) {
-                if (latestUserRef.current?.role === 'user') {
-                    return { ...room, unreadCountUser: 0 };
-                } else if (latestUserRef.current?.role === 'admin') {
-                    return { ...room, unreadCountAdmin: 0 };
-                }
-            }
-            return room;
-        }));
-
-    }, [isSocketReady, loadingAuth]);
 
     const contextValue = {
-        socket: socketRef.current,
+        accessToken,
+        user,
+        isAuthenticated,
+        isAdmin,
+        loadingAuth,
         isSocketReady,
         messages,
         isLoadingMessages,
         messagesError,
-        sendUserMessage,
-        currentUserId: latestUserRef.current?._id,
-        isAuthenticated,
-        isAdmin,
         chatRooms,
-        currentChatRoomId: latestCurrentChatRoomIdRef.current,
-        currentUserChatRoomId, // <-- Dùng để đánh dấu đã đọc/phục vụ user gửi message
+        currentUserChatRoomId,
+        setMessages, // Cho phép component khác reset messages (ví dụ khi unmount chat)
+        sendMessage,
         selectChatRoom,
         markMessagesAsRead,
-        loadingAuth,
+        handleLocalLogout, // Export hàm logout để có thể gọi từ ngoài
+        // setAccessToken, setUser, setIsAuthenticated, setIsAdmin - nếu cần cho luồng đăng nhập khác
     };
 
     return (
