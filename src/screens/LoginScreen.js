@@ -66,6 +66,10 @@ const LoginScreen = () => {
                     provider: 'local', // Đánh dấu provider là local/email
                     ...backendUser
                 };
+                console.log('[LOGIN - DEBUG] backendResponseData:', backendResponseData); // Xem dữ liệu thô
+                console.log('[LOGIN - DEBUG] backendUser:', backendUser);             // Xem đối tượng user đã tách
+                console.log('[LOGIN - DEBUG] userInfoToStore:', userInfoToStore);
+
                 await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                 await AsyncStorage.setItem('shouldAutoLogin', 'true');
                 await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
@@ -132,6 +136,9 @@ const LoginScreen = () => {
                         is_allowed: backendUser.is_allowed,
                         ...backendUser
                     };
+
+                     console.log('[GOOGLE] ID MongoDB nhận từ backend (backendUser._id):', backendUser._id); 
+                     console.log('[GOOGLE] Firebase UID nhận từ Google:', userCredential.user.uid);
                     await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                     await AsyncStorage.setItem('shouldAutoLogin', 'true');
                     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
