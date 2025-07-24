@@ -21,7 +21,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker'; // Import image picker
 import { API_BASE_URL } from '../config/api'; // Import base URL
-import { types } from '@babel/core';
+import ImageMessage from '../components/ImageMessage';
 
 const UserChatScreen = () => {
     const {
@@ -163,7 +163,11 @@ const UserChatScreen = () => {
         setIsImageViewerVisible(true);
     };
 
-    const handleDeleteMessage = useCallback((messageId) => {
+    const handleDeleteMessage = useCallback((messageId, senderIdOfMessage) => {
+        if(!user || user._id !== senderIdOfMessage){
+            Alert.alert("Không có quyền", "Bạn chỉ có thể xóa tin nhắn của chính mình.");
+            return; 
+        }
         Alert.alert(
             "Xóa tin nhắn", 
             "Bạn có chắc muốn xóa tin nhắn này không?", 
@@ -171,17 +175,22 @@ const UserChatScreen = () => {
                 {text: 'Hủy', style: 'cancel'},
                 {text: 'Xóa', 
                  onPress: ()=> {
-                    if(socket && user){
-                        console.log(`[UserChatScreen] Đang gửi yêu cầu xóa tin nhắn ID: ${messageId}`);
-                        socket.emit('delete_message', messageId);
+                    if(socket && user && currentUserChatRoomId){
+                       console.log(`[UserChatScreen] Đang gửi yêu cầu xóa tin nhắn ID: ${messageId} trong phòng ${currentUserChatRoomId}`);
+                        socket.emit('delete_message', { messageId, chatRoomId: currentUserChatRoomId });
                     }else{
-                        Alert.alert('Lỗi, không thể xóa tin nhắn')
+                        let errorMessage = 'Không thể xóa tin nhắn. ';
+                        if (!socket) errorMessage += 'Socket chưa sẵn sàng. ';
+                        if (!user) errorMessage += 'Người dùng chưa được xác định. ';
+                        if (!currentUserChatRoomId) errorMessage += 'Phòng chat chưa xác định. ';
+                        Alert.alert('Lỗi', errorMessage + 'Vui lòng thử lại.');
+                        console.error('Lỗi xóa tin nhắn (client):', { socketReady: !!socket, userExists: !!user, chatRoomIdExists: !!currentUserChatRoomId });
                     }
                  }
                 }
             ], {cancelable:  true}
         )
-    }, [socket, user])
+    }, [socket, user, currentUserChatRoomId])
 
     const renderMessage = useCallback(({ item: msg, user, handleDeleteMessage, handleImagePress }) => {
         const isAdmin = msg.sender?.role === 'admin';
@@ -193,6 +202,7 @@ const UserChatScreen = () => {
         console.log("msg.sender?._id:", msg.sender?._id);
     console.log("user?._id:", user?._id);
     console.log("isMyMessage:", isMyMessage);
+    console.log("Full User Object:", user);
 
         return (
             <View style={{
@@ -213,13 +223,13 @@ const UserChatScreen = () => {
                         }]}
                         onLongPress={() => {
                             if (isMyMessage) {
-                handleDeleteMessage(msg._id);
+                handleDeleteMessage(msg._id, msg.sender?._id);
             } else {
                 Alert.alert("Không có quyền", "Bạn chỉ có thể xóa tin nhắn của chính mình.");
             }
                         }}
                         onPress={() => handleImagePress(msg.mediaUrl)}>
-                            <Image source={{ uri: msg.mediaUrl }} style={styles.chatImage} />
+                           <ImageMessage imageUrl={msg.mediaUrl} /> 
                         </TouchableOpacity>
                         
                         {/* Nếu có nội dung văn bản kèm ảnh (caption) */}
@@ -482,13 +492,13 @@ const styles = StyleSheet.create({
     sendButton: { marginLeft: 10, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25, backgroundColor: '#3b82f6', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
     sendButtonDisabled: { backgroundColor: '#93c5fd' },
     sendButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
-    chatImage: {
-        width: 250,
-        aspectRatio: 1,
+    // chatImage: {
+    //     width: 250,
+    //     aspectRatio: 1,
         
-        borderRadius: 15,
-        resizeMode: 'cover',
-    },
+    //     borderRadius: 15,
+    //     resizeMode: 'cover',
+    // },
     previewContainer: {
         flexDirection: 'row',
         padding: 10,
@@ -514,17 +524,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
     // Style mới cho container của ảnh
-    adminImageContainer: {
-        alignSelf: 'flex-start',
-        marginRight: 10, // Khoảng cách với avatar
-        maxWidth: '80%', // Tương tự như bubble text
-        marginBottom: 5, // Khoảng cách với tin nhắn tiếp theo
-    },
-    userImageContainer: {
-        alignSelf: 'flex-end',
-        maxWidth: '80%',
-        marginBottom: 5,
-    },
+    // adminImageContainer: {
+    //     alignSelf: 'flex-start',
+    //     marginRight: 10, // Khoảng cách với avatar
+    //     maxWidth: '80%', // Tương tự như bubble text
+    //     marginBottom: 5, // Khoảng cách với tin nhắn tiếp theo
+    // },
+    // userImageContainer: {
+    //     alignSelf: 'flex-end',
+    //     maxWidth: '80%',
+    //     marginBottom: 5,
+    // },
     // Style cho caption của ảnh (nếu có text kèm theo ảnh)
     adminImageCaption: {
         fontSize: 16,
