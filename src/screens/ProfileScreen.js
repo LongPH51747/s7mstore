@@ -118,7 +118,7 @@ const ProfileScreen = () => {
         <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfile')}>
           <Image
             style={styles.avatar}
-            source={{ uri: user.photoURL || 'https://via.placeholder.com/150' }} 
+            source={{ uri: user.avatar || 'https://tse2.mm.bing.net/th/id/OIP.uWTdrVSKnAVaTZaOK1BFxAAAAA?r=0&cb=thvnext&rs=1&pid=ImgDetMain&o=7&rm=3' }} 
           />
           <View style={styles.profileTextContainer}>
             <Text style={styles.name}>{user.displayName || user.fullname || 'Tên người dùng'}</Text> 
@@ -186,9 +186,11 @@ const ProfileScreen = () => {
        
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.supportGrid}>
-          <TouchableOpacity style={styles.gridItem}>
-            <Feather name="video" size={20} color="black" />
-            <Text style={styles.gridText}>LiveStream</Text>
+          <TouchableOpacity
+          onPress={() => navigation.navigate('ChangePass')}
+          style={styles.gridItem}>
+            <Feather name="unlock" size={20} color="black" />
+            <Text style={styles.gridText}>Đổi mật khẩu</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Chat')}

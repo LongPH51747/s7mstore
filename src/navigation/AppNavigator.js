@@ -79,6 +79,8 @@ const AppNavigator = () => {
         <Stack.Screen name="Rating" component={RatingScreen} />
         <Stack.Screen name='Profile' component={ProfileScreen}/>
         <Stack.Screen name='Chat' component={UserChatScreen}/>
+        <Stack.Screen name='ChangePass' component={ChangePasswordScreen}/>
+        <Stack.Screen name='ForgotPass' component={ForgotPasswordScreen}/>
         
       </Stack.Navigator>
 
