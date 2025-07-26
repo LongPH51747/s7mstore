@@ -115,6 +115,7 @@ const ProfileScreen = () => {
           Authorization: `Bearer ${token}`,
         },
       });
+      
       if (response.data && response.data.user) {
         const userInfo = response.data.user;
         await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));

@@ -181,6 +181,7 @@ export const SocketProvider = ({ children }) => {
                 await AsyncStorage.setItem('userToken', finalAccessToken);
                 await AsyncStorage.setItem('userInfo', JSON.stringify(finalUserObject));
                 console.log("[SocketContext][LoadAuth] Đã cập nhật AsyncStorage với User._id:", finalUserObject._id);
+                console.log("[SocketContext][LoadAuth] Full userInfo saved:", JSON.stringify(finalUserObject, null, 2));
             } else {
                 console.warn("[SocketContext][LoadAuth] Thông tin xác thực không hợp lệ. Xóa dữ liệu cũ trong AsyncStorage.");
                 await AsyncStorage.multiRemove(['userToken', 'userInfo']);
@@ -349,6 +350,7 @@ export const SocketProvider = ({ children }) => {
                                     firebaseUid: prevUser.firebaseUid || (prevUser._id && prevUser._id.length > 20 ? prevUser._id : undefined)
                                 };
                                 AsyncStorage.setItem('userInfo', JSON.stringify(updatedStoredUserInfo));
+                                console.log("[SocketContext][onAuthenticated] Updated userInfo in AsyncStorage:", JSON.stringify(updatedStoredUserInfo, null, 2));
                             }).catch(e => console.error("Error updating userInfo in AsyncStorage:", e));
 
                             return {

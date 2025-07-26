@@ -42,17 +42,13 @@ const ProductDetailScreen = () => {
         const userInfo = JSON.parse(userInfoString);
         if (userInfo && userInfo._id) {
           setUserId(userInfo._id);
-          console.log('User ID from AsyncStorage on ProductDetailScreen focus (MongoDB _id):', userInfo._id);
         } else {
-          console.warn('userInfo found but _id is missing on ProductDetailScreen focus:', userInfo);
           Alert.alert('Thông báo', 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại.');
           navigation.replace('Login');
         }
-      } else {
-        console.warn('No userInfo found in AsyncStorage on ProductDetailScreen focus.');
       }
     } catch (error) {
-      console.error('Failed to get user info from AsyncStorage on ProductDetailScreen focus:', error);
+      console.error('Failed to get user info from AsyncStorage:', error);
     }
   }, [navigation]);
 
@@ -67,8 +63,6 @@ const ProductDetailScreen = () => {
   useEffect(() => {
     if (route.params?.product) {
       const fetchedProduct = route.params.product;
-      console.log('=== PRODUCT DETAIL: Product data received ===');
-      console.log('Full product data:', JSON.stringify(fetchedProduct, null, 2));
       setProduct(fetchedProduct);
       
       // Tự động chọn biến thể đầu tiên có sẵn hàng
@@ -79,17 +73,10 @@ const ProductDetailScreen = () => {
         });
         
         if (availableVariant) {
-          console.log('=== PRODUCT DETAIL: Auto-selecting available variant ===', {
-            variantId: availableVariant._id,
-            variantColor: availableVariant.variant_color,
-            variantSize: availableVariant.variant_size,
-            stock: availableVariant.variant_stock || availableVariant.variant_quantity || availableVariant.stock || availableVariant.quantity || availableVariant.inventory || 0
-          });
           setSelectedVariant(availableVariant);
           
           // Cập nhật ảnh hiển thị cho biến thể được chọn
           if (availableVariant.variant_image_url) {
-            console.log('Check variant_image_url:', availableVariant.variant_image_url, typeof availableVariant.variant_image_url);
             if (typeof availableVariant.variant_image_url === 'string' && availableVariant.variant_image_url.startsWith('/uploads_product/')) {
               setCurrentDisplayImage(`${API_BASE_URL}${availableVariant.variant_image_url}`);
             } else {
@@ -100,7 +87,6 @@ const ProductDetailScreen = () => {
           } else {
             // Nếu biến thể không có ảnh riêng, sử dụng ảnh sản phẩm chính
             if (fetchedProduct.product_image) {
-              console.log('Check product_image:', fetchedProduct.product_image, typeof fetchedProduct.product_image);
               if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
                 setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
               } else {
@@ -109,11 +95,9 @@ const ProductDetailScreen = () => {
             }
           }
         } else {
-          console.log('=== PRODUCT DETAIL: No available variants found ===');
           setSelectedVariant(null);
           // Ảnh lớn mặc định là ảnh sản phẩm chính
           if (fetchedProduct.product_image) {
-            console.log('Check product_image:', fetchedProduct.product_image, typeof fetchedProduct.product_image);
             if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
               setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
             } else {
@@ -122,11 +106,9 @@ const ProductDetailScreen = () => {
           }
         }
       } else {
-        console.log('=== PRODUCT DETAIL: No variants available ===');
         setSelectedVariant(null);
         // Ảnh lớn mặc định là ảnh sản phẩm chính
         if (fetchedProduct.product_image) {
-          console.log('Check product_image:', fetchedProduct.product_image, typeof fetchedProduct.product_image);
           if (typeof fetchedProduct.product_image === 'string' && fetchedProduct.product_image.startsWith('/uploads_product/')) {
             setCurrentDisplayImage(`${API_BASE_URL}${fetchedProduct.product_image}`);
           } else {
@@ -138,32 +120,8 @@ const ProductDetailScreen = () => {
   }, [route.params]);
 
   const handleVariantChange = (variant) => {
-    console.log('=== PRODUCT DETAIL: handleVariantChange called ===');
-    console.log('Selected variant:', {
-      _id: variant._id,
-      variant_color: variant.variant_color,
-      variant_size: variant.variant_size,
-      variant_price: variant.variant_price,
-      variant_quantity: variant.variant_quantity,
-      stock: variant.stock,
-      quantity: variant.quantity,
-      inventory: variant.inventory,
-      allFields: Object.keys(variant)
-
-    });
-    
     // Kiểm tra xem biến thể có hàng tồn kho không - try multiple field names
     const stockQuantity = variant.variant_stock || variant.variant_quantity || variant.stock || variant.quantity || variant.inventory || 0;
-    console.log('=== PRODUCT DETAIL: Stock validation ===', {
-      stockQuantity,
-      isOutOfStock: stockQuantity <= 0,
-      fieldValues: {
-        variant_quantity: variant.variant_quantity,
-        stock: variant.stock,
-        quantity: variant.quantity,
-        inventory: variant.inventory
-      }
-    });
     
     if (stockQuantity <= 0) {
       // Find the next available variant
@@ -176,7 +134,6 @@ const ProductDetailScreen = () => {
         setSelectedVariant(nextAvailableVariant);
         // Update image for the new variant
         if (nextAvailableVariant.variant_image_url) {
-          console.log('Check nextAvailableVariant.variant_image_url:', nextAvailableVariant.variant_image_url, typeof nextAvailableVariant.variant_image_url);
           if (typeof nextAvailableVariant.variant_image_url === 'string' && nextAvailableVariant.variant_image_url.startsWith('/uploads_product/')) {
             setCurrentDisplayImage(`${API_BASE_URL}${nextAvailableVariant.variant_image_url}`);
           } else {
@@ -185,7 +142,6 @@ const ProductDetailScreen = () => {
         } else if (nextAvailableVariant.variant_image_base64 && nextAvailableVariant.variant_image_type) {
           setCurrentDisplayImage(`data:${nextAvailableVariant.variant_image_type};base64,${nextAvailableVariant.variant_image_base64}`);
         } else {
-          console.log('Check product_image:', product.product_image, typeof product.product_image);
           if (typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')) {
             setCurrentDisplayImage(`${API_BASE_URL}${product.product_image}`);
           } else {
@@ -201,13 +157,8 @@ const ProductDetailScreen = () => {
 
     setSelectedVariant(variant);
     setQuantity(1);
-    console.log('=== PRODUCT DETAIL: Variant changed successfully ===', {
-      newSelectedVariant: variant._id,
-      newQuantity: 1
-    });
 
     if (variant.variant_image_url) {
-      console.log('Check variant_image_url:', variant.variant_image_url, typeof variant.variant_image_url);
       if (typeof variant.variant_image_url === 'string' && variant.variant_image_url.startsWith('/uploads_product/')) {
         setCurrentDisplayImage(`${API_BASE_URL}${variant.variant_image_url}`);
       } else {
@@ -216,7 +167,6 @@ const ProductDetailScreen = () => {
     } else if (variant.variant_image_base64 && variant.variant_image_type) {
       setCurrentDisplayImage(`data:${variant.variant_image_type};base64,${variant.variant_image_base64}`);
     } else {
-      console.log('Check product_image:', product.product_image, typeof product.product_image);
       if (typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')) {
         setCurrentDisplayImage(`${API_BASE_URL}${product.product_image}`);
       } else {
@@ -232,70 +182,36 @@ const ProductDetailScreen = () => {
       setShowLoginModal(true);
       return;
     }
-
-    console.log('=== PRODUCT DETAIL: handleAddToCart called ===');
     
     if (!userId) {
-      console.log('=== PRODUCT DETAIL: No userId - cannot add to cart ===');
       Alert.alert('Lỗi', 'Không thể thêm vào giỏ hàng: Người dùng chưa đăng nhập.');
       return;
     }
 
     if (!product) {
-      console.log('=== PRODUCT DETAIL: No product - cannot add to cart ===');
       Alert.alert('Lỗi', 'Không thể thêm vào giỏ hàng: Sản phẩm chưa được chọn.');
       return;
     }
 
     if (!selectedVariant) {
-      console.log('=== PRODUCT DETAIL: No selected variant - cannot add to cart ===');
       Alert.alert('Lỗi', 'Vui lòng chọn biến thể sản phẩm.');
       return;
     }
 
-    console.log('=== PRODUCT DETAIL: Validation data ===', {
-      userId,
-      productId: product._id,
-      productName: product.product_name,
-      selectedVariantId: selectedVariant._id,
-      selectedVariantColor: selectedVariant.variant_color,
-      selectedVariantSize: selectedVariant.variant_size,
-      quantity,
-      selectedVariantPrice: selectedVariant.variant_price
-    });
-
     // Kiểm tra số lượng tồn kho
     const stockQuantity = selectedVariant.variant_stock || selectedVariant.variant_quantity || selectedVariant.stock || selectedVariant.quantity || selectedVariant.inventory || 0;
-    console.log('=== PRODUCT DETAIL: Stock validation ===', {
-      stockQuantity,
-      requestedQuantity: quantity,
-      isOutOfStock: stockQuantity <= 0,
-      exceedsStock: quantity > stockQuantity,
-      fieldValues: {
-        variant_quantity: selectedVariant.variant_quantity,
-        stock: selectedVariant.stock,
-        quantity: selectedVariant.quantity,
-        inventory: selectedVariant.inventory
-      }
-    });
     
     if (stockQuantity <= 0) {
-      console.log('=== PRODUCT DETAIL: Item is out of stock ===');
       Alert.alert('Thông báo', 'Sản phẩm này đã hết hàng trong kho.');
       return;
     }
 
     if (quantity > stockQuantity) {
-      console.log('=== PRODUCT DETAIL: Quantity exceeds stock ===', {
-        requested: quantity,
-        available: stockQuantity
-      });
       Alert.alert('Thông báo', `Chỉ còn ${stockQuantity} sản phẩm trong kho. Vui lòng giảm số lượng xuống ${stockQuantity} hoặc ít hơn.`);
       return;
     }
 
     if (quantity <= 0) {
-      console.log('=== PRODUCT DETAIL: Invalid quantity ===', { quantity });
       Alert.alert('Lỗi', 'Số lượng phải lớn hơn 0.');
       return;
     }
@@ -322,11 +238,6 @@ const ProductDetailScreen = () => {
         }
       };
 
-      console.log('=== PRODUCT DETAIL: Add to cart request ===', {
-        endpoint: `${API_ENDPOINTS.CART.ADD_TO_CART}/${userId}`,
-        requestBody: JSON.stringify(requestBody, null, 2)
-      });
-
       const response = await fetch(`${API_ENDPOINTS.CART.ADD_TO_CART}/${userId}`, {
         method: 'POST',
         headers: API_HEADERS,
@@ -335,17 +246,10 @@ const ProductDetailScreen = () => {
       });
       clearTimeout(timeoutId);
 
-      console.log('=== PRODUCT DETAIL: Add to cart response ===', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
-
       if (!response.ok) {
         let errorData = '';
         try {
           errorData = await response.text();
-          console.error('=== PRODUCT DETAIL: Raw error response ===', errorData);
           const jsonError = JSON.parse(errorData);
           throw new Error(`Failed to add to cart: ${response.status} - ${jsonError.message || response.statusText}`);
         } catch (parseError) {
@@ -354,15 +258,13 @@ const ProductDetailScreen = () => {
       }
 
       const responseData = await response.json();
-      console.log('=== PRODUCT DETAIL: Add to cart successful ===', responseData);
       Alert.alert('Thành công', `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
 
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('=== PRODUCT DETAIL: Request timeout ===');
         Alert.alert('Lỗi', 'Thời gian yêu cầu thêm vào giỏ hàng đã hết. Vui lòng thử lại.');
       } else {
-        console.error('=== PRODUCT DETAIL: Error adding to cart ===', error);
+        console.error('Error adding to cart:', error);
         Alert.alert('Lỗi', `Không thể thêm vào giỏ hàng: ${error.message}`);
       }
     }
@@ -408,24 +310,6 @@ const ProductDetailScreen = () => {
   const isSelectedVariantInStock = selectedVariant && (selectedVariant.variant_stock || selectedVariant.variant_quantity || selectedVariant.stock || selectedVariant.quantity || selectedVariant.inventory || 0) > 0;
   const selectedVariantStock = selectedVariant ? (selectedVariant.variant_stock || selectedVariant.variant_quantity || selectedVariant.stock || selectedVariant.quantity || selectedVariant.inventory || 0) : 0;
 
-  console.log('=== PRODUCT DETAIL: Current state ===', {
-    hasProduct: !!product,
-    hasSelectedVariant: !!selectedVariant,
-    selectedVariantId: selectedVariant?._id,
-    selectedVariantColor: selectedVariant?.variant_color,
-    selectedVariantSize: selectedVariant?.variant_size,
-    selectedVariantStock,
-    isSelectedVariantInStock,
-    currentQuantity: quantity,
-    userId: userId,
-    stockFieldValues: selectedVariant ? {
-      variant_quantity: selectedVariant.variant_quantity,
-      stock: selectedVariant.stock,
-      quantity: selectedVariant.quantity,
-      inventory: selectedVariant.inventory
-    } : null
-  });
-
   if (!product) {
     return (
       <View style={styles.loadingContainer}>
@@ -437,8 +321,7 @@ const ProductDetailScreen = () => {
 
   const displayImageSource = (
     typeof currentDisplayImage === 'string' && 
-    (console.log('Check currentDisplayImage:', currentDisplayImage, typeof currentDisplayImage),
-     currentDisplayImage.startsWith('http://') || 
+    (currentDisplayImage.startsWith('http://') || 
      currentDisplayImage.startsWith('https://') || 
      currentDisplayImage.startsWith('data:image'))
   )
@@ -460,9 +343,7 @@ const ProductDetailScreen = () => {
 
   // Hàm xử lý khi nhấn vào variant
   const handleVariantPress = (variantId, productName) => {
-    // Ví dụ: log ra, hoặc mở modal, hoặc điều hướng
-    console.log('Variant ID:', variantId, 'Tên sản phẩm:', productName);
-    // Bạn có thể điều hướng hoặc xử lý khác ở đây
+    // Có thể mở modal hoặc điều hướng ở đây
   };
 
   // Tính điểm trung bình chỉ với review hợp lệ
@@ -510,7 +391,6 @@ const ProductDetailScreen = () => {
               // Lấy ảnh variant
               let variantImgSrc = require('../assets/errorimg.webp');
               if (variant.variant_image_url) {
-                console.log('Check variant.variant_image_url:', variant.variant_image_url, typeof variant.variant_image_url);
                 variantImgSrc =
                   typeof variant.variant_image_url === 'string' && variant.variant_image_url.startsWith('/uploads_product/')
                     ? { uri: `${API_BASE_URL}${variant.variant_image_url}` }
@@ -518,7 +398,6 @@ const ProductDetailScreen = () => {
               } else if (variant.variant_image_base64 && variant.variant_image_type) {
                 variantImgSrc = { uri: `data:${variant.variant_image_type};base64,${variant.variant_image_base64}` };
               } else if (product.product_image) {
-                console.log('Check product.product_image:', product.product_image, typeof product.product_image);
                 variantImgSrc =
                   typeof product.product_image === 'string' && product.product_image.startsWith('/uploads_product/')
                     ? { uri: `${API_BASE_URL}${product.product_image}` }
@@ -581,14 +460,17 @@ const ProductDetailScreen = () => {
       {/* 2. Tên, giá, mô tả */}
       <View style={styles.detailsContainer}>
         <Text style={styles.productName}>{product.product_name}</Text>
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={18} color="#FFD700" />
-          <Text style={styles.ratingText}>
-            {averageRating ? averageRating : '0.0'}/5
-          </Text>
-          <Text style={styles.ratingCount}>
-            ({validReviews.length} đánh giá)
-          </Text>
+        <View style={styles.ratingRowWithSold}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="star" size={18} color="#FFD700" />
+            <Text style={styles.ratingText}>
+              {averageRating ? averageRating : '0.0'}/5
+            </Text>
+            <Text style={styles.ratingCount}>
+              ({validReviews.length} đánh giá)
+            </Text>
+          </View>
+          <Text style={styles.soldTextDetail}>Đã bán: {typeof product.product_sold === 'number' ? product.product_sold : 0}</Text>
         </View>
         <View style={styles.priceAndQuantityRow}>
           <Text style={styles.productPrice}>
@@ -663,13 +545,11 @@ const ProductDetailScreen = () => {
                 variantName = `${foundVariant.variant_color || ''}${foundVariant.variant_color && foundVariant.variant_size ? ' - ' : ''}${foundVariant.variant_size || ''}`.trim();
               }
             }
-            console.log('Review', review._id, 'variantName:', variantName, 'id_variant:', review.id_variant);
+
             return (
               <View key={review._id} style={styles.reviewCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   {user?.avatar && (
-                    <>
-                      {console.log('Review user avatar:', { avatar: user.avatar, type: typeof user.avatar })}
                       <Image
                         source={{
                           uri: typeof user.avatar === 'string' && user.avatar.startsWith('http')
@@ -678,7 +558,6 @@ const ProductDetailScreen = () => {
                         }}
                         style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }}
                       />
-                    </>
                   )}
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15 }}>{user?.fullname || 'Người dùng'}</Text>
@@ -790,7 +669,7 @@ const styles = StyleSheet.create({
   },
   mainImageWrapper: {
     width: '100%',
-    height: 345,
+    height: 369,
     position: 'relative',
     marginBottom: 10,
   },
@@ -798,25 +677,18 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 20,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 0,
-    width: '98%',
-    height: 345,
-    marginLeft: 40,
+
+  
+    width: '100%',
+    height: 369,
+    
     backgroundColor: '#f5f5f5',
     overflow: 'hidden',
   },
   productMainImage: {
     width: '100%',
     height: '100%',
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 0,
+ 
   },
   floatingBackButton: {
     position: 'absolute',
@@ -1242,6 +1114,19 @@ ratingCount: {
     marginHorizontal: 8,
     minWidth: 24,
     textAlign: 'center',
+  },
+  ratingRowWithSold: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    marginTop: 2,
+  },
+  soldTextDetail: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 12,
   },
 });
 

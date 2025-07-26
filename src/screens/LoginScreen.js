@@ -137,10 +137,16 @@ const LoginScreen = () => {
                         email: backendUser.email || userCredential.user.email,
                         photoURL: backendUser.avatar || userCredential.user.photoURL,
                         uid: userCredential.user.uid,
-                        _id: backendUser._id,
+                        firebaseUid: userCredential.user.uid,
+                        _id: backendUser._id, // MongoDB _id từ backend
+                        googleId: backendUser.googleId || userCredential.user.uid,
                         is_allowed: backendUser.is_allowed,
+                        provider: 'firebase',
+                        role: backendUser.role || 'user',
                         ...backendUser
                     };
+                    
+
 
                      console.log('[GOOGLE] ID MongoDB nhận từ backend (backendUser._id):', backendUser._id); 
                      console.log('[GOOGLE] Firebase UID nhận từ Google:', userCredential.user.uid);

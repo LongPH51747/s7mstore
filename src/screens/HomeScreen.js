@@ -311,8 +311,11 @@ const HomeScreen = ({ navigation }) => {
             });
           }}
         />
+         <Text style={styles.name} numberOfLines={2}>{item.product_name}</Text>
         <Text style={styles.price}>{item.product_price?.toLocaleString('vi-VN')}đ</Text>
-        <Text style={styles.name} numberOfLines={2}>{item.product_name}</Text>
+       
+        {/* Hiển thị số sản phẩm đã bán */}
+        <Text style={styles.soldText}>Đã bán: {typeof item.product_sold === 'number' ? item.product_sold : 0}</Text>
         <TouchableOpacity style={styles.heart}>
           <Text style={styles.heartIcon}>♡</Text>
         </TouchableOpacity>
@@ -471,13 +474,7 @@ const HomeScreen = ({ navigation }) => {
         }}>
           <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Favorites');
-          // Note: Favorites screen doesn't exist yet
-          console.log('Favorites screen not implemented yet');
-        }}>
-          <Icon name={activeTab === 'Favorites' ? 'heart' : 'heart-outline'} size={24} color="#000" />
-        </TouchableOpacity>
+       
         <TouchableOpacity onPress={() => {
           setActiveTab('Profile');
           navigation.navigate('ProfileScreen');
@@ -527,8 +524,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   image: { width: '100%', height: 200, borderRadius: 8 },
-  price: { fontWeight: 'bold', marginTop: 8 },
-  name: { color: '#444', fontSize: 13, marginTop: 2, marginBottom: 8 },
+  price: { fontWeight: 'bold', marginTop: 8,color: '#E53935' },
+  name: { color: '#', fontSize: 16, marginTop: 2, marginBottom: 8,fontWeight: 'bold'  },
   heart: { position: 'absolute', top: 10, right: 10 },
   bottomNav: {
     flexDirection: 'row',
@@ -541,8 +538,8 @@ const styles = StyleSheet.create({
   heartIcon: {
     fontSize: 20,
   },
-  bannerImgWrap: { width: '100%', height: 180, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  bannerImg: { width: '95%', height: 180, borderRadius: 12 },
+  bannerImgWrap: { width: '100%', height: 234, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  bannerImg: { width: '95%', height: 234, borderRadius: 12 },
   categoriesContainer: {
     paddingVertical: 16,
     backgroundColor: '#fff',
@@ -598,6 +595,11 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  soldText: {
+    color: '#888',
+    fontSize: 12,
+    marginBottom: 4,
   },
 });
 
