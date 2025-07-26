@@ -262,8 +262,6 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [selectedCategory, products]);
 
-  // console.log('Filtered products:', filteredProducts);
-  console.log('Selected category:', selectedCategory);
 
   const loadMoreProducts = () => {
     if (!loadingMore && hasMore && page < totalPages) {

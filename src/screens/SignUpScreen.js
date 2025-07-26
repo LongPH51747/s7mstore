@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import axios from 'axios';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
 import { useNavigation } from '@react-navigation/native';
+import Loading from '../components/Loading';
 
 const SignUpScreen = () => {
   const [email, setEmail] = useState('');
@@ -297,6 +298,7 @@ const SignUpScreen = () => {
           </View>
         </View>
       </Modal>
+      <Loading visible={loading || verifying} text={verifying ? 'Đang xác thực OTP...' : 'Đang đăng ký...'} />
         </View>
   );
 };

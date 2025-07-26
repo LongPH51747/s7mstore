@@ -18,6 +18,8 @@ import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth, { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
+import Loading from '../components/Loading';
+// import { normalizeUserData, logUserInfo } from '../utils/userUtils';
 
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
@@ -99,6 +101,8 @@ const LoginScreen = () => {
 
     // Logic Google Sign-In (ẩn nút, nhưng giữ logic để dùng về sau)
     const handleGoogleLogin = async () => {
+        if (loading) return;
+        setLoading(true);
         try {
             console.log('[GOOGLE] Bắt đầu đăng nhập Google...');
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -136,20 +140,15 @@ const LoginScreen = () => {
                         displayName: backendUser.fullname || userCredential.user.displayName,
                         email: backendUser.email || userCredential.user.email,
                         photoURL: backendUser.avatar || userCredential.user.photoURL,
-                        uid: userCredential.user.uid,
-                        firebaseUid: userCredential.user.uid,
-                        _id: backendUser._id, // MongoDB _id từ backend
+                        _id: backendUser._id, // Chỉ lưu MongoDB _id
                         googleId: backendUser.googleId || userCredential.user.uid,
                         is_allowed: backendUser.is_allowed,
                         provider: 'firebase',
                         role: backendUser.role || 'user',
                         ...backendUser
                     };
-                    
-
-
-                     console.log('[GOOGLE] ID MongoDB nhận từ backend (backendUser._id):', backendUser._id); 
-                     console.log('[GOOGLE] Firebase UID nhận từ Google:', userCredential.user.uid);
+                    console.log('[GOOGLE] ID MongoDB nhận từ backend (backendUser._id):', backendUser._id); 
+                    console.log('[GOOGLE] Firebase UID nhận từ Google:', userCredential.user.uid);
                     await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                     await AsyncStorage.setItem('shouldAutoLogin', 'true');
                     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
@@ -175,6 +174,8 @@ const LoginScreen = () => {
             else if (error.message) message = error.message;
             console.log('[GOOGLE] Lỗi:', error, error?.response?.data);
             Alert.alert('Lỗi', message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -227,18 +228,19 @@ const LoginScreen = () => {
                 disabled={loading}
             >
                 {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <Loading visible={loading} text="Đang đăng nhập..." />
                 ) : (
                     <Text style={styles.buttonText}>Log In</Text>
                 )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleGoogleLogin} style={styles.buttonGG}>
+            <TouchableOpacity onPress={handleGoogleLogin} style={styles.buttonGG} disabled={loading}>
                 <Image
                     source={require('../../assets/image/LogoGG.png')}
                     style={{ width: 30, height: 30, marginRight: 10 }}
                 />
                 <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
             </TouchableOpacity>
+            <Loading visible={loading} text="Đang đăng nhập..." />
             <Text style={styles.orText}>or continue with</Text>
             <TouchableOpacity onPress={() => navigation.navigate('SignUpScreen')}>
                 <Text style={styles.bottomLink}>Bạn chưa có tài khoản? <Text style={styles.linkText}>Đăng kí ngay</Text></Text>

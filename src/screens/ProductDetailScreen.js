@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Loading from '../components/Loading';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +34,7 @@ const ProductDetailScreen = () => {
   const [userInfoById, setUserInfoById] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -176,25 +178,30 @@ const ProductDetailScreen = () => {
   };
 
   const handleAddToCart = async () => {
+    setLoading(true);
     // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
     const token = await AsyncStorage.getItem('userToken');
     if (!token) {
       setShowLoginModal(true);
+      setLoading(false);
       return;
     }
     
     if (!userId) {
       Alert.alert('Lỗi', 'Không thể thêm vào giỏ hàng: Người dùng chưa đăng nhập.');
+      setLoading(false);
       return;
     }
 
     if (!product) {
       Alert.alert('Lỗi', 'Không thể thêm vào giỏ hàng: Sản phẩm chưa được chọn.');
+      setLoading(false);
       return;
     }
 
     if (!selectedVariant) {
       Alert.alert('Lỗi', 'Vui lòng chọn biến thể sản phẩm.');
+      setLoading(false);
       return;
     }
 
@@ -203,16 +210,19 @@ const ProductDetailScreen = () => {
     
     if (stockQuantity <= 0) {
       Alert.alert('Thông báo', 'Sản phẩm này đã hết hàng trong kho.');
+      setLoading(false);
       return;
     }
 
     if (quantity > stockQuantity) {
       Alert.alert('Thông báo', `Chỉ còn ${stockQuantity} sản phẩm trong kho. Vui lòng giảm số lượng xuống ${stockQuantity} hoặc ít hơn.`);
+      setLoading(false);
       return;
     }
 
     if (quantity <= 0) {
       Alert.alert('Lỗi', 'Số lượng phải lớn hơn 0.');
+      setLoading(false);
       return;
     }
 
@@ -267,6 +277,8 @@ const ProductDetailScreen = () => {
         console.error('Error adding to cart:', error);
         Alert.alert('Lỗi', `Không thể thêm vào giỏ hàng: ${error.message}`);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -524,6 +536,7 @@ const ProductDetailScreen = () => {
             `Thêm vào giỏ hàng - ${selectedVariant.variant_color} ${selectedVariant.variant_size}`}
         </Text>
       </TouchableOpacity>
+      {loading && <Loading visible={loading} text="Đang xử lý..." />}
 
       {/* Hiển thị danh sách review */}
       <View style={styles.reviewSection}>
