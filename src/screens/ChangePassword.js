@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,10 @@ import {
   ActivityIndicator, // Thêm để hiển thị loading
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/FontAwesome'; // Cần cài đặt react-native-vector-icons
-import Ionicons from 'react-native-vector-icons/Ionicons'; // Cần cài đặt react-native-vector-icons
+import Icon from 'react-native-vector-icons/FontAwesome';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config/api'; // Đảm bảo đường dẫn này đúng
 
 /**
  * Màn hình "Đổi Mật khẩu" (Change Password Screen).
@@ -22,9 +24,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons'; // Cần cài đặt 
 const ChangePasswordScreen = () => {
   const navigation = useNavigation();
 
-  // GIẢ ĐỊNH EMAIL CỦA NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP (Chỉ cho DEMO)
-  // Trong ứng dụng thật, bạn sẽ lấy email/ID người dùng từ ngữ cảnh đăng nhập (context, redux, auth state)
-  const loggedEmail = 'bao@gmail.com'; // Đảm bảo email này tồn tại trong db.json của bạn
+  const [userId, setUserId] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
+  const [userProvider, setUserProvider] = useState(null); // State để lưu trữ phương thức đăng nhập (local/google)
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // States cho các trường nhập mật khẩu
   const [currentPassword, setCurrentPassword] = useState('');
@@ -35,7 +38,6 @@ const ChangePasswordScreen = () => {
   const [currentPasswordError, setCurrentPasswordError] = useState('');
   const [newPasswordError, setNewPasswordError] = useState('');
   const [confirmNewPasswordError, setConfirmNewPasswordError] = useState('');
-  // const [forgot, setForgot] = useState(''); // Không cần state này nữa, thay bằng error message
 
   // States để quản lý trạng thái ẩn/hiện mật khẩu
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -44,9 +46,38 @@ const ChangePasswordScreen = () => {
 
   const [isLoading, setIsLoading] = useState(false); // Thêm state cho loading
 
+  useEffect(() => {
+    const loadAuthData = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem('userToken');
+        const storedUserInfo = await AsyncStorage.getItem('userInfo');
+
+        if (storedToken && storedUserInfo) {
+          setAuthToken(storedToken);
+          const userInfo = JSON.parse(storedUserInfo);
+          setUserId(userInfo._id);
+          setUserProvider(userInfo.provider); // Lấy provider từ userInfo
+          console.log('[ChangePasswordScreen] Loaded userId:', userInfo._id);
+          console.log('[ChangePasswordScreen] Loaded authToken:', storedToken ? storedToken.substring(0, 30) + '...' : 'null');
+          console.log('[ChangePasswordScreen] Loaded User Provider:', userInfo.provider);
+        } else {
+          console.warn('[ChangePasswordScreen] Auth data not found. Redirecting to Login.');
+          Alert.alert("Lỗi xác thực", "Vui lòng đăng nhập lại để đổi mật khẩu.");
+          navigation.replace('Login');
+        }
+      } catch (error) {
+        console.error('[ChangePasswordScreen] Error loading auth data from AsyncStorage:', error);
+        Alert.alert("Lỗi", "Không thể tải thông tin người dùng. Vui lòng thử lại.");
+        navigation.replace('Login');
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+    loadAuthData();
+  }, []);
+
   /**
    * Hàm kiểm tra độ mạnh của mật khẩu mới.
-   * Đây là ví dụ đơn giản, bạn có thể mở rộng các quy tắc phức tạp hơn.
    * @param {string} password - Mật khẩu cần kiểm tra.
    * @returns {string} - Thông báo lỗi nếu mật khẩu không hợp lệ, hoặc chuỗi rỗng nếu hợp lệ.
    */
@@ -74,30 +105,25 @@ const ChangePasswordScreen = () => {
    * Đây là nơi bạn sẽ gọi API để gửi mật khẩu cũ và mật khẩu mới lên server.
    */
   const handleChangePassword = async () => {
-    Keyboard.dismiss(); // Đóng bàn phím
+    Keyboard.dismiss();
 
-    // Reset tất cả thông báo lỗi
     setCurrentPasswordError('');
     setNewPasswordError('');
     setConfirmNewPasswordError('');
-    // setForgot(''); // Reset state này
 
     let hasError = false;
 
-    // 1. Kiểm tra mật khẩu cũ có được nhập không
     if (!currentPassword.trim()) {
       setCurrentPasswordError('Vui lòng nhập mật khẩu cũ.');
       hasError = true;
     }
 
-    // 2. Kiểm tra mật khẩu mới
     const newPassError = validatePassword(newPassword);
     if (newPassError) {
       setNewPasswordError(newPassError);
       hasError = true;
     }
 
-    // 3. Kiểm tra xác nhận mật khẩu mới
     if (!confirmNewPassword.trim()) {
       setConfirmNewPasswordError('Vui lòng xác nhận mật khẩu mới.');
       hasError = true;
@@ -106,64 +132,112 @@ const ChangePasswordScreen = () => {
       hasError = true;
     }
 
-    // Nếu có bất kỳ lỗi nào từ các kiểm tra trên, dừng lại
     if (hasError) {
       return;
     }
 
-    setIsLoading(true); // Bắt đầu loading
+    if (currentPassword === newPassword) {
+      setNewPasswordError('Mật khẩu mới không được trùng với mật khẩu cũ.');
+      return;
+    }
+
+    // Kiểm tra nếu thông tin xác thực chưa được tải hoặc bị thiếu
+    if (isAuthLoading || !userId || !authToken) {
+      Alert.alert("Lỗi", "Thông tin xác thực chưa được tải đầy đủ. Vui lòng đợi hoặc thử lại.");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      // --- Bước 1: Lấy thông tin người dùng từ JSON Server ---
-      // (Giả sử chúng ta tìm người dùng theo email)
-      // Đảm bảo URL này khớp với địa chỉ JSON Server của bạn
-      // Ví dụ: 'http://10.0.2.2:3000' cho Android emulator, 'http://localhost:3000' cho iOS simulator
-      const JSON_SERVER_URL = 'http://192.168.100.92:3000'; // IP thực tế của bạn
+      const apiEndpoint = `${API_BASE_URL}/api/auth/change-password/id/${userId}`;
+      console.log('[ChangePassword] Calling API:', apiEndpoint);
 
-      const userResponse = await fetch(`${JSON_SERVER_URL}/users?email=${loggedEmail}`);
-      const users = await userResponse.json();
-
-      if (users.length === 0) {
-        Alert.alert('Lỗi', 'Không tìm thấy tài khoản người dùng với email này.');
-        return;
-      }
-
-      const user = users[0]; // Lấy người dùng đầu tiên tìm thấy
-
-      // --- Bước 2: Xác minh mật khẩu cũ (DEMO: SO SÁNH PLAIN TEXT) ---
-      // CẢNH BÁO: KHÔNG LÀM NHƯ NÀY TRONG PRODUCTION THẬT SỰ VÌ LÝ DO BẢO MẬT
-      if (user.password !== currentPassword) {
-        setCurrentPasswordError('Mật khẩu cũ không đúng.');
-        // setForgot("Bạn quên mật khẩu?"); // Có thể thêm lại nếu muốn, nhưng không nên.
-        return; // Dừng lại nếu mật khẩu cũ không đúng
-      }
-
-      // --- Bước 3: Cập nhật mật khẩu mới trong db.json thông qua JSON Server ---
-      const updatedUser = { ...user, password: newPassword }; // Tạo đối tượng người dùng đã cập nhật
-
-      const updateResponse = await fetch(`${JSON_SERVER_URL}/users/${user.id}`, { // Dùng user.id để PUT vào đúng người dùng
-        method: 'PUT', // Dùng PUT để cập nhật toàn bộ resource
+      const response = await fetch(apiEndpoint, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
         },
-        body: JSON.stringify(updatedUser),
+        body: JSON.stringify({
+          oldPassword: currentPassword,
+          newPassword: newPassword,
+        }),
       });
 
       if (updateResponse.ok) {
         Alert.alert('Thành công', 'Mật khẩu của bạn đã được đổi thành công.');
-        navigation.navigate('ProfileScreen'); // Chuyển về màn hình profile
+        navigation.navigate('profile'); // Chuyển về màn hình profile (đảm bảo route 'profile' tồn tại)
       } else {
-        Alert.alert('Lỗi', 'Không thể đổi mật khẩu. Vui lòng thử lại sau.');
+        // Backend trả về lỗi (ví dụ 400, 401, 500)
+        let errorMessage = 'Không thể đổi mật khẩu. Vui lòng thử lại.';
+        if (data && data.message) {
+          errorMessage = data.message;
+        } else if (response.status === 401) {
+          errorMessage = 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.';
+          await AsyncStorage.clear(); // Xóa token và ID
+          navigation.replace('Login');
+        } else if (response.status === 400) {
+          errorMessage = data.message || 'Dữ liệu gửi lên không hợp lệ.';
+        } else if (response.status === 500) {
+          errorMessage = 'Lỗi máy chủ nội bộ. Vui lòng thử lại sau.';
+        }
+        Alert.alert('Lỗi');
       }
 
     } catch (error) {
-      console.error('Lỗi khi đổi mật khẩu:', error);
-      Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ demo. Vui lòng kiểm tra JSON Server và kết nối mạng.');
+      // Lỗi mạng hoặc lỗi không xác định khác
+      console.error('[ChangePassword] API call failed:', error);
+      let userFacingError = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.';
+      if (error.message.includes('Network request failed')) {
+        userFacingError = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
+      } else {
+        userFacingError = error.message;
+      }
+      Alert.alert('Lỗi', userFacingError);
     } finally {
-      setIsLoading(false); // Kết thúc loading
+      setIsLoading(false);
     }
   };
 
+  // Hiển thị màn hình loading trong khi tải dữ liệu xác thực
+  if (isAuthLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text style={styles.loadingText}>Đang tải thông tin người dùng...</Text>
+      </View>
+    );
+  }
+
+  // Nếu người dùng đăng nhập bằng Google, chỉ hiển thị thông báo
+  if (userProvider === 'firebase') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back-outline" size={26} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Đổi Mật khẩu</Text>
+        <View style={styles.messageContainer}>
+          <Ionicons name="information-circle-outline" size={50} color="#007bff" />
+          <Text style={styles.messageText}>
+            Bạn đã đăng nhập bằng tài khoản Google. Không thể đổi mật khẩu qua ứng dụng.
+          </Text>
+          <TouchableOpacity
+            style={styles.goBackButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.goBackButtonText}>Quay lại</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Nếu người dùng đăng nhập bằng tài khoản cục bộ, hiển thị form đổi mật khẩu
   return (
     <SafeAreaView style={styles.container}>
       {/* Nút quay lại màn hình trước */}
@@ -209,7 +283,7 @@ const ChangePasswordScreen = () => {
         {currentPasswordError ? <Text style={styles.errorText}>{currentPasswordError}</Text> : null}
 
         {/* <Text // Không cần dòng này nếu bạn đã xử lý lỗi mật khẩu cũ bằng currentPasswordError
-          onPress={() =>navigation.navigate('ForgotPasswordScreen')}
+          onPress={() =>navigation.navigate('forgot')}
           style={{color: 'blue', fontWeight: '500'}}>{forgot}
         </Text> */}
       </View>
@@ -273,11 +347,15 @@ const ChangePasswordScreen = () => {
         {confirmNewPasswordError ? <Text style={styles.errorText}>{confirmNewPasswordError}</Text> : null}
       </View>
 
+      <TouchableOpacity onPress={() => navigation.navigate('ForgotPass')}>
+        <Text style={styles.forgot}>Nếu bạn quên mật khẩu, hãy click vào đây</Text>
+      </TouchableOpacity>
+
       {/* Nút "Đổi Mật khẩu" */}
       <TouchableOpacity
         style={styles.changePasswordButton}
         onPress={handleChangePassword}
-        disabled={isLoading} // Vô hiệu hóa nút khi đang loading
+        disabled={isLoading || isAuthLoading} // Vô hiệu hóa nút khi đang loading
       >
         {isLoading ? (
           <ActivityIndicator color="#fff" /> // Hiển thị vòng xoay loading
@@ -289,18 +367,28 @@ const ChangePasswordScreen = () => {
   );
 };
 
-// --- Định nghĩa Stylesheet cho màn hình ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
     alignItems: 'center',
-    paddingTop: 50,
+    
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: 20,
     left: 20,
     zIndex: 1,
   },
@@ -329,7 +417,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   passwordInputWrapper: {
-    flexDirection: 'row', // Để icon và input nằm cùng hàng
+    flexDirection: 'row',
     alignItems: 'center',
     borderColor: '#ddd',
     borderWidth: 1,
@@ -337,7 +425,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   input: {
-    flex: 1, // Chiếm phần lớn không gian
+    flex: 1,
     height: 50,
     paddingHorizontal: 15,
     fontSize: 16,
@@ -360,7 +448,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   changePasswordButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#000000ff',
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 8,
@@ -373,6 +461,36 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  // Styles for the message when logged in with Google
+  messageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    backgroundColor: '#fff',
+  },
+  messageText: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#333',
+    marginTop: 20,
+    lineHeight: 26,
+  },
+  goBackButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    marginTop: 30,
+  },
+  goBackButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  forgot: {
+    color: 'black'
+  }
 });
 
 export default ChangePasswordScreen;
