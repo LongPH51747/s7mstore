@@ -129,23 +129,8 @@ export const SocketProvider = ({ children }) => {
                 const firebaseIdToken = await firebaseUser.getIdToken(true);
                 finalAccessToken = firebaseIdToken; // Ưu tiên Firebase ID Token
 
-                // Nếu chưa có user object từ AsyncStorage với MongoDB _id, 
-                // hoặc Firebase UID không khớp, tạo một user object tạm thời từ Firebase data
-                if (!finalUserObject || finalUserObject.firebaseUid !== firebaseUser.uid) {
-                    console.log("[SocketContext][LoadAuth] Tạo hoặc cập nhật UserInfo TẠM THỜI từ Firebase User. UID:", firebaseUser.uid);
-                    // Chỉ dùng Firebase UID làm _id tạm thời nếu chưa có MongoDB _id
-                    finalUserObject = {
-                        _id: firebaseUser.uid, // Tạm thời dùng Firebase UID làm _id
-                        email: firebaseUser.email,
-                        fullname: firebaseUser.displayName || 'Người dùng',
-                        avatar: firebaseUser.photoURL,
-                        provider: 'firebase',
-                        role: 'user', 
-                        firebaseUid: firebaseUser.uid
-                    };
-                } else {
-                    // Nếu đã có user object từ AsyncStorage và khớp với Firebase UID, 
-                    // Cập nhật các trường có thể thay đổi từ Firebase và giữ lại MongoDB _id
+                // Chỉ cập nhật thông tin từ Firebase nếu đã có MongoDB _id từ AsyncStorage
+                if (finalUserObject && finalUserObject._id && finalUserObject._id.length > 20) {
                     console.log("[SocketContext][LoadAuth] Cập nhật UserInfo từ Firebase (giữ MongoDB _id).");
                     finalUserObject = {
                         ...finalUserObject,
@@ -155,13 +140,18 @@ export const SocketProvider = ({ children }) => {
                         provider: finalUserObject.provider || 'firebase',
                         firebaseUid: firebaseUser.uid 
                     };
+                } else {
+                    console.log("[SocketContext][LoadAuth] Không có MongoDB _id hợp lệ từ AsyncStorage. Không tạo user tạm thời.");
+                    // Không tạo user object tạm thời từ Firebase UID
+                    finalUserObject = null;
+                    finalAccessToken = null;
                 }
             } 
             // Nếu có finalUserObject nhưng không có finalAccessToken (token hết hạn),
             // hoặc finalUserObject không có _id hợp lệ (chưa được xác thực backend),
             // coi như chưa xác thực và xóa thông tin.
-            else if (finalUserObject && (!finalAccessToken || !finalUserObject._id || finalUserObject._id === finalUserObject.firebaseUid)) {
-                console.warn("[SocketContext][LoadAuth] Phát hiện UserInfo nhưng không có Token hợp lệ hoặc MongoDB _id. Xem như chưa xác thực.");
+            else if (finalUserObject && (!finalAccessToken || !finalUserObject._id || finalUserObject._id.length < 20)) {
+                console.warn("[SocketContext][LoadAuth] Phát hiện UserInfo nhưng không có Token hợp lệ hoặc MongoDB _id hợp lệ. Xem như chưa xác thực.");
                 finalUserObject = null;
                 finalAccessToken = null;
             }
@@ -225,8 +215,8 @@ export const SocketProvider = ({ children }) => {
                         storedUserInfo = JSON.parse(userInfoStringFromStorage);
                     } catch (e) { /* ignore */ }
                 }
-                // Chỉ logout nếu KHÔNG có Firebase user VÀ KHÔNG có MongoDB _id trong userInfo
-                const isLocallyAuthenticatedWithMongoId = userTokenFromStorage && storedUserInfo && storedUserInfo._id;
+                // Chỉ logout nếu KHÔNG có Firebase user VÀ KHÔNG có MongoDB _id hợp lệ trong userInfo
+                const isLocallyAuthenticatedWithMongoId = userTokenFromStorage && storedUserInfo && storedUserInfo._id && storedUserInfo._id.length > 20;
 
                 if (!isLocallyAuthenticatedWithMongoId) {
                     console.log("[Firebase Auth Listener] Không có Firebase user và không có token/userInfo cục bộ hợp lệ (MongoDB _id). Đang gọi handleLocalLogout.");
