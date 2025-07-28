@@ -666,6 +666,7 @@ export const SocketProvider = ({ children }) => {
         selectChatRoom,
         markMessagesAsRead,
         handleLocalLogout, // Export hàm logout để có thể gọi từ ngoài
+        loadAuthDataFromAsyncStorage, // <-- Thêm dòng này
         // setAccessToken, setUser, setIsAuthenticated, setIsAdmin - nếu cần cho luồng đăng nhập khác
     };
 
