@@ -194,7 +194,7 @@ const ProfileScreen = () => {
         <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfile', { user })}>
           <Image
             style={styles.avatar}
-            source={{ uri: user.avatar || 'https://tse2.mm.bing.net/th/id/OIP.uWTdrVSKnAVaTZaOK1BFxAAAAA?r=0&cb=thvnext&rs=1&pid=ImgDetMain&o=7&rm=3' }} 
+            source={{ uri: user.avatar || 'https://via.placeholder.com/150' }} 
           />
           <View style={styles.profileTextContainer}>
          

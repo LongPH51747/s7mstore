@@ -174,7 +174,7 @@ const LoginScreen = () => {
                     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
                     console.log('[GOOGLE] Đăng nhập Google thành công, chuyển sang Home');
                     console.log('[GOOGLE] Access Token nhận từ backend và đã lưu vào AsyncStorage:', backendResponseData.access_token ? backendResponseData.access_token.substring(0, 30) + '...' : 'null');
-
+                    console.log("[User infor Store] ",userInfoToStore)
                     const tokenJustRead = await AsyncStorage.getItem('userToken');
                     const userInfoJustRead = await AsyncStorage.getItem('userInfo');
                     console.log('[GOOGLE] Token VỪA ĐỌC LẠI TỪ AsyncStorage:', tokenJustRead ? tokenJustRead.substring(0, 30) + '...' : 'null');
