@@ -5,6 +5,8 @@ import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { initializeSdks } from './src/utils/initializeSdks';
 
 import { SocketProvider } from './src/contexts/SocketContext';
+import { NotificationProvider } from './src/contexts/NotificationContext';
+import NotificationPopup from './src/components/NotificationPopup';
 import AppNavigator from './src/navigation/AppNavigator';
 
 const App: React.FC = () => {
@@ -42,11 +44,12 @@ const App: React.FC = () => {
         backgroundColor={backgroundStyle.backgroundColor}
       />
       <NavigationContainer>
-        
+        <NotificationProvider>
           <SocketProvider>
             <AppNavigator />
           </SocketProvider>
-       
+          <NotificationPopup />
+        </NotificationProvider>
       </NavigationContainer>
     </SafeAreaView>
   );

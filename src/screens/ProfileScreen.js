@@ -17,12 +17,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage'; // Import 
 import CustomNavBottom from '../components/CustomNavBottom';
 import axios from 'axios';
 import { API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { useNotification } from '../contexts/NotificationContext';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused(); // Hook để kiểm tra xem màn hình có đang focus không
   const [user, setUser] = useState(null); // State để lưu thông tin người dùng
   const [loading, setLoading] = useState(true); // State để quản lý loading
+  const { getUnreadCount } = useNotification();
+  
+
 
   // Hàm tải thông tin người dùng từ AsyncStorage
   const fetchUserInfo = useCallback(async () => {
@@ -260,6 +264,28 @@ const ProfileScreen = () => {
           <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
         </TouchableOpacity>
 
+        <Text style={styles.sectionTitle}>Thông Báo</Text>
+                <TouchableOpacity 
+          style={styles.itemRow} 
+          onPress={() => navigation.navigate('NotificationScreen')}
+        >
+          <View style={styles.notificationIconContainer}>
+            <Feather name="bell" size={20} color="black" />
+            {(() => {
+              const unreadCount = getUnreadCount();
+              console.log(`🎯 ProfileScreen badge render - Unread count: ${unreadCount}`);
+              return unreadCount > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              ) : null;
+            })()}
+          </View>
+          <Text style={styles.itemText}>Thông báo người dùng</Text>
+          <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
+        </TouchableOpacity>
        
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.supportGrid}>
@@ -314,6 +340,9 @@ const ProfileScreen = () => {
           <Feather name="log-out" size={20} color="red" />
           <Text style={styles.logoutButtonText}>Đăng xuất</Text>
         </TouchableOpacity>
+
+
+
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -525,6 +554,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
+  notificationIconContainer: {
+    position: 'relative',
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#ff4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+
 });
 
 export default ProfileScreen;
