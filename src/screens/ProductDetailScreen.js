@@ -42,6 +42,8 @@ const ProductDetailScreen = () => {
         const userInfo = JSON.parse(userInfoString);
         if (userInfo && userInfo._id) {
           setUserId(userInfo._id);
+          console.log("Id người dùng: ", userInfo._id)
+          
         } else {
           Alert.alert('Thông báo', 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại.');
           navigation.replace('Login');

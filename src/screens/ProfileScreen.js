@@ -195,7 +195,7 @@ const ProfileScreen = () => {
         <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfile')}>
           <Image
             style={styles.avatar}
-            source={{ uri: user.photoURL || 'https://via.placeholder.com/150' }} 
+            source={{ uri: user.avatar || 'https://via.placeholder.com/150' }} 
           />
           <View style={styles.profileTextContainer}>
             <Text style={styles.name}>{user.displayName || user.fullname || 'Tên người dùng'}</Text> 
