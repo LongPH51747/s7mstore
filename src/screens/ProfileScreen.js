@@ -36,10 +36,9 @@ const ProfileScreen = () => {
       if (userInfoString) {
         const userInfo = JSON.parse(userInfoString);
         setUser(userInfo);
-        console.log('[PROFILE] userInfo object sau khi parse:', userInfo);
-        // Nếu có _id thì gọi API lấy user mới nhất
-        if (userInfo._id) {
-          await fetchUserById(userInfo._id);
+        const userId = userInfo._id;
+        if (userId) {
+          await fetchUserById(userId);
         }
       } else {
         console.log('[PROFILE] Không có userInfo trong AsyncStorage, thử lấy userToken...');
@@ -192,12 +191,13 @@ const ProfileScreen = () => {
         </View>
 
        
-        <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfile')}>
+        <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfile', { user })}>
           <Image
             style={styles.avatar}
             source={{ uri: user.avatar || 'https://via.placeholder.com/150' }} 
           />
           <View style={styles.profileTextContainer}>
+         
             <Text style={styles.name}>{user.displayName || user.fullname || 'Tên người dùng'}</Text> 
             <Text>{user.email || user.phoneNumber || 'Không có email/SĐT'}</Text> 
           </View>
@@ -263,9 +263,11 @@ const ProfileScreen = () => {
        
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.supportGrid}>
-          <TouchableOpacity style={styles.gridItem}>
-            <Feather name="video" size={20} color="black" />
-            <Text style={styles.gridText}>LiveStream</Text>
+          <TouchableOpacity
+          onPress={() => navigation.navigate('ChangePass')}
+          style={styles.gridItem}>
+            <Feather name="unlock" size={20} color="black" />
+            <Text style={styles.gridText}>Đổi mật khẩu</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('ChatScreen')}

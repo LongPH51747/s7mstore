@@ -13,12 +13,13 @@ import {
     Alert,
     Image, 
     Modal,
-    Dimensions
+    Dimensions,
+    StatusBar
 } from 'react-native';
 import { useSocket } from '../contexts/SocketContext';
 import moment from 'moment';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker'; // Import image picker
 import { API_BASE_URL } from '../config/api'; // Import base URL
 import ImageMessage from '../components/ImageMessage';
@@ -43,6 +44,7 @@ const UserChatScreen = () => {
     const currentUserId = user?._id;
     const [selectedImageForViewer, setSelectedImageForViewer] = useState(null); // State cho ảnh đang xem
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false); // State để điều khiển hiển thị trình xem ảnh
+    const navigation = useNavigation();
 
     // Clear selected image when chat room changes
     useEffect(() => {
@@ -264,7 +266,7 @@ const UserChatScreen = () => {
                     <View style={[
                         styles.messageBubble,
                         {
-                            backgroundColor: isAdmin ? '#e2e8f0' : '#3b82f6',
+                            backgroundColor: isAdmin ? '#e2e8f0' : '#9be9ffff',
                             alignSelf: isAdmin ? 'flex-start' : 'flex-end',
                         }
                     ]}>
@@ -319,14 +321,20 @@ const UserChatScreen = () => {
 
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
+            <StatusBar backgroundColor='transparent' translucent  />
             <KeyboardAvoidingView
                 style={styles.keyboardAvoidingView}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Online Support</Text>
+                    <TouchableOpacity onPress={()=> navigation.goBack()} style={{marginTop: 15}}>
+                    <Icon name="arrow-back" size={24} color="#000000ff" />
+                    </TouchableOpacity>
+                     <Image style={styles.logo} source={require('../assets/LogoS7MStore.png')}/>
+                   <Text style={styles.s7m}>S7M Store</Text>
+                   
                 </View>
 
                 <FlatList
@@ -355,17 +363,17 @@ const UserChatScreen = () => {
 
                 <View style={styles.inputForm}>
                     <TouchableOpacity style={styles.imagePickerButton} onPress={handleTakePhoto}>
-                        <Icon name="camera-outline" size={24} color="#3b82f6" />
+                        <Icon name="camera-outline" size={24} color="#000000ff" />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.imagePickerButton} onPress={handleChoosePhoto}>
-                        <Icon name="image-outline" size={24} color="#3b82f6" />
+                        <Icon name="image-outline" size={24} color="#000000ff" />
                     </TouchableOpacity>
                     <TextInput
                         style={styles.textInput}
                         value={newMessage}
                         onChangeText={setNewMessage}
-                        placeholder="Type your message..."
+                        placeholder="..."
                         placeholderTextColor="#888"
                         editable={isSocketReady}
                         multiline
@@ -378,7 +386,8 @@ const UserChatScreen = () => {
                         onPress={handleSend}
                         disabled={!isSocketReady || (!newMessage.trim() && !selectedImage)}
                     >
-                        <Text style={styles.sendButtonText}>Send</Text>
+                       <Icon name="send" size={24} color="#22eae3ff" />
+
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
@@ -405,7 +414,7 @@ const UserChatScreen = () => {
                         )}
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
 
         
     );
@@ -413,11 +422,11 @@ const UserChatScreen = () => {
 const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#eeeaeaff' },
-    keyboardAvoidingView: { flex: 1 },
+    keyboardAvoidingView: { flex: 1,},
     statusContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f8f8' },
     statusText: { marginTop: 10, fontSize: 16, color: '#4a5568' },
     errorText: { fontSize: 16, color: '#ef4444', textAlign: 'center', paddingHorizontal: 20 },
-    header: { paddingVertical: 18, paddingHorizontal: 20, backgroundColor: '#f0f5fa', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+    header: { paddingTop: 10, paddingHorizontal: 10, backgroundColor: '#ffffffff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', alignItems: 'center', justifyContent: 'flex-start', flexDirection: 'row' },
     headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#2c5282', textTransform: 'uppercase', letterSpacing: 0.5 },
     messagesContainer: { paddingVertical: 15, paddingHorizontal: 10, backgroundColor: '#f8f8f8', flexGrow: 1 },
     noMessagesContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -444,9 +453,9 @@ const styles = StyleSheet.create({
 
     messageBubble: {
         maxWidth: '75%',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 20,
+        paddingVertical: 8,
+        paddingHorizontal: 8,
+        borderRadius: 15,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -460,11 +469,11 @@ const styles = StyleSheet.create({
         marginBottom: 4,
         fontWeight: 'bold',
     },
-    messageContent: { fontSize: 16, lineHeight: 22 },
+    messageContent: { fontSize: 13, lineHeight: 22 },
     myMessageContent: { color: '#ffffff' },
     otherMessageContent: { color: '#e0e1e4ff' },
     messageInfoRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 5 },
-    messageTime: { fontSize: 12 },
+    messageTime: { fontSize: 10 },
     myMessageTime: { color: 'rgba(255, 255, 255, 0.7)' },
     otherMessageTime: { color: '#718096' },
     messageStatusContainer: { marginLeft: 5 },
@@ -489,8 +498,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#f9fafb',
         marginHorizontal: 5,
     },
-    sendButton: { marginLeft: 10, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25, backgroundColor: '#3b82f6', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
-    sendButtonDisabled: { backgroundColor: '#93c5fd' },
+    sendButton: { marginLeft: 10, paddingVertical: 8,
+         paddingHorizontal: 15, borderWidth: 0.5,
+          borderRadius: 25, backgroundColor: '#ffffffff', 
+          shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+           shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
+    sendButtonDisabled: { backgroundColor: '#ffffffff' },
     sendButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
     // chatImage: {
     //     width: 250,
@@ -537,8 +550,8 @@ const styles = StyleSheet.create({
     // },
     // Style cho caption của ảnh (nếu có text kèm theo ảnh)
     adminImageCaption: {
-        fontSize: 16,
-        lineHeight: 22,
+        fontSize: 13,
+        lineHeight: 20,
         color: '#2d3748',
         paddingHorizontal: 15,
         paddingTop: 5,
@@ -549,13 +562,13 @@ const styles = StyleSheet.create({
         marginBottom: 5,
     },
     userImageCaption: {
-        fontSize: 16,
-        lineHeight: 22,
+        fontSize: 13,
+        lineHeight: 20,
         color: '#fff',
         paddingHorizontal: 15,
         paddingTop: 5,
         paddingBottom: 5,
-        backgroundColor: '#3b82f6', // Màu nền cho caption
+        backgroundColor: '#9be9ffff', // Màu nền cho caption
         borderRadius: 15,
         overflow: 'hidden',
         marginBottom: 5,
@@ -585,8 +598,15 @@ const styles = StyleSheet.create({
         height: height * 0.8,
         resizeMode: 'contain',
     },
-    image1: {
-        // backgroundColor: 'pink'
+    logo: {
+        width: 60,
+        height: 60,
+        marginTop: 15
+    }, 
+    s7m: {
+        marginTop: 15,
+        fontSize: 15,
+        color: 'black'
     }
     
 });

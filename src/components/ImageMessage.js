@@ -5,7 +5,7 @@ const { width: screenWidth } = Dimensions.get('window');
 // Giới hạn chiều rộng tối đa của ảnh trong bubble.
 // Thường thì bạn không muốn ảnh tràn hết 100% màn hình vì nó sẽ sát mép quá mức hoặc không để lại không gian cho avatar.
 // 0.75 (75%) là một giá trị phổ biến, bạn có thể điều chỉnh để phù hợp với giao diện tổng thể.
-const MAX_IMAGE_BUBBLE_WIDTH = screenWidth * 0.5; 
+const MAX_IMAGE_BUBBLE_WIDTH = screenWidth * 0.4; 
 
 const ImageMessage = ({ imageUrl }) => {
     const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });

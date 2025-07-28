@@ -4,6 +4,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { Animated, LayoutAnimation, Platform, UIManager, Modal, Alert } from 'react-native';
+import Loading from '../components/Loading';
 
 import { 
   SafeAreaView, 
@@ -458,6 +459,7 @@ const CartScreen = (props) => {
           </View>
         </View>
       </Modal>
+      <Loading visible={!cartItem} text="Đang tải dữ liệu giỏ hàng..." />
       {showLoginModal ? null : (
         !cartItem ? (
           <View style={{flex:1, backgroundColor:"#FFFFFF", alignItems:"center", justifyContent:"center", flexDirection:"column", color:"black"}}>
