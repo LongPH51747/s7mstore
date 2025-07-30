@@ -81,7 +81,8 @@ const AppNavigator = () => {
         <Stack.Screen name='Chat' component={UserChatScreen}/>
         <Stack.Screen name='ChangePass' component={ChangePasswordScreen}/>
         <Stack.Screen name='ForgotPass' component={ForgotPasswordScreen}/>
-        
+        <Stack.Screen name='ResetPasswordScreen' component={ResetPasswordScreen}/>
+        <Stack.Screen name='Otp' component={OtpVerificationScreen}/>
       </Stack.Navigator>
 
   );

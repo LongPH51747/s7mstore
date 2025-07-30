@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://9ebdf0408572.ngrok-free.app';
+export const API_BASE_URL = 'http://192.168.1.182:3000';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -76,6 +76,11 @@ export const API_ENDPOINTS = {
   REVIEWS: {
     GET_REVIEW_BY_PRODUCT_ID: (id_product) => `${API_BASE_URL}/api/review/get-review-by-id/id_product/${id_product}`,
   },
+
+  OTP: {
+    SEND_OTP: `${API_BASE_URL}/api/other/check-email/send-change-pass`,
+    FORGOT_PASS_OUT_APP: `${API_BASE_URL}/api/auth/forget-password`
+  }
 };
 
 // API Headers
