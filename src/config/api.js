@@ -79,15 +79,17 @@ export const API_ENDPOINTS = {
 
   OTP: {
     SEND_OTP: `${API_BASE_URL}/api/other/check-email/send-change-pass`,
-    FORGOT_PASS_OUT_APP: `${API_BASE_URL}/api/auth/forget-password`
-  }
-};
+    FORGOT_PASS_OUT_APP: `${API_BASE_URL}/api/auth/forget-password`},
+  MOMO:{
+    CREATE_PAY: () => `${API_BASE_URL}/api/momo/create-payment`
+  },
+}
 
 // API Headers
 export const API_HEADERS = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-};
+}
 
 // API Timeout
 export const API_TIMEOUT = 10000; // 10 seconds 

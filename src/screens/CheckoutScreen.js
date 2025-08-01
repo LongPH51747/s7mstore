@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Linking } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 
 export default function CheckoutScreen() {
@@ -112,7 +113,8 @@ export default function CheckoutScreen() {
         throw new Error('User information not found');
       }
 
-      // Format order items
+      if(paymentMethod === 'COD'){
+        // Format order items
       const orderItems = cartItems.map(item => ({
         id_product: item.id_product,
         id_variant: item.id_variant || '',
@@ -145,9 +147,68 @@ export default function CheckoutScreen() {
         throw new Error('Failed to create order');
       }
 
-      const result = await response.json();
-      console.log('Order created:', result);
-              navigation.navigate('PaymentSuccessScreen', { orderId: result._id || result.id });
+      const result_cod = await response.json();
+      console.log('Order created:', result_cod);
+      navigation.navigate('PaymentSuccessScreen', { orderId: result_cod._id || result_cod.id });
+      }else if( paymentMethod === 'MOMO'){
+        console.log('Tiến hành thanh toán với MOMO...');
+
+        const orderItems = cartItems.map(item => ({
+          id_product: item.id_product,
+          id_variant: item.id_variant || '',
+          quantity: item.quantity
+        }));
+
+        // Prepare order data
+        const orderData = {
+          orderItems,
+          id_address: selectedAddress._id,
+          payment_method: paymentMethod,
+          id_cart: route.params?.cartId || null
+        };
+
+        // Call create order API
+      const response = await fetch(
+        `${API_ENDPOINTS.ORDERS.CREATE_ORDER(userInfo._id)}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderData)
+        }
+      );
+      console.log(JSON.stringify(orderData));
+
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const result_momo = await response.json();
+      console.log('Order created:', result_momo);
+        
+        const result = await axios.post(`${API_BASE_URL}/api/momo/create-payment`,{
+          total_amount: result_momo.total_amount,
+          orderId: result_momo._id
+        })
+
+        if (result.status !== 200) {
+          throw new Error('Thanh toán thất bại với MOMO')
+        }
+
+        console.log('Data:', result.data);
+        
+     
+        const { deeplink } = result?.data?.data
+        console.log('LINK:', deeplink);
+        
+        if (deeplink) {
+          await Linking.openURL(deeplink)
+        }
+      }else{
+        throw new Error('MOMO payUrl not received from server')
+      }
+      // Đã xử lý response và navigation trong từng block, không cần xử lý ở ngoài nữa
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');

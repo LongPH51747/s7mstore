@@ -35,13 +35,25 @@ const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  const linking = {
+  prefixes: ['s7mstore://'], // URL scheme của bạn
+  config: {
+    screens: {
+      // Ánh xạ đường dẫn trong URL với tên màn hình trong Stack Navigator
+      PaymentSuccess: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
+      OrderDetail: 'order/:orderId', // s7mstore://order/123
+      // ... ánh xạ các màn hình khác nếu cần
+    },
+  },
+};
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      <NavigationContainer>
+      <NavigationContainer linking={linking} fallback={<Text>Loading...</Text>}>
         
           <SocketProvider>
             <AppNavigator />
