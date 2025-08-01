@@ -15,7 +15,7 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Home');
-          navigation.navigate('Home');
+          navigation.navigate('HomeScreen');
         }}>
         <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color="#000" />
         {/* Tùy chọn: Thêm Text cho nhãn */}
@@ -25,7 +25,7 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Search');
-          navigation.navigate('Search');
+          navigation.navigate('SearchScreen');
         }}>
         <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#000" />
       </TouchableOpacity>
@@ -33,7 +33,7 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Cart');
-          navigation.navigate('Cart');
+          navigation.navigate('CartScreen');
         }}>
         <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
       </TouchableOpacity>
@@ -41,7 +41,9 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Favorites');
-          navigation.navigate('Favorites');
+          // Note: Favorites screen doesn't exist yet, you might want to create it or remove this
+          // navigation.navigate('FavoritesScreen');
+          console.log('Favorites screen not implemented yet');
         }}>
         <Icon name={activeTab === 'Favorites' ? 'heart' : 'heart-outline'} size={24} color="#000" />
       </TouchableOpacity>
@@ -49,7 +51,7 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Profile');
-          navigation.navigate('Profile');
+          navigation.navigate('ProfileScreen');
         }}>
         <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#000" />
       </TouchableOpacity>

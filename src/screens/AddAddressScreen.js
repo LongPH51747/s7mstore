@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   TextInput,
   Image,
+  ScrollView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
@@ -131,7 +132,7 @@ const AddAddressScreen = ({ route }) => {
       const result = await response.json();
       console.log('Thêm địa chỉ thành công:', result);
       Alert.alert('Thành công', 'Đã thêm địa chỉ mới!', [
-        { text: 'OK', onPress: () => navigation.navigate('Address', { refresh: true }) }
+        { text: 'OK', onPress: () => navigation.navigate('AddressScreen', { refresh: true }) }
       ]);
     } catch (err) {
       console.log('Lỗi khi lưu địa chỉ:', err);
@@ -142,83 +143,96 @@ const AddAddressScreen = ({ route }) => {
   };
 
   const handleChooseLocation = () => {
-    const lat = latitude || 21.028511;
-    const lng = longitude || 105.804817;
+    // Lấy các trường cần thiết để truyền sang MapScreen
+    const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
+    const provinceType = provinces.find(p => p.id === selectedProvince)?.type || '';
+    const wardName = wards.find(w => w.id === selectedWard)?.name || '';
+    const wardType = wards.find(w => w.id === selectedWard)?.type || '';
     navigation.navigate('MapScreen', {
-      latitude: lat,
-      longitude: lng,
-      fromScreen: 'AddAddress',
       addressDetail,
-      selectedWard,
-      selectedProvince,
-      wards,
-      provinces,
+      wardType,
+      wardName,
+      provinceType,
+      provinceName,
+      fromScreen: 'AddAddress',
     });
   };
 
   // Sắp xếp và nhóm tỉnh/thành phố theo chữ cái đầu
-  const sortedProvinces = [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-  const provincePickerItems = [
-    <Picker.Item
-      key="province-placeholder"
-      label="Tỉnh/Thành phố"
-      value=""
-      color="#888"
-      enabled={false}
-    />
-  ];
-  let lastProvinceChar = '';
-  sortedProvinces.forEach((province) => {
-    const firstChar = province.name[0].toUpperCase();
-    if (firstChar !== lastProvinceChar) {
-      provincePickerItems.push(
+  const sortedProvinces = React.useMemo(() => {
+    return [...provinces].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [provinces]);
+
+  const provincePickerItems = React.useMemo(() => {
+    const items = [
+      <Picker.Item
+        key="province-placeholder"
+        label="Tỉnh/Thành phố"
+        value=""
+        color="#888"
+        enabled={false}
+      />
+    ];
+    let lastProvinceChar = '';
+    sortedProvinces.forEach((province) => {
+      const firstChar = province.name[0].toUpperCase();
+      if (firstChar !== lastProvinceChar) {
+        items.push(
+          <Picker.Item
+            key={`header-province-${firstChar}`}
+            label={`--- ${firstChar} ---`}
+            value={`_header_province_${firstChar}`}
+            enabled={false}
+            color="#888"
+          />
+        );
+        lastProvinceChar = firstChar;
+      }
+      items.push(
         <Picker.Item
-          key={`header-province-${firstChar}`}
-          label={`--- ${firstChar} ---`}
-          value={`_header_province_${firstChar}`}
-          enabled={false}
-          color="#888"
+          key={province.id}
+          label={`${province.name} (${province.type})`}
+          value={province.id}
+          color="#000"
         />
       );
-      lastProvinceChar = firstChar;
-    }
-    provincePickerItems.push(
-      <Picker.Item
-        key={province.id}
-        label={`${province.name} (${province.type})`}
-        value={province.id}
-        color="#000"
-      />
-    );
-  });
+    });
+    return items;
+  }, [sortedProvinces]);
 
   // Sắp xếp và nhóm xã/phường theo chữ cái đầu
-  const sortedWards = [...wards].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-  const wardPickerItems = [];
-  let lastWardChar = '';
-  sortedWards.forEach((ward) => {
-    const firstChar = ward.name[0].toUpperCase();
-    if (firstChar !== lastWardChar) {
-      wardPickerItems.push(
+  const sortedWards = React.useMemo(() => {
+    return [...wards].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [wards]);
+
+  const wardPickerItems = React.useMemo(() => {
+    const items = [];
+    let lastWardChar = '';
+    sortedWards.forEach((ward) => {
+      const firstChar = ward.name[0].toUpperCase();
+      if (firstChar !== lastWardChar) {
+        items.push(
+          <Picker.Item
+            key={`header-ward-${firstChar}`}
+            label={`--- ${firstChar} ---`}
+            value={`_header_ward_${firstChar}`}
+            enabled={false}
+            color="#888"
+          />
+        );
+        lastWardChar = firstChar;
+      }
+      items.push(
         <Picker.Item
-          key={`header-ward-${firstChar}`}
-          label={`--- ${firstChar} ---`}
-          value={`_header_ward_${firstChar}`}
-          enabled={false}
-          color="#888"
+          key={ward.id}
+          label={`${ward.name} (${ward.type})`}
+          value={ward.id}
+          color="#000"
         />
       );
-      lastWardChar = firstChar;
-    }
-    wardPickerItems.push(
-      <Picker.Item
-        key={ward.id}
-        label={`${ward.name} (${ward.type})`}
-        value={ward.id}
-        color="#000"
-      />
-    );
-  });
+    });
+    return items;
+  }, [sortedWards]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -242,104 +256,91 @@ const AddAddressScreen = ({ route }) => {
       ) : error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : (
-        <>
-          {/* Province */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Tỉnh/Thành phố</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={selectedProvince}
-                onValueChange={(itemValue) => setSelectedProvince(itemValue)}
-                style={styles.picker}
-              >
-                {provincePickerItems}
-              </Picker>
-            </View>
+        <ScrollView keyboardShouldPersistTaps="handled">
+        {/* Province */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Tỉnh/Thành phố</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={selectedProvince}
+              onValueChange={(itemValue) => setSelectedProvince(itemValue)}
+              style={styles.picker}
+            >
+              {provincePickerItems}
+            </Picker>
           </View>
-          
-          {/* Ward */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Xã/Phường</Text>
-            <View style={styles.pickerWrapper}>
-              {loadingWard ? (
-                <ActivityIndicator size="small" color="#000" />
-              ) : (
-                selectedProvince && wardPickerItems.length > 0 ? (
-                  <Picker
-                    selectedValue={selectedWard}
-                    onValueChange={(itemValue) => setSelectedWard(itemValue)}
-                    style={styles.picker}
-                  >
-                    {wardPickerItems}
-                  </Picker>
-                ) : null
-              )}
-            </View>
+        </View>
+        {/* Ward */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Xã/Phường</Text>
+          <View style={styles.pickerWrapper}>
+            {loadingWard ? (
+              <ActivityIndicator size="small" color="#000" />
+            ) : (
+              selectedProvince && wardPickerItems.length > 0 ? (
+                <Picker
+                  selectedValue={selectedWard}
+                  onValueChange={(itemValue) => setSelectedWard(itemValue)}
+                  style={styles.picker}
+                >
+                  {wardPickerItems}
+                </Picker>
+              ) : null
+            )}
           </View>
-          
-          {/* Address detail */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Địa chỉ cụ thể</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập địa chỉ cụ thể"
-              value={addressDetail}
-              onChangeText={setAddressDetail}
-            />
-          </View>
-          
-          {/* Full name */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Họ tên</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập họ tên"
-              value={fullName}
-              onChangeText={setFullName}
-            />
-          </View>
-          
-          {/* Phone number */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Số điện thoại</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập số điện thoại"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-              maxLength={10}
-            />
-          </View>
-          
-          {/* Default address checkbox */}
-          <View style={styles.checkboxRow}>
-            <Checkbox
-              status={isDefault ? 'checked' : 'unchecked'}
-              onPress={() => setIsDefault(!isDefault)}
-            />
-            <Text style={styles.checkboxLabel}>Đặt làm địa chỉ mặc định</Text>
-          </View>
-          
-          {/* Save button */}
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-            <Text style={styles.saveBtnText}>{saving ? 'Đang lưu...' : 'Lưu địa chỉ'}</Text>
-          </TouchableOpacity>
-          
-          {/* Map button */}
-          <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: '#2196F3', marginBottom: 10 }]}
-            onPress={handleChooseLocation}
-          >
-            <Text style={styles.saveBtnText}>Chọn vị trí trên bản đồ</Text>
-          </TouchableOpacity>
-          
-          {/* Coordinates display */}
-          <View style={{ alignItems: 'center', marginBottom: 10 }}>
-            <Text>Latitude: {latitude}</Text>
-            <Text>Longitude: {longitude}</Text>
-          </View>
-        </>
+        </View>
+        {/* Address detail */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Địa chỉ cụ thể</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập địa chỉ cụ thể"
+            value={addressDetail}
+            onChangeText={setAddressDetail}
+          />
+        </View>
+        {/* Full name */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Họ tên</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập họ tên"
+            value={fullName}
+            onChangeText={setFullName}
+          />
+        </View>
+        {/* Phone number */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Số điện thoại</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập số điện thoại"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+            maxLength={10}
+          />
+        </View>
+        {/* Default address checkbox */}
+        <View style={styles.checkboxRow}>
+          <Checkbox
+            status={isDefault ? 'checked' : 'unchecked'}
+            onPress={() => setIsDefault(!isDefault)}
+          />
+          <Text style={styles.checkboxLabel}>Đặt làm địa chỉ mặc định</Text>
+        </View>
+        {/* Save button */}
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
+          <Text style={styles.saveBtnText}>{saving ? 'Đang lưu...' : 'Lưu địa chỉ'}</Text>
+        </TouchableOpacity>
+        {/* Map button */}
+        <TouchableOpacity
+          style={[styles.saveBtn, { backgroundColor: '#2196F3', marginBottom: 10 }]}
+          onPress={handleChooseLocation}
+        >
+          <Text style={styles.saveBtnText}>Chọn vị trí trên bản đồ</Text>
+        </TouchableOpacity>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -348,8 +349,8 @@ const AddAddressScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 10,
+    backgroundColor: '#F6F8FA', // màu nền dịu mắt
+    padding: 0,
   },
   header: {
     flexDirection: 'row',
@@ -359,34 +360,50 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E3E4E5',
     backgroundColor: '#fff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
   },
   backButton: {
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0F1F3',
   },
   backIcon: {
     width: 24,
     height: 24,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#222',
   },
   headerRight: {
     width: 40,
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: 18,
+    marginHorizontal: 18,
   },
   label: {
-    fontSize: 16,
-    marginBottom: 8,
+    fontSize: 15,
+    marginBottom: 6,
+    color: '#444',
+    fontWeight: '600',
   },
   pickerWrapper: {
     borderWidth: 1,
     borderColor: '#E3E4E5',
-    borderRadius: 6,
+    borderRadius: 10,
     overflow: 'hidden',
+    backgroundColor: '#fff',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 1,
   },
   picker: {
     height: 48,
@@ -395,37 +412,52 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#E3E4E5',
-    borderRadius: 6,
-    padding: 10,
+    borderRadius: 10,
+    padding: 14,
     fontSize: 16,
     backgroundColor: '#fff',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 1,
   },
   errorText: {
     color: 'red',
     textAlign: 'center',
     marginVertical: 16,
+    fontSize: 15,
   },
   saveBtn: {
-    backgroundColor: '#000',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: '#1A73E8',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 18,
+    marginHorizontal: 18,
+    elevation: 2,
+    shadowColor: '#1A73E8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
   },
   saveBtnText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 8,
+    marginHorizontal: 18,
   },
   checkboxLabel: {
     fontSize: 16,
     marginLeft: 8,
+    color: '#444',
   },
 });
 

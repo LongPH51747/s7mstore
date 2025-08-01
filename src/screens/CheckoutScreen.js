@@ -147,7 +147,7 @@ export default function CheckoutScreen() {
 
       const result = await response.json();
       console.log('Order created:', result);
-      navigation.navigate('PaymentSuccess', { orderId: result._id || result.id });
+              navigation.navigate('PaymentSuccessScreen', { orderId: result._id || result.id });
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');
@@ -178,7 +178,7 @@ export default function CheckoutScreen() {
           <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
           <TouchableOpacity 
             style={styles.addressContainer}
-            onPress={() => navigation.navigate('Address')}
+            onPress={() => navigation.navigate('AddressScreen')}
           >
             {selectedAddress ? (
               <>
@@ -267,9 +267,9 @@ export default function CheckoutScreen() {
           </View>
           <View style={styles.radioRow}>
             <RadioButton
-              value="momo"
-              status={paymentMethod === 'momo' ? 'checked' : 'unchecked'}
-              onPress={() => setPaymentMethod('momo')}
+              value="MOMO"
+              status={paymentMethod === 'MOMO' ? 'checked' : 'unchecked'}
+              onPress={() => setPaymentMethod('MOMO')}
             />
             <Text style={styles.paymentMethodText}>Thanh toán qua Momo</Text>
           </View>

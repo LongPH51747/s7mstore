@@ -18,6 +18,9 @@ import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth, { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
+import Loading from '../components/Loading';
+import { useSocket } from '../contexts/SocketContext';
+// import { normalizeUserData, logUserInfo } from '../utils/userUtils';
 
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
@@ -27,6 +30,7 @@ const LoginScreen = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showForgotPasswordLink, setShowForgotPasswordLink] = useState(false); // State mới để hiển thị link quên mật khẩu
     const navigation = useNavigation();
+    const { loadAuthDataFromAsyncStorage } = useSocket();
 
     useEffect(() => {
         GoogleSignin.configure({
@@ -76,9 +80,16 @@ const LoginScreen = () => {
                 await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                 await AsyncStorage.setItem('shouldAutoLogin', 'true');
                 await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
+                console.log('[LOGIN] userInfoToStore:', userInfoToStore); // Log thông tin user vừa lưu
+                // Thử lưu một giá trị testKey vào AsyncStorage
+                await AsyncStorage.setItem('testKey', 'testValue');
+                const testValue = await AsyncStorage.getItem('testKey');
+                console.log('[LOGIN] testKey value:', testValue);
                 try { await getAuth().signOut(); } catch (e) {} // Đảm bảo signOut Firebase
                 console.log('[LOGIN] Đăng nhập thành công, chuyển sang Home');
-                navigation.replace('Home');
+                navigation.replace('HomeScreen');
+                await loadAuthDataFromAsyncStorage(); // GỌI LẠI để cập nhật state xác thực
+                // Sau đó socket sẽ tự động connect lại nhờ useEffect trong SocketContext
             } else {
                 console.log('[LOGIN] Đăng nhập thất bại, response không hợp lệ:', response.data);
                 throw new Error('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
@@ -110,6 +121,8 @@ const LoginScreen = () => {
 
     // Logic Google Sign-In (ẩn nút, nhưng giữ logic để dùng về sau)
     const handleGoogleLogin = async () => {
+        if (loading) return;
+        setLoading(true);
         try {
             console.log('[GOOGLE] Bắt đầu đăng nhập Google...');
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -147,25 +160,28 @@ const LoginScreen = () => {
                         displayName: backendUser.fullname || userCredential.user.displayName,
                         email: backendUser.email || userCredential.user.email,
                         photoURL: backendUser.avatar || userCredential.user.photoURL,
-                        uid: userCredential.user.uid,
-                        _id: backendUser._id,
+                        _id: backendUser._id, // Chỉ lưu MongoDB _id
+                        googleId: backendUser.googleId || userCredential.user.uid,
                         is_allowed: backendUser.is_allowed,
+                        provider: 'firebase',
+                        role: backendUser.role || 'user',
                         ...backendUser
                     };
-
-                    console.log('[GOOGLE] ID MongoDB nhận từ backend (backendUser._id):', backendUser._id);
+                    console.log('[GOOGLE] ID MongoDB nhận từ backend (backendUser._id):', backendUser._id); 
                     console.log('[GOOGLE] Firebase UID nhận từ Google:', userCredential.user.uid);
                     await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                     await AsyncStorage.setItem('shouldAutoLogin', 'true');
                     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
                     console.log('[GOOGLE] Đăng nhập Google thành công, chuyển sang Home');
                     console.log('[GOOGLE] Access Token nhận từ backend và đã lưu vào AsyncStorage:', backendResponseData.access_token ? backendResponseData.access_token.substring(0, 30) + '...' : 'null');
-
+                    console.log("[User infor Store] ",userInfoToStore)
                     const tokenJustRead = await AsyncStorage.getItem('userToken');
                     const userInfoJustRead = await AsyncStorage.getItem('userInfo');
                     console.log('[GOOGLE] Token VỪA ĐỌC LẠI TỪ AsyncStorage:', tokenJustRead ? tokenJustRead.substring(0, 30) + '...' : 'null');
                     console.log('[GOOGLE] User Info VỪA ĐỌC LẠI TỪ AsyncStorage (parsed ._id):', userInfoJustRead ? JSON.parse(userInfoJustRead)._id : 'null');
-                    navigation.replace('Home');
+                    navigation.replace('HomeScreen');
+                    await loadAuthDataFromAsyncStorage(); // GỌI LẠI để cập nhật state xác thực
+                    // Sau đó socket sẽ tự động connect lại nhờ useEffect trong SocketContext
                 } else {
                     console.log('[GOOGLE] Đăng nhập Google thất bại, response không hợp lệ:', response.data);
                     throw new Error('Không nhận được token từ server');
@@ -180,6 +196,8 @@ const LoginScreen = () => {
             else if (error.message) message = error.message;
             console.log('[GOOGLE] Lỗi:', error, error?.response?.data);
             Alert.alert('Lỗi', message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -240,20 +258,21 @@ const LoginScreen = () => {
                 disabled={loading}
             >
                 {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <Loading visible={loading} text="Đang đăng nhập..." />
                 ) : (
                     <Text style={styles.buttonText}>Log In</Text>
                 )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleGoogleLogin} style={styles.buttonGG}>
+            <TouchableOpacity onPress={handleGoogleLogin} style={styles.buttonGG} disabled={loading}>
                 <Image
                     source={require('../../assets/image/LogoGG.png')}
                     style={{ width: 30, height: 30, marginRight: 10 }}
                 />
                 <Text style={styles.buttonText}>Đăng nhập bằng Google</Text>
             </TouchableOpacity>
+            <Loading visible={loading} text="Đang đăng nhập..." />
             <Text style={styles.orText}>or continue with</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUpScreen')}>
                 <Text style={styles.bottomLink}>Bạn chưa có tài khoản? <Text style={styles.linkText}>Đăng kí ngay</Text></Text>
             </TouchableOpacity>
         </View>

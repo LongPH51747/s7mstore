@@ -201,10 +201,10 @@ const UserChatScreen = () => {
         const defaultAvatarUrl = `https://www.gravatar.com/avatar/${msg.sender?.email ? encodeURIComponent(msg.sender.email) : 'default'}?d=mp&s=200`;
         const avatarSource = msg.sender?.avatar ? { uri: msg.sender.avatar } : { uri: defaultAvatarUrl };
         const isMyMessage = msg.sender?._id === user?._id;
-        console.log("msg.sender?._id:", msg.sender?._id);
-    console.log("user?._id:", user?._id);
-    console.log("isMyMessage:", isMyMessage);
-    console.log("Full User Object:", user);
+    //     console.log("msg.sender?._id:", msg.sender?._id);
+    // console.log("user?._id:", user?._id);
+    // console.log("isMyMessage:", isMyMessage);
+    // console.log("Full User Object:", user);
 
         return (
             <View style={{

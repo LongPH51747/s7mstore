@@ -283,13 +283,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         width: '100%', // Đảm bảo container chiếm toàn bộ chiều rộng
         alignItems: 'center', // Căn giữa các thành phần con
-        justifyContent: 'center', // Căn giữa theo chiều dọc
+       
     },
     image: {
         width: 200,
         height: 200,
         resizeMode: 'contain',
-        marginBottom: 20,
+       
+       
     },
     title: {
         fontSize: 32,

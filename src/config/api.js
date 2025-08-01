@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'http://192.168.1.182:3000';
+export const API_BASE_URL = 'https://92f8fa709052.ngrok-free.app';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -8,8 +8,8 @@ export const API_ENDPOINTS = {
     LOGIN_GOOGLE: `${API_BASE_URL}/api/auth/login-google`,
     LOGIN_EMAIL: `${API_BASE_URL}/api/auth/login-email`,
     REGISTER_EMAIL: `${API_BASE_URL}/api/auth/register-email`,
-    LOGIN_USERNAME: `${API_BASE_URL}/api/auth/login-username`,
-    REGISTER_USERNAME: `${API_BASE_URL}/api/auth/register-username`,
+
+   
     REGISTER: `${API_BASE_URL}/api/auth/register`,
     SEND_VERIFICATION: `${API_BASE_URL}/api/other/check-email/send-verification`,
   },
@@ -66,11 +66,11 @@ export const API_ENDPOINTS = {
   },
 
   RATINGS: {
-    CREATE: `${API_BASE_URL}/review/create-review`,
-    GET_BY_PRODUCT: (productId) => `${API_BASE_URL}/ratings/product/${productId}`,
-    GET_BY_USER: (userId) => `${API_BASE_URL}/ratings/user/${userId}`,
-    UPDATE: (ratingId) => `${API_BASE_URL}/ratings/update/${ratingId}`,
-    DELETE: (ratingId) => `${API_BASE_URL}/ratings/delete/${ratingId}`,
+    CREATE: `${API_BASE_URL}/api/review/create-review/id_order`,
+    GET_BY_PRODUCT: (productId) => `${API_BASE_URL}/api/ratings/product/${productId}`,
+    GET_BY_USER: (userId) => `${API_BASE_URL}/api/review/get-review-by-id/id_user/${userId}`,
+    UPDATE: (ratingId) => `${API_BASE_URL}/api/review/update-review-id/id_review/${id_review}`,
+    DELETE: (ratingId) => `${API_BASE_URL}/api/ratings/delete/${ratingId}`,
   },
 
   REVIEWS: {

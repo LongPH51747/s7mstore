@@ -114,7 +114,7 @@ export const SocketProvider = ({ children }) => {
                         finalUserObject = { ...storedUserInfo };
                         console.log("[SocketContext][LoadAuth] Đã tải UserInfo từ AsyncStorage (MongoDB _id):", storedUserInfo._id);
                     } else {
-                        console.warn("[SocketContext][LoadAuth] UserInfo từ AsyncStorage không hợp lệ (thiếu hoặc sai định dạng MongoDB _id).");
+                        // console.warn("[SocketContext][LoadAuth] UserInfo từ AsyncStorage không hợp lệ (thiếu hoặc sai định dạng MongoDB _id).");
                         await AsyncStorage.removeItem('userInfo'); // Xóa nếu không hợp lệ
                     }
                 } catch (e) {
@@ -130,7 +130,7 @@ export const SocketProvider = ({ children }) => {
                     finalAccessToken = tokenFromStorage;
                     console.log("[SocketContext][LoadAuth] Đã tải JWT cục bộ từ AsyncStorage.");
                 } else {
-                    console.warn("[SocketContext][LoadAuth] Token từ AsyncStorage không đúng định dạng JWT. Xóa token.");
+                    // console.warn("[SocketContext][LoadAuth] Token từ AsyncStorage không đúng định dạng JWT. Xóa token.");
                     await AsyncStorage.removeItem('userToken'); // Xóa nếu token không hợp lệ
                 }
             }
@@ -148,6 +148,7 @@ export const SocketProvider = ({ children }) => {
                 await AsyncStorage.setItem('userToken', finalAccessToken);
                 await AsyncStorage.setItem('userInfo', JSON.stringify(finalUserObject));
                 console.log("[SocketContext][LoadAuth] Đã cập nhật AsyncStorage với User._id:", finalUserObject._id);
+                console.log("[SocketContext][LoadAuth] Full userInfo saved:", JSON.stringify(finalUserObject, null, 2));
             } else {
                 console.warn("[SocketContext][LoadAuth] Thông tin xác thực không hợp lệ. Xóa dữ liệu cũ trong AsyncStorage.");
                 await AsyncStorage.multiRemove(['userToken', 'userInfo']); // Xóa nếu không xác thực được
@@ -390,7 +391,7 @@ export const SocketProvider = ({ children }) => {
             };
 
             const onChatHistory = (data) => {
-                console.log('[SocketContext] Dữ liệu lịch sử chat nhận từ backend:', data);
+                // console.log('[SocketContext] Dữ liệu lịch sử chat nhận từ backend:', data);
                 let history = [];
                 let chatRoomId = null;
 
@@ -528,7 +529,7 @@ export const SocketProvider = ({ children }) => {
                 isConnecting.current = false;
             };
         }
-    }, [isAuthenticated, accessToken, loadingAuth, handleLocalLogout, user?._id, accessToken]);
+    }, [isAuthenticated, accessToken, loadingAuth, handleLocalLogout]);
 
 
     // --- Hàm gửi tin nhắn ---

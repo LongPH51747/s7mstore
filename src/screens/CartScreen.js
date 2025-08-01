@@ -4,6 +4,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { Animated, LayoutAnimation, Platform, UIManager, Modal, Alert } from 'react-native';
+import Loading from '../components/Loading';
 
 import { 
   SafeAreaView, 
@@ -265,7 +266,7 @@ const CartScreen = (props) => {
       return;
     }
     
-    navigation.navigate('Checkout', { cartItems: selectedProducts, cartId: cart._id });
+            navigation.navigate('CheckoutScreen', { cartItems: selectedProducts, cartId: cart._id });
   };
 
   const handleSelectAll = () => {
@@ -450,7 +451,7 @@ const CartScreen = (props) => {
               style={{backgroundColor:'#1c2b38', padding:12, borderRadius:8}}
               onPress={() => {
                 setShowLoginModal(false);
-                navigation.navigate('Login');
+                navigation.navigate('LoginScreen');
               }}
             >
               <Text style={{color:'#fff', fontWeight:'bold'}}>Đăng nhập</Text>
@@ -458,6 +459,7 @@ const CartScreen = (props) => {
           </View>
         </View>
       </Modal>
+      <Loading visible={!cartItem} text="Đang tải dữ liệu giỏ hàng..." />
       {showLoginModal ? null : (
         !cartItem ? (
           <View style={{flex:1, backgroundColor:"#FFFFFF", alignItems:"center", justifyContent:"center", flexDirection:"column", color:"black"}}>
@@ -474,7 +476,7 @@ const CartScreen = (props) => {
                 />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>{"Cart"}</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
+              <TouchableOpacity onPress={() => navigation.navigate('UserReviewScreen')}>
                 <Image 
                   source={require('../assets/search.png')} 
                   style={styles.headerIcon}

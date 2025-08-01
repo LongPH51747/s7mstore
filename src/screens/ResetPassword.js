@@ -116,7 +116,7 @@ const ResetPasswordScreen = () => {
                     [
                         {
                             text: 'OK',
-                            onPress: () => navigation.navigate('Login'), // Chuyển về màn hình đăng nhập
+                            onPress: () => navigation.navigate('LoginScreen'), // Chuyển về màn hình đăng nhập
                         },
                     ]
                 );

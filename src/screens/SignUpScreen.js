@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import axios from 'axios';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
 import { useNavigation } from '@react-navigation/native';
+import Loading from '../components/Loading';
 
 const SignUpScreen = () => {
   const [email, setEmail] = useState('');
@@ -122,7 +123,7 @@ const SignUpScreen = () => {
         Alert.alert('Success', 'Account created successfully', [
           {
             text: 'OK',
-                        onPress: () => navigation.navigate('login'),
+                        onPress: () => navigation.navigate('LoginScreen'),
           },
         ]);
       } else {
@@ -255,7 +256,7 @@ const SignUpScreen = () => {
                 )}
             </TouchableOpacity>
             <Text style={styles.orText}>or continue with</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('login')}>
+            <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
                 <Text style={styles.bottomLink}>Already have an account? <Text style={styles.linkText}>Sign in</Text></Text>
             </TouchableOpacity>
       {/* Modal nhập OTP */}
@@ -297,6 +298,7 @@ const SignUpScreen = () => {
           </View>
         </View>
       </Modal>
+      <Loading visible={loading || verifying} text={verifying ? 'Đang xác thực OTP...' : 'Đang đăng ký...'} />
         </View>
   );
 };

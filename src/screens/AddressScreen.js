@@ -128,7 +128,7 @@ const AddressScreen = () => {
   };
 
   const handleSelectAddress = (address) => {
-    navigation.navigate('Checkout', { selectedAddress: address });
+            navigation.navigate('CheckoutScreen', { selectedAddress: address });
   };
 
   const renderAddressItem = ({ item }) => (
@@ -153,7 +153,7 @@ const AddressScreen = () => {
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate('UpdateAddress', { address: item })}
+          onPress={() => navigation.navigate('UpdateAddressScreen', { address: item })}
         >
           <Image 
             source={require('../assets/edit.png')} 
@@ -210,7 +210,7 @@ const AddressScreen = () => {
         <Text style={styles.headerTitle}>My Addresses</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('AddAddress')}
+          onPress={() => navigation.navigate('AddAddressScreen')}
         >
           <Image 
             source={require('../assets/addlocation.png')} 
@@ -230,7 +230,7 @@ const AddressScreen = () => {
             <Text style={styles.emptyText}>No addresses found</Text>
             <TouchableOpacity
               style={styles.addAddressButton}
-              onPress={() => navigation.navigate('AddAddress')}
+              onPress={() => navigation.navigate('AddAddressScreen')}
             >
               <Text style={styles.addAddressText}>Add New Address</Text>
             </TouchableOpacity>
