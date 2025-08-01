@@ -754,11 +754,11 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   deleteIcon: {
     width: 18,
     height: 18,
-    tintColor: '#000',
   },
   checkbox: {
     marginRight: 8,

@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://9ebdf0408572.ngrok-free.app';
+export const API_BASE_URL = 'https://bdb6e8717f1f.ngrok-free.app';
 
 // API Endpoints
 export const API_ENDPOINTS = {
