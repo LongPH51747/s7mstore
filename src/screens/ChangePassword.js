@@ -191,7 +191,7 @@ const ChangePasswordScreen = () => {
                 setConfirmNewPassword('');
                 setIncorrectAttempts(0); // Reset số lần thử sai khi thành công
                 setShowForgotPasswordLink(false); // Ẩn link khi thành công
-                navigation.navigate('Profile'); // Chuyển về màn hình Profile
+                navigation.navigate('ProfileScreen'); // Chuyển về màn hình Profile
             } else {
                 // Backend trả về lỗi (ví dụ 400, 401, 404, 500)
                 let errorMessage = 'Không thể đổi mật khẩu. Vui lòng thử lại.';

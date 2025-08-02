@@ -36,6 +36,7 @@ const CartScreen = (props) => {
   const debounceTimers = useRef({});
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [variantStocks, setVariantStocks] = useState({}); // Lưu tồn kho theo id_variant
+  const [isDeletingItems, setIsDeletingItems] = useState({}); // Thêm state để track các item đang xóa
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -193,62 +194,99 @@ const CartScreen = (props) => {
   };
 
   const handleRemoveItem = async (cartItemId) => {
+    // Kiểm tra nếu đang xóa item này
+    if (isDeletingItems[cartItemId]) {
+      return;
+    }
+
     const currentItem = cartItem.find(item => item.id_variant === cartItemId);
     if (!currentItem || !currentItem._id) {
       Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không tìm thấy sản phẩm để xóa.' });
       return;
     }
 
-    // Bắt đầu animation
-    if (!animatedValues[cartItemId]) {
-      setAnimatedValues(prev => ({ ...prev, [cartItemId]: new Animated.Value(0) }));
-    }
-    Animated.timing(animatedValues[cartItemId], {
-      toValue: -400,
-      duration: 100,
-      useNativeDriver: true,
-    }).start(async () => {
-      // Tạm thời xóa khỏi giao diện
+    // Đánh dấu item đang được xóa
+    setIsDeletingItems(prev => ({ ...prev, [cartItemId]: true }));
+
+    try {
+      // Gửi request xóa lên server TRƯỚC
+      const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
+        method: 'DELETE',
+        headers: API_HEADERS,
+        body: JSON.stringify({ userId: idUser }),
+      });
+
+      const responseText = await response.text();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = responseText;
+      }
+
+      if (!response.ok) {
+        throw new Error(responseData.message || `Failed to remove item: ${response.status}`);
+      }
+
+      // Chỉ xóa khỏi UI SAU KHI server xác nhận thành công
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      
+      // Xóa khỏi cartItem
       setCartItem(prev => prev.filter(item => item.id_variant !== cartItemId));
+      
+      // Xóa khỏi cart
       setCart(prev => ({
         ...prev,
         cartItem: prev.cartItem.filter(item => item.id_variant !== cartItemId)
       }));
 
-      try {
-        const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
-          method: 'DELETE',
-          headers: API_HEADERS,
-          body: JSON.stringify({ userId: idUser }),
-        });
+      // Xóa khỏi selectedItems
+      setSelectedItems(prev => {
+        const newSelected = { ...prev };
+        delete newSelected[cartItemId];
+        return newSelected;
+      });
 
-        const responseText = await response.text();
-        let responseData;
-        try {
-          responseData = JSON.parse(responseText);
-        } catch (e) {
-          responseData = responseText;
-        }
+      // Xóa khỏi localQuantities
+      setLocalQuantities(prev => {
+        const newQuantities = { ...prev };
+        delete newQuantities[cartItemId];
+        return newQuantities;
+      });
 
-        if (!response.ok) {
-          throw new Error(responseData.message || `Failed to remove item: ${response.status}`);
-        }
+      // Xóa khỏi animatedValues
+      setAnimatedValues(prev => {
+        const newAnimated = { ...prev };
+        delete newAnimated[cartItemId];
+        return newAnimated;
+      });
 
-        Toast.show({ type: 'success', text1: 'Thành công', text2: 'Sản phẩm đã được xóa khỏi giỏ hàng.' });
-        // Cập nhật lại giỏ hàng ngay lập tức
-        await getCart();
-      } catch (error) {
-        // Rollback giao diện nếu xóa thất bại
-        setCartItem(prev => [...prev, currentItem]);
-        setCart(prev => ({
-          ...prev,
-          cartItem: [...prev.cartItem, currentItem]
-        }));
-        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Có lỗi khi xóa sản phẩm khỏi giỏ hàng.' });
-        await getCart(); // Đồng bộ lại dữ liệu
-      }
-    });
+      // Xóa khỏi variantStocks
+      setVariantStocks(prev => {
+        const newStocks = { ...prev };
+        delete newStocks[cartItemId];
+        return newStocks;
+      });
+
+      Toast.show({ type: 'success', text1: 'Thành công', text2: 'Sản phẩm đã được xóa khỏi giỏ hàng.' });
+      
+      // Đồng bộ lại dữ liệu từ server để đảm bảo tính nhất quán
+      await getCart();
+      
+    } catch (error) {
+      console.error('Error removing item:', error);
+      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Có lỗi khi xóa sản phẩm khỏi giỏ hàng.' });
+      
+      // Đồng bộ lại dữ liệu từ server nếu có lỗi
+      await getCart();
+    } finally {
+      // Luôn reset trạng thái xóa
+      setIsDeletingItems(prev => {
+        const newDeleting = { ...prev };
+        delete newDeleting[cartItemId];
+        return newDeleting;
+      });
+    }
   };
 
   const toggleItemSelection = (itemId) => {
@@ -344,9 +382,17 @@ const CartScreen = (props) => {
         {/* Delete Button */}
         <TouchableOpacity 
           onPress={() => confirmRemoveItem(product.id_variant)} 
-          style={styles.deleteButton}
+          style={[
+            styles.deleteButton,
+            isDeletingItems[product.id_variant] && styles.deleteButtonDisabled
+          ]}
+          disabled={isDeletingItems[product.id_variant]}
         >
-          <Image source={require('../assets/x.png')} style={styles.deleteIcon} />
+          {isDeletingItems[product.id_variant] ? (
+            <ActivityIndicator size="small" color="#666" />
+          ) : (
+            <Image source={require('../assets/x.png')} style={styles.deleteIcon} />
+          )}
         </TouchableOpacity>
       </Animated.View>
     );
@@ -756,11 +802,14 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   deleteIcon: {
     width: 18,
     height: 18,
-    tintColor: '#000',
+  },
+  deleteButtonDisabled: {
+    opacity: 0.5,
   },
   checkbox: {
     marginRight: 8,

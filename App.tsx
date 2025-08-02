@@ -40,7 +40,7 @@ const App: React.FC = () => {
   config: {
     screens: {
       // Ánh xạ đường dẫn trong URL với tên màn hình trong Stack Navigator
-      PaymentSuccess: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
+      PaymentSuccessScreen: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
       OrderDetail: 'order/:orderId', // s7mstore://order/123
       // ... ánh xạ các màn hình khác nếu cần
     },

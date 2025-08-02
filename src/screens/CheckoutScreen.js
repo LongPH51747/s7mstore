@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Linking } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Linking, TextInput} from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
@@ -20,6 +20,7 @@ export default function CheckoutScreen() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [hasAddresses, setHasAddresses] = useState(false);
+  const [userNote, setUserNote] = useState('');
 
   useEffect(() => {
     if (route.params?.selectedAddress) {
@@ -126,7 +127,8 @@ export default function CheckoutScreen() {
         orderItems,
         id_address: selectedAddress._id,
         payment_method: paymentMethod,
-        id_cart: route.params?.cartId || null
+        id_cart: route.params?.cartId || null,
+        user_note: userNote.trim()
       };
 
 
@@ -141,7 +143,7 @@ export default function CheckoutScreen() {
           body: JSON.stringify(orderData)
         }
       );
-      console.log(JSON.stringify(orderData));
+      console.log("Order data: ",JSON.stringify(orderData));
 
       if (!response.ok) {
         throw new Error('Failed to create order');
@@ -334,6 +336,24 @@ export default function CheckoutScreen() {
             />
             <Text style={styles.paymentMethodText}>Thanh toán qua Momo</Text>
           </View>
+        </View>
+
+        {/* Ghi chú đơn hàng */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ghi chú đơn hàng</Text>
+          <TextInput
+            style={styles.noteInput}
+            placeholder="Nhập ghi chú cho đơn hàng (tùy chọn)"
+            value={userNote}
+            onChangeText={setUserNote}
+            multiline={true}
+            numberOfLines={3}
+            maxLength={200}
+            textAlignVertical="top"
+          />
+          <Text style={styles.characterCount}>
+            {userNote.length}/200 ký tự
+          </Text>
         </View>
       </ScrollView>
 
@@ -545,5 +565,22 @@ const styles = StyleSheet.create({
   paymentMethodText: {
     fontSize: 14,
     color: '#000'
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: '#E3E4E5',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    fontSize: 14,
+    color: '#000',
+    backgroundColor: '#F6F8F9',
+    minHeight: 80,
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+    marginTop: 4,
   },
 });
