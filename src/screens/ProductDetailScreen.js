@@ -35,6 +35,7 @@ const ProductDetailScreen = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -180,6 +181,9 @@ const ProductDetailScreen = () => {
   };
 
   const handleAddToCart = async () => {
+    if (isAddingToCart) return;
+    setIsAddingToCart(true);
+
     setLoading(true);
     // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
     const token = await AsyncStorage.getItem('userToken');
@@ -281,6 +285,7 @@ const ProductDetailScreen = () => {
       }
     } finally {
       setLoading(false);
+      setIsAddingToCart(false);
     }
   };
 
@@ -537,6 +542,7 @@ const ProductDetailScreen = () => {
             !isSelectedVariantInStock ? 'Hết hàng' :
             `Thêm vào giỏ hàng - ${selectedVariant.variant_color} ${selectedVariant.variant_size}`}
         </Text>
+       
       </TouchableOpacity>
       {loading && <Loading visible={loading} text="Đang xử lý..." />}
 
