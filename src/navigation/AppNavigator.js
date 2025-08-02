@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -40,14 +39,24 @@ const Stack = createStackNavigator();
  * - Thiết lập màn hình khởi động
  */
 const AppNavigator = () => {
+  // Export navigation service globally for notification deep linking
+  React.useEffect(() => {
+    global.navigationService = {
+      navigate: (name, params) => {
+        if (global._navigator) {
+          global._navigator.navigate(name, params);
+        }
+      }
+    };
+  }, []);
+  
   return (
-    
-      <Stack.Navigator
-        initialRouteName="HomeScreen"
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
+    <Stack.Navigator
+      initialRouteName="HomeScreen"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
         {/* Màn hình chào mừng */}
         <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
         
@@ -92,7 +101,6 @@ const AppNavigator = () => {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="NotificationScreen" component={NotificationScreen}/>
       </Stack.Navigator>
-
   );
 };
 

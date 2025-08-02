@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -13,45 +13,67 @@ import {
   State,
   Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Feather from 'react-native-vector-icons/Feather';
-import { useNotification } from '../contexts/NotificationContext';
+import {useNotification} from '../contexts/NotificationContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NotificationScreen = () => {
   const navigation = useNavigation();
-  const { notifications, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications } = useNotification();
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    deleteAllNotifications,
+  } = useNotification();
   const [longPressedItem, setLongPressedItem] = useState(null);
 
-  const handleNotificationPress = (notification) => {
+  // Debug: Log notifications data
+  console.log(
+    '🔔 NotificationScreen - Total notifications:',
+    notifications.length,
+  );
+  console.log(
+    '🔔 NotificationScreen - Notifications data:',
+    notifications.map(n => ({
+      id: n.id,
+      title: n.title,
+      type: n.type,
+      productName: n.productName,
+      orderId: n.orderId,
+    })),
+  );
+
+  const handleNotificationPress = notification => {
     // Reset long press state
     setLongPressedItem(null);
-    
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-    
+
     // Navigate based on notification type
     if (notification.type === 'new_order' && notification.orderId) {
-      navigation.navigate('OrderDetailScreen', { 
-        orderId: notification.orderId 
+      navigation.navigate('OrderDetailScreen', {
+        orderId: notification.orderId,
       });
     } else if (notification.productId) {
       if (notification.productId.startsWith('test_')) {
         Alert.alert(
-          "Test Notification", 
+          'Test Notification',
           `Đây là thông báo test cho sản phẩm: ${notification.productName}`,
-          [{ text: "OK" }]
+          [{text: 'OK'}],
         );
       } else {
-        navigation.navigate('ProductDetailScreen', { 
-          productId: notification.productId 
+        navigation.navigate('ProductDetailScreen', {
+          productId: notification.productId,
         });
       }
     }
   };
 
-  const handleLongPress = (notificationId) => {
+  const handleLongPress = notificationId => {
     setLongPressedItem(notificationId);
     // Auto hide sau 3 giây
     setTimeout(() => {
@@ -59,128 +81,233 @@ const NotificationScreen = () => {
     }, 3000);
   };
 
-  const handleDeletePress = (notification) => {
+  const handleDeletePress = notification => {
     Alert.alert(
-      "Xóa thông báo",
+      'Xóa thông báo',
       `Bạn có chắc chắn muốn xóa thông báo "${notification.title}"?`,
       [
         {
-          text: "Hủy",
-          style: "cancel",
-          onPress: () => setLongPressedItem(null)
+          text: 'Hủy',
+          style: 'cancel',
+          onPress: () => setLongPressedItem(null),
         },
         {
-          text: "Xóa",
-          style: "destructive",
+          text: 'Xóa',
+          style: 'destructive',
           onPress: () => {
             deleteNotification(notification.id);
             setLongPressedItem(null);
-          }
-        }
-      ]
+          },
+        },
+      ],
+    );
+  };
+
+  const handleCleanDuplicates = async () => {
+    const duplicateCount =
+      notifications.length -
+      [
+        ...new Set(
+          notifications.map(n =>
+            n.type === 'new_order' ? n.orderId : n.productId,
+          ),
+        ),
+      ].length;
+
+    if (duplicateCount === 0) {
+      Alert.alert('Thông báo', 'Không có thông báo trùng lặp nào.');
+      return;
+    }
+
+    Alert.alert(
+      'Dọn dẹp thông báo trùng lặp',
+      `Tìm thấy ${duplicateCount} thông báo trùng lặp. Bạn có muốn xóa chúng?`,
+      [
+        {text: 'Hủy', style: 'cancel'},
+        {
+          text: 'Dọn dẹp',
+          onPress: async () => {
+            // Manual cleanup logic inline
+            const cleanedNotifications = [];
+            const seenOrderIds = new Set();
+            const seenProductIds = new Set();
+
+            notifications.forEach(notification => {
+              let isDuplicate = false;
+
+              if (notification.type === 'new_order' && notification.orderId) {
+                if (seenOrderIds.has(notification.orderId)) {
+                  isDuplicate = true;
+                } else {
+                  seenOrderIds.add(notification.orderId);
+                }
+              } else if (
+                notification.type === 'new_product' &&
+                notification.productId
+              ) {
+                if (seenProductIds.has(notification.productId)) {
+                  isDuplicate = true;
+                } else {
+                  seenProductIds.add(notification.productId);
+                }
+              }
+
+              if (!isDuplicate) {
+                cleanedNotifications.push(notification);
+              }
+            });
+
+            const removed = notifications.length - cleanedNotifications.length;
+            console.log('🧹 Manual cleanup: removed', removed, 'duplicates');
+
+            // Actually update the notifications through deleteAll then re-add cleaned ones
+            deleteAllNotifications();
+
+            // Save cleaned notifications to AsyncStorage
+            setTimeout(async () => {
+              try {
+                await AsyncStorage.setItem(
+                  'notifications',
+                  JSON.stringify(cleanedNotifications),
+                );
+                // Force reload by navigating back and forth (simple solution)
+                Alert.alert(
+                  'Hoàn thành',
+                  `Đã xóa ${removed} thông báo trùng lặp! Vui lòng reload app.`,
+                );
+              } catch (error) {
+                console.error('Error saving cleaned notifications:', error);
+              }
+            }, 100);
+          },
+        },
+      ],
     );
   };
 
   const handleDeleteAll = () => {
     if (notifications.length === 0) {
-      Alert.alert("Thông báo", "Không có thông báo nào để xóa.");
+      Alert.alert('Thông báo', 'Không có thông báo nào để xóa.');
       return;
     }
 
     Alert.alert(
-      "Xóa tất cả thông báo",
+      'Xóa tất cả thông báo',
       `Bạn có chắc chắn muốn xóa tất cả ${notifications.length} thông báo?`,
       [
         {
-          text: "Hủy",
-          style: "cancel"
+          text: 'Hủy',
+          style: 'cancel',
         },
         {
-          text: "Xóa tất cả",
-          style: "destructive",
+          text: 'Xóa tất cả',
+          style: 'destructive',
           onPress: () => {
             deleteAllNotifications();
             setLongPressedItem(null);
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
-  const renderNotificationItem = ({ item }) => {
+  const renderNotificationItem = ({item}) => {
     const isLongPressed = longPressedItem === item.id;
-    
+
     return (
       <View style={styles.notificationWrapper}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.notificationItem,
             !item.isRead && styles.unreadNotification,
-            isLongPressed && styles.longPressedItem
+            isLongPressed && styles.longPressedItem,
           ]}
           onPress={() => handleNotificationPress(item)}
           onLongPress={() => handleLongPress(item.id)}
-          activeOpacity={0.7}
-                  >
-            {/* Product Image */}
-            <View style={styles.notificationImageContainer}>
-              {item.productImage ? (
-                <Image
-                  source={{ uri: item.productImage }}
-                  style={styles.notificationImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.notificationIconPlaceholder}>
-                  {item.type === 'new_product' ? (
-                    <Feather name="package" size={20} color="#007bff" />
-                  ) : (
-                    <Feather name="bell" size={20} color="#ff6b6b" />
-                  )}
-                </View>
-              )}
-            </View>
-            
-            <View style={styles.notificationContent}>
-              <Text style={[
+          activeOpacity={0.7}>
+          {/* Icon/Image Container */}
+          <View style={styles.notificationImageContainer}>
+            {item.type === 'new_order' ? (
+              <View style={styles.notificationIconPlaceholder}>
+                <Feather name="shopping-bag" size={20} color="#28a745" />
+              </View>
+            ) : item.productImage ? (
+              <Image
+                source={{uri: item.productImage}}
+                style={styles.notificationImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.notificationIconPlaceholder}>
+                <Feather name="package" size={20} color="#007bff" />
+              </View>
+            )}
+          </View>
+
+          <View style={styles.notificationContent}>
+            <Text
+              style={[
                 styles.notificationTitle,
-                !item.isRead && styles.unreadText
+                !item.isRead && styles.unreadText,
               ]}>
-                {item.title}
-              </Text>
-              <Text style={styles.productNameInList}>
-                {item.productName}
-              </Text>
-              <Text style={styles.notificationMessage}>
-                {item.message}
-              </Text>
-              {item.productPrice > 0 && (
-                <Text style={styles.priceInList}>
-                  {item.productPrice.toLocaleString('vi-VN')} ₫
+              {item.title}
+            </Text>
+
+            {/* Conditional rendering based on notification type */}
+            {item.type === 'new_order' ? (
+              // Order notification content
+              <>
+                <Text style={styles.orderIdInList}>
+                  Mã đơn: ****{item.orderId ? item.orderId.slice(-4) : 'N/A'}
                 </Text>
-              )}
-              <Text style={styles.notificationTime}>
-                {item.timestamp}
-              </Text>
-            </View>
+                <Text style={styles.orderStatusInList}>
+                  Trạng thái: {item.orderStatus || 'Chờ xác nhận'}
+                </Text>
+                {item.orderTotal > 0 && (
+                  <Text style={styles.priceInList}>
+                    Tổng tiền: {item.orderTotal.toLocaleString('vi-VN')} ₫
+                  </Text>
+                )}
+                {item.orderItems > 0 && (
+                  <Text style={styles.orderItemsInList}>
+                    {item.orderItems} sản phẩm
+                  </Text>
+                )}
+              </>
+            ) : (
+              // Product notification content
+              <>
+                <Text style={styles.productNameInList}>{item.productName}</Text>
+                <Text style={styles.notificationMessage}>{item.message}</Text>
+                {item.productPrice > 0 && (
+                  <Text style={styles.priceInList}>
+                    {item.productPrice.toLocaleString('vi-VN')} ₫
+                  </Text>
+                )}
+              </>
+            )}
+
+            <Text style={styles.notificationTime}>{item.timestamp}</Text>
+          </View>
           {!item.isRead && <View style={styles.unreadDot} />}
-          
+
           {/* Delete button - hiện khi long press */}
           {isLongPressed && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => handleDeletePress(item)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Feather name="x" size={18} color="#ff4444" />
             </TouchableOpacity>
           )}
         </TouchableOpacity>
-        
+
         {/* Swipe indicator khi long press */}
         {isLongPressed && (
           <View style={styles.swipeIndicator}>
-            <Text style={styles.swipeText}>Nhấn X để xóa hoặc vuốt sang phải</Text>
+            <Text style={styles.swipeText}>
+              Nhấn X để xóa hoặc vuốt sang phải
+            </Text>
           </View>
         )}
       </View>
@@ -189,18 +316,24 @@ const NotificationScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor='white' barStyle='dark-content' />
-      
+      <StatusBar backgroundColor="white" barStyle="dark-content" />
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
-        >
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
           <Ionicons name="chevron-back-outline" size={26} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thông Báo</Text>
-        <TouchableOpacity style={styles.deleteAllButton} onPress={handleDeleteAll}>
+        <TouchableOpacity
+          style={[styles.deleteAllButton, {marginRight: 10}]}
+          onPress={handleCleanDuplicates}>
+          <Feather name="refresh-cw" size={16} color="#007bff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteAllButton}
+          onPress={handleDeleteAll}>
           <Feather name="trash-2" size={16} color="#ff4444" />
         </TouchableOpacity>
       </View>
@@ -219,7 +352,7 @@ const NotificationScreen = () => {
         <FlatList
           data={notifications}
           renderItem={renderNotificationItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={item => item.id.toString()}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           extraData={longPressedItem} // Re-render when longPressedItem changes
@@ -228,7 +361,9 @@ const NotificationScreen = () => {
         <View style={styles.emptyContainer}>
           <Feather name="bell-off" size={64} color="#ccc" />
           <Text style={styles.emptyText}>Chưa có thông báo nào</Text>
-          <Text style={styles.emptySubText}>Các thông báo về sản phẩm mới sẽ hiển thị tại đây</Text>
+          <Text style={styles.emptySubText}>
+            Các thông báo về sản phẩm mới và đơn hàng sẽ hiển thị tại đây
+          </Text>
         </View>
       )}
     </View>
@@ -354,6 +489,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#007bff',
+    marginBottom: 4,
+  },
+  orderIdInList: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 3,
+  },
+  orderStatusInList: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#28a745',
+    marginBottom: 3,
+  },
+  orderItemsInList: {
+    fontSize: 12,
+    color: '#666',
     marginBottom: 4,
   },
   notificationTime: {

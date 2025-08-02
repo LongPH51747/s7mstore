@@ -10,6 +10,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  AppState,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -18,6 +19,7 @@ import CustomNavBottom from '../components/CustomNavBottom';
 import axios from 'axios';
 import { API_ENDPOINTS, API_HEADERS } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
+import PushNotification from 'react-native-push-notification';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -25,6 +27,8 @@ const ProfileScreen = () => {
   const [user, setUser] = useState(null); // State để lưu thông tin người dùng
   const [loading, setLoading] = useState(true); // State để quản lý loading
   const { getUnreadCount } = useNotification();
+
+
   
 
 
@@ -265,9 +269,9 @@ const ProfileScreen = () => {
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Thông Báo</Text>
-                <TouchableOpacity 
-          style={styles.itemRow} 
-          onPress={() => navigation.navigate('NotificationScreen')}
+        <TouchableOpacity
+        style={styles.itemRow}
+        onPress={() => navigation.navigate('NotificationScreen')}
         >
           <View style={styles.notificationIconContainer}>
             <Feather name="bell" size={20} color="black" />
@@ -340,9 +344,6 @@ const ProfileScreen = () => {
           <Feather name="log-out" size={20} color="red" />
           <Text style={styles.logoutButtonText}>Đăng xuất</Text>
         </TouchableOpacity>
-
-
-
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -577,6 +578,201 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  // ✅ DEBUG TEST BUTTON STYLES
+  debugSection: {
+    marginVertical: 20,
+    padding: 15,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  debugTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#333',
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+  },
+  testButton2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2196F3',
+    padding: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+  },
+  fireTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF4500',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  directTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8E24AA',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#9C27B0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  diagnosticsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#607D8B',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    justifyContent: 'center',
+  },
+  simpleTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF9800',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFA726',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  permissionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#66BB6A',
+  },
+  requestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF5722',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF7043',
+  },
+  navTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007bff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#6c757d',
+  },
+  onceTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B', // A different color for one-time test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF8E8E',
+  },
+  intervalTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF4136', // A different color for interval test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF6347',
+  },
+  backgroundTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007bff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#6c757d',
+  },
+  statusTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#66BB6A',
+  },
+  abortTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B', // A different color for abort test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF8E8E',
+  },
+  dedupTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B', // A different color for dedup test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF8E8E',
   },
 
 });
