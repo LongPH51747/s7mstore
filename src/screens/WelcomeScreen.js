@@ -28,6 +28,10 @@ const WelcomeScreen = ({ navigation }) => {
       }
     };
     checkAutoLogin();
+    const timer = setTimeout(() => {
+      navigation.replace('LoginScreen');
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

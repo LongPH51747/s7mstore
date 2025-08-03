@@ -79,16 +79,14 @@ const AppNavigator = () => {
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="OrderScreen" component={OrderScreen} />
         <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
-        <Stack.Screen name="RatingScreen" component={RatingScreen} />
-        <Stack.Screen name="ProfileScreen" component={ProfileScreen}/>
-        <Stack.Screen name="ChatScreen" component={UserChatScreen}/>
-        {/* Các màn hình bổ sung */}
-        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
-        <Stack.Screen name="OtpScreen" component={OtpScreen} />
-        <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
-        <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
-        <Stack.Screen name="RefundReturnScreen" component={RefundReturnScreen} />
-        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="Rating" component={RatingScreen} />
+        <Stack.Screen name='ProfileScreen' component={ProfileScreen}/>
+        <Stack.Screen name='ChatScreen' component={UserChatScreen}/>
+        <Stack.Screen name='ChangePass' component={ChangePasswordScreen}/>
+        <Stack.Screen name='ForgotPass' component={ForgotPasswordScreen}/>
+        <Stack.Screen name='ResetPasswordScreen' component={ResetPasswordScreen}/>
+        <Stack.Screen name='Otp' component={OtpScreen}/>
+        <Stack.Screen name='EditProfileScreen' component={EditProfileScreen}/>
       </Stack.Navigator>
 
   );

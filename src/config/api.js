@@ -19,8 +19,8 @@ export const API_ENDPOINTS = {
     GET_ALL_LIMIT: `${API_BASE_URL}/api/products/get-all-products-limit`,
     GET_BY_ID: (id) => `${API_BASE_URL}/api/products/get-product/${id}`,
     GET_BY_ID_FULL: (id) => `${API_BASE_URL}/api/products/get-products-by-id/id/${id}`,
-    GET_BY_CATEGORY: (category) => `${API_BASE_URL}/api/products/get-products-by-category/${category}`,
-    SEARCH: `${API_BASE_URL}/api/products/search-product`,
+    GET_BY_CATEGORY: (category) => `${API_BASE_URL}/api/products/getProductByCate?cateId=${category}`,
+
   },
   
   // Category endpoints
@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
   USERS: {
     GET_PROFILE: `${API_BASE_URL}/api/users/profile`,
     UPDATE_PROFILE: `${API_BASE_URL}/api/users/update-profile`,
+    UPDATE_INFO: (id) => `${API_BASE_URL}/api/users/update-info-user/id/${id}`,
     GET_BY_ID: (id) => `${API_BASE_URL}/api/users/get-by-id/id/${id}`,
   },
 
@@ -76,13 +77,20 @@ export const API_ENDPOINTS = {
   REVIEWS: {
     GET_REVIEW_BY_PRODUCT_ID: (id_product) => `${API_BASE_URL}/api/review/get-review-by-id/id_product/${id_product}`,
   },
-};
+
+  OTP: {
+    SEND_OTP: `${API_BASE_URL}/api/other/check-email/send-change-pass`,
+    FORGOT_PASS_OUT_APP: `${API_BASE_URL}/api/auth/forget-password`},
+  MOMO:{
+    CREATE_PAY: () => `${API_BASE_URL}/api/momo/create-payment`
+  },
+}
 
 // API Headers
 export const API_HEADERS = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-};
+}
 
 // API Timeout
 export const API_TIMEOUT = 10000; // 10 seconds 

@@ -5,6 +5,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '../firebase/firebaseConfig';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const numColumns = 2;
 const { width } = Dimensions.get('window');
@@ -40,10 +42,37 @@ const HomeScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    if (page > 1) {
+    if (page > 1 && selectedCategory === 'All') {
       fetchMoreProducts();
     }
-  }, [page]);
+  }, [page, selectedCategory]);
+
+  // Add useFocusEffect to refresh data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      // Check if returning from payment success
+      const checkReturningFromPaymentSuccess = async () => {
+        try {
+          const returningFromPaymentSuccess = await AsyncStorage.getItem('returningFromPaymentSuccess');
+          if (returningFromPaymentSuccess === 'true') {
+            console.log('HomeScreen: Returning from payment success, refreshing data');
+            // Clear the flag
+            await AsyncStorage.removeItem('returningFromPaymentSuccess');
+            // Reset pagination state
+            setPage(1);
+            setHasMore(true);
+            setProducts([]);
+            // Refresh data to get updated information
+            fetchData();
+          }
+        } catch (error) {
+          console.error('Error checking returning from payment success flag:', error);
+        }
+      };
+      
+      checkReturningFromPaymentSuccess();
+    }, [])
+  );
 
   const fetchProductsByCategory = async (categoryId) => {
     try {
@@ -53,6 +82,7 @@ const HomeScreen = ({ navigation }) => {
       const productsController = new AbortController();
       const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
       
+      // Category API doesn't support pagination - it returns all products for the category
       const url = `${API_ENDPOINTS.PRODUCTS.GET_BY_CATEGORY(categoryId)}`;
       console.log('Category API URL:', url);
       
@@ -72,14 +102,16 @@ const HomeScreen = ({ navigation }) => {
       } catch (e) {
         console.error('Error parsing JSON from category response:', e);
         setProducts([]);
+        setHasMore(false);
         setLoading(false);
         return;
       }
 
+      // Category API returns an array of products (no pagination)
       if (responseData && Array.isArray(responseData)) {
         console.log('Number of products for category:', responseData.length);
         setProducts(responseData);
-        setHasMore(false); // No pagination for category filter
+        setHasMore(false); // No pagination for category products
         setPage(1);
       } else {
         console.log('No products found for category or invalid data format');
@@ -95,7 +127,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const fetchMoreProducts = async () => {
-      try {
+    try {
       setLoadingMore(true);
       console.log('Fetching more products - Page:', page);
       
@@ -125,7 +157,6 @@ const HomeScreen = ({ navigation }) => {
         return;
       }
 
-      // console.log('Parsed API Response for page', page, ':', responseData);
       console.log('Type of responseData:', typeof responseData);
       console.log('Is responseData truthy?', !!responseData);
       console.log('Does responseData have data property?', 'data' in responseData);
@@ -137,21 +168,36 @@ const HomeScreen = ({ navigation }) => {
 
       if (responseData && responseData.data && Array.isArray(responseData.data)) {
         console.log('Number of products received:', responseData.data.length);
-        setProducts(prevProducts => {
-          const newProducts = [...prevProducts, ...responseData.data];
-          console.log('Total products after update:', newProducts.length);
-          return newProducts;
-        });
         
-        setTotalPages(responseData.totalPages);
-        setHasMore(page < responseData.totalPages);
-        console.log('Has more:', page < responseData.totalPages, 'Total pages:', responseData.totalPages);
+        // Kiểm tra xem có sản phẩm mới không
+        if (responseData.data.length > 0) {
+          setProducts(prevProducts => {
+            const newProducts = [...prevProducts, ...responseData.data];
+            console.log('Total products after update:', newProducts.length);
+            return newProducts;
+          });
+          
+          setTotalPages(responseData.totalPages || 1);
+          setHasMore(page < (responseData.totalPages || 1));
+          console.log('Has more:', page < (responseData.totalPages || 1), 'Total pages:', responseData.totalPages || 1);
+        } else {
+          // Không có sản phẩm mới, dừng pagination
+          console.log('No new products received, stopping pagination');
+          setHasMore(false);
+        }
       } else {
         console.log('Condition failed: No products received or invalid data format');
         setHasMore(false);
       }
     } catch (error) {
       console.error('Error fetching more products:', error);
+      // Thử lại sau 3 giây nếu có lỗi
+      setTimeout(() => {
+        if (hasMore && !loadingMore) {
+          console.log('Retrying to fetch more products...');
+          setPage(prevPage => prevPage);
+        }
+      }, 3000);
     } finally {
       setLoadingMore(false);
     }
@@ -160,10 +206,15 @@ const HomeScreen = ({ navigation }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      console.log('Initial fetch - Page:', 1);
+      console.log('HomeScreen: Fetching fresh data - Page:', 1);
       
-        const productsController = new AbortController();
-        const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
+      // Reset pagination state when fetching fresh data
+      setPage(1);
+      setHasMore(true);
+      setProducts([]);
+      
+      const productsController = new AbortController();
+      const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
         
       const url = `${API_ENDPOINTS.PRODUCTS.GET_ALL_LIMIT}?page=1&limit=${PRODUCTS_PER_PAGE}`;
       console.log('Initial API URL:', url);
@@ -189,7 +240,6 @@ const HomeScreen = ({ navigation }) => {
         return;
       }
 
-      // console.log('Parsed Initial API Response:', responseData);
       console.log('Type of responseData:', typeof responseData);
       console.log('Is responseData truthy?', !!responseData);
       console.log('Does responseData have data property?', 'data' in responseData);
@@ -202,9 +252,9 @@ const HomeScreen = ({ navigation }) => {
       if (responseData && responseData.data && Array.isArray(responseData.data)) {
         console.log('Initial number of products:', responseData.data.length);
         setProducts(responseData.data);
-        setTotalPages(responseData.totalPages);
-        setHasMore(1 < responseData.totalPages);
-        console.log('Initial has more:', 1 < responseData.totalPages, 'Total pages:', responseData.totalPages);
+        setTotalPages(responseData.totalPages || 1);
+        setHasMore(1 < (responseData.totalPages || 1));
+        console.log('Initial has more:', 1 < (responseData.totalPages || 1), 'Total pages:', responseData.totalPages || 1);
         } else {
         console.log('Condition failed: No initial products or invalid data format');
           setProducts([]);
@@ -298,15 +348,12 @@ const HomeScreen = ({ navigation }) => {
    */
   const filteredProducts = selectedCategory === 'All'
     ? products
-    : products.filter(product =>
-        product.category_id === selectedCategory
-      );
+    : products; // When category is selected, products array already contains category-specific products
 
   // Add error handling for filtering
   useEffect(() => {
     if (selectedCategory !== 'All') {
-      console.log('Filtering products for category:', selectedCategory);
-      console.log('Filtered products count:', filteredProducts.length);
+      console.log('Category products count:', products.length);
     }
   }, [selectedCategory, products]);
 
@@ -430,6 +477,10 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => {
                 if (selectedCategory !== 'All') {
                   setSelectedCategory('All');
+                  // Reset pagination state for all products
+                  setPage(1);
+                  setHasMore(true);
+                  setProducts([]);
                   fetchData(); // Reset to all products
                 }
               }}
@@ -455,6 +506,7 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => {
                 if (selectedCategory !== category._id) {
                   setSelectedCategory(category._id);
+                  // Category products don't use pagination, so just fetch all products
                   fetchProductsByCategory(category._id);
                 }
               }}
@@ -497,9 +549,12 @@ const HomeScreen = ({ navigation }) => {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           onEndReached={loadMoreProducts}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.1}
           ListFooterComponent={renderFooter}
           scrollEnabled={false}
+          removeClippedSubviews={false}
+          maxToRenderPerBatch={10}
+          windowSize={10}
         />
       </ScrollView>
       {/* Bottom Navigation: các icon điều hướng nhanh */}

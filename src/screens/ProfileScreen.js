@@ -16,7 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import CustomNavBottom from '../components/CustomNavBottom';
 import axios from 'axios';
-import { API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -191,14 +191,30 @@ const ProfileScreen = () => {
         </View>
 
        
-        <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfile', { user })}>
+        <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfileScreen', { user })}>
           <Image
             style={styles.avatar}
-            source={{ uri: user.avatar || 'https://via.placeholder.com/150' }} 
+            source={(() => {
+              const avatarImg = user.avatar;
+              if (typeof avatarImg === 'string' && avatarImg.startsWith('uploads_avatar/')) {
+                return { uri: `${API_BASE_URL}/${avatarImg}` };
+              } else if (typeof avatarImg === 'string' && (avatarImg.startsWith('http://') || avatarImg.startsWith('https://') || avatarImg.startsWith('data:image'))) {
+                return { uri: avatarImg };
+              } else {
+                return { uri: 'https://via.placeholder.com/150' };
+              }
+            })()}
+            onError={(e) => {
+              console.error('Avatar image loading error:', e.nativeEvent.error, 'for URL:', user.avatar);
+              e.target.setNativeProps({
+                source: { uri: 'https://via.placeholder.com/150' }
+              });
+            }}
           />
           <View style={styles.profileTextContainer}>
          
             <Text style={styles.name}>{user.displayName || user.fullname || 'Tên người dùng'}</Text> 
+            <Text>{user.username ? `@${user.username}` : ''}</Text>
             <Text>{user.email || user.phoneNumber || 'Không có email/SĐT'}</Text> 
           </View>
           <Ionicons name="chevron-forward-outline" size={24} color="#555" />
@@ -277,7 +293,7 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         
           {user.phoneNumber && ( // Kiểm tra xem user có phoneNumber không
-            <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('ChangePasswordScreen')}>
+            <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('ChangePass')}>
               <Feather name="lock" size={20} color="black" />
               <Text style={styles.gridText}>Đổi mật khẩu</Text>
             </TouchableOpacity>

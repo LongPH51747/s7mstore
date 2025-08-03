@@ -11,7 +11,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
@@ -57,6 +57,92 @@ const ProductDetailScreen = () => {
     }
   }, [navigation]);
 
+  // Function to fetch fresh product data from server
+  const fetchProductData = useCallback(async (productId) => {
+    if (!productId) return;
+    
+    console.log('ProductDetailScreen: Fetching fresh product data for ID:', productId);
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+      
+      const response = await fetch(API_ENDPOINTS.PRODUCTS.GET_BY_ID_FULL(productId), {
+        headers: API_HEADERS,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch product data');
+      }
+      
+      const data = await response.json();
+      if (data && data.product) {
+        console.log('ProductDetailScreen: Received updated product data:', data.product.product_name);
+        setProduct(data.product);
+        
+        // Tự động chọn biến thể đầu tiên có sẵn hàng
+        if (data.product.product_variant && data.product.product_variant.length > 0) {
+          const availableVariant = data.product.product_variant.find(variant => {
+            const stockQuantity = variant.variant_stock || variant.variant_quantity || variant.stock || variant.quantity || variant.inventory || 0;
+            return stockQuantity > 0;
+          });
+          
+          if (availableVariant) {
+            setSelectedVariant(availableVariant);
+            
+            // Cập nhật ảnh hiển thị cho biến thể được chọn
+            if (availableVariant.variant_image_url) {
+              if (typeof availableVariant.variant_image_url === 'string' && availableVariant.variant_image_url.startsWith('/uploads_product/')) {
+                setCurrentDisplayImage(`${API_BASE_URL}${availableVariant.variant_image_url}`);
+              } else {
+                setCurrentDisplayImage(availableVariant.variant_image_url);
+              }
+            } else if (availableVariant.variant_image_base64 && availableVariant.variant_image_type) {
+              setCurrentDisplayImage(`data:${availableVariant.variant_image_type};base64,${availableVariant.variant_image_base64}`);
+            } else {
+              // Nếu biến thể không có ảnh riêng, sử dụng ảnh sản phẩm chính
+              if (data.product.product_image) {
+                if (typeof data.product.product_image === 'string' && data.product.product_image.startsWith('/uploads_product/')) {
+                  setCurrentDisplayImage(`${API_BASE_URL}${data.product.product_image}`);
+                } else {
+                  setCurrentDisplayImage(data.product.product_image);
+                }
+              }
+            }
+          } else {
+            setSelectedVariant(null);
+            // Ảnh lớn mặc định là ảnh sản phẩm chính
+            if (data.product.product_image) {
+              if (typeof data.product.product_image === 'string' && data.product.product_image.startsWith('/uploads_product/')) {
+                setCurrentDisplayImage(`${API_BASE_URL}${data.product.product_image}`);
+              } else {
+                setCurrentDisplayImage(data.product.product_image);
+              }
+            }
+          }
+        } else {
+          setSelectedVariant(null);
+          // Ảnh lớn mặc định là ảnh sản phẩm chính
+          if (data.product.product_image) {
+            if (typeof data.product.product_image === 'string' && data.product.product_image.startsWith('/uploads_product/')) {
+              setCurrentDisplayImage(`${API_BASE_URL}${data.product.product_image}`);
+            } else {
+              setCurrentDisplayImage(data.product.product_image);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching product data:', error);
+      if (error.name === 'AbortError') {
+        console.log('ProductDetailScreen: Request timeout, will retry later');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     getUserInfo();
     const unsubscribe = navigation.addListener('focus', () => {
@@ -64,6 +150,55 @@ const ProductDetailScreen = () => {
     });
     return unsubscribe;
   }, [getUserInfo, navigation]);
+
+  // Add useFocusEffect to refresh product data when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.product?._id) {
+        // Refresh product data from server when screen is focused
+        fetchProductData(route.params.product._id);
+        
+        // Check if an order was created recently
+        const checkOrderCreated = async () => {
+          try {
+            const orderCreatedFlag = await AsyncStorage.getItem('orderCreated');
+            if (orderCreatedFlag === 'true') {
+              console.log('ProductDetailScreen: Order created flag found, refreshing product data');
+              // Clear the flag
+              await AsyncStorage.removeItem('orderCreated');
+              // Refresh product data to get updated stock
+              fetchProductData(route.params.product._id);
+            }
+            
+            // Check if returning from payment success
+            const returningFromPaymentSuccess = await AsyncStorage.getItem('returningFromPaymentSuccess');
+            if (returningFromPaymentSuccess === 'true') {
+              console.log('ProductDetailScreen: Returning from payment success, refreshing product data');
+              // Clear the flag
+              await AsyncStorage.removeItem('returningFromPaymentSuccess');
+              // Refresh product data to get updated stock
+              fetchProductData(route.params.product._id);
+              
+              // Reset quantity to 1 after successful payment
+              setQuantity(1);
+              
+              // Show success message
+              Alert.alert(
+                'Thành công',
+                'Đơn hàng đã được thanh toán thành công! Sản phẩm đã được cập nhật.',
+                [{ text: 'OK' }],
+                { cancelable: true }
+              );
+            }
+          } catch (error) {
+            console.error('Error checking order created flag:', error);
+          }
+        };
+        
+        checkOrderCreated();
+      }
+    }, [route.params?.product?._id, fetchProductData])
+  );
 
   useEffect(() => {
     if (route.params?.product) {
@@ -274,7 +409,33 @@ const ProductDetailScreen = () => {
       }
 
       const responseData = await response.json();
-      Alert.alert('Thành công', `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
+      
+      // Hiển thị dialog cho người dùng chọn
+      Alert.alert(
+        'Thành công',
+        `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`,
+        [
+          {
+            text: 'Ở lại trang sản phẩm',
+            style: 'cancel',
+            onPress: () => {
+              // Reset quantity về 1
+              setQuantity(1);
+            }
+          },
+          {
+            text: 'Đi đến giỏ hàng',
+            style: 'default',
+            onPress: () => {
+              // Reset quantity về 1
+              setQuantity(1);
+              // Điều hướng đến giỏ hàng
+              navigation.navigate('CartScreen');
+            }
+          }
+        ],
+        { cancelable: true }
+      );
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -572,12 +733,23 @@ const ProductDetailScreen = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   {user?.avatar && (
                       <Image
-                        source={{
-                          uri: typeof user.avatar === 'string' && user.avatar.startsWith('http')
-                            ? user.avatar
-                            : `${API_BASE_URL}/${(user.avatar || '').replace(/\\/g, '/')}`
-                        }}
+                        source={(() => {
+                          const avatarImg = user.avatar;
+                          if (typeof avatarImg === 'string' && avatarImg.startsWith('uploads_avatar/')) {
+                            return { uri: `${API_BASE_URL}/${avatarImg}` };
+                          } else if (typeof avatarImg === 'string' && (avatarImg.startsWith('http://') || avatarImg.startsWith('https://') || avatarImg.startsWith('data:image'))) {
+                            return { uri: avatarImg };
+                          } else {
+                            return { uri: 'https://via.placeholder.com/150' };
+                          }
+                        })()}
                         style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }}
+                        onError={(e) => {
+                          console.error('Review avatar image loading error:', e.nativeEvent.error, 'for URL:', user.avatar);
+                          e.target.setNativeProps({
+                            source: { uri: 'https://via.placeholder.com/150' }
+                          });
+                        }}
                       />
                   )}
                   <View style={{ flex: 1 }}>
