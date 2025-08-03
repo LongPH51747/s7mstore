@@ -246,7 +246,7 @@ const OrdersScreen = () => {
                     >
                       <Text style={styles.buttonPrimaryText}>Xem chi tiết</Text>
                     </TouchableOpacity>
-                    {order.status === 'Giao thành công' && (
+                    {order.status === 'Giao thành công' && order.orderItems.some(item => !item.is_review) && (
                       <>
                         <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Rating', { order })}>
                           <Text style={styles.buttonSecondaryText}>Đánh giá</Text>
