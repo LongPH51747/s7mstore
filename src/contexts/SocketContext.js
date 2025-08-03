@@ -682,6 +682,7 @@ export const SocketProvider = ({ children }) => {
         handleLocalLogout, // Export để component có thể gọi đăng xuất
         loadAuthDataFromAsyncStorage // Export để component có thể gọi tải lại auth
     };
+    
 
     return (
         <SocketContext.Provider value={value}>

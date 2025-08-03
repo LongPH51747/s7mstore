@@ -45,6 +45,55 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [page]);
 
+  const fetchProductsByCategory = async (categoryId) => {
+    try {
+      setLoading(true);
+      console.log('Fetching products for category:', categoryId);
+      
+      const productsController = new AbortController();
+      const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
+      
+      const url = `${API_ENDPOINTS.PRODUCTS.GET_BY_CATEGORY(categoryId)}`;
+      console.log('Category API URL:', url);
+      
+      const productsResponse = await fetch(url, {
+        headers: API_HEADERS,
+        signal: productsController.signal,
+      });
+      clearTimeout(productsTimeout);
+      
+      if (!productsResponse.ok) {
+        throw new Error(`Failed to fetch products by category: ${productsResponse.status}`);
+      }
+      
+      let responseData;
+      try {
+        responseData = await productsResponse.json();
+      } catch (e) {
+        console.error('Error parsing JSON from category response:', e);
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      if (responseData && Array.isArray(responseData)) {
+        console.log('Number of products for category:', responseData.length);
+        setProducts(responseData);
+        setHasMore(false); // No pagination for category filter
+        setPage(1);
+      } else {
+        console.log('No products found for category or invalid data format');
+        setProducts([]);
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error fetching products by category:', error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchMoreProducts = async () => {
       try {
       setLoadingMore(true);
@@ -250,8 +299,7 @@ const HomeScreen = ({ navigation }) => {
   const filteredProducts = selectedCategory === 'All'
     ? products
     : products.filter(product =>
-        Array.isArray(product.product_category) &&
-        product.product_category.includes(selectedCategory)
+        product.category_id === selectedCategory
       );
 
   // Add error handling for filtering
@@ -264,11 +312,11 @@ const HomeScreen = ({ navigation }) => {
 
 
   const loadMoreProducts = () => {
-    if (!loadingMore && hasMore && page < totalPages) {
+    if (selectedCategory === 'All' && !loadingMore && hasMore && page < totalPages) {
       console.log('Loading more products - Current page:', page, 'Total pages:', totalPages);
       setPage(prevPage => prevPage + 1);
     } else {
-      console.log('Not loading more - Loading:', loadingMore, 'Has more:', hasMore, 'Page:', page, 'Total pages:', totalPages);
+      console.log('Not loading more - Category:', selectedCategory, 'Loading:', loadingMore, 'Has more:', hasMore, 'Page:', page, 'Total pages:', totalPages);
     }
   };
 
@@ -382,6 +430,7 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => {
                 if (selectedCategory !== 'All') {
                   setSelectedCategory('All');
+                  fetchData(); // Reset to all products
                 }
               }}
             >
@@ -397,18 +446,19 @@ const HomeScreen = ({ navigation }) => {
               ]}>Tất cả</Text>
             </TouchableOpacity>
             {categories.map((category) => (
-              <TouchableOpacity
-                key={category._id}
-                style={[
-                  styles.categoryTab,
-                  selectedCategory === category._id && styles.selectedCategoryTab
-                ]}
-                onPress={() => {
-                  if (selectedCategory !== category._id) {
-                    setSelectedCategory(category._id);
-                  }
-                }}
-              >
+                          <TouchableOpacity
+              key={category._id}
+              style={[
+                styles.categoryTab,
+                selectedCategory === category._id && styles.selectedCategoryTab
+              ]}
+              onPress={() => {
+                if (selectedCategory !== category._id) {
+                  setSelectedCategory(category._id);
+                  fetchProductsByCategory(category._id);
+                }
+              }}
+            >
                 <View style={styles.categoryImageContainer}>
                   <Image
                     source={(() => {
@@ -523,7 +573,7 @@ const styles = StyleSheet.create({
   },
   image: { width: '100%', height: 200, borderRadius: 8 },
   price: { fontWeight: 'bold', marginTop: 8,color: '#E53935' },
-  name: { color: '#', fontSize: 16, marginTop: 2, marginBottom: 8,fontWeight: 'bold'  },
+  name: { color: '#888', fontSize: 16, marginTop: 2, marginBottom: 8,fontWeight: 'bold'  },
   heart: { position: 'absolute', top: 10, right: 10 },
   bottomNav: {
     flexDirection: 'row',
