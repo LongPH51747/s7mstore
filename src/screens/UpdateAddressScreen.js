@@ -37,6 +37,7 @@ const UpdateAddressScreen = () => {
   const [wardName, setWardName] = useState('');
   const [latitude, setLatitude] = useState(address?.latitude || 21.028511);
   const [longitude, setLongitude] = useState(address?.longitude || 105.804817);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     if (address) {
@@ -154,8 +155,19 @@ const UpdateAddressScreen = () => {
     if (route.params?.selectedLat && route.params?.selectedLng) {
       setLatitude(route.params.selectedLat);
       setLongitude(route.params.selectedLng);
+      setLocationLoading(false);
+      console.log('Tọa độ mới được cập nhật:', route.params.selectedLat, route.params.selectedLng);
     }
   }, [route.params?.selectedLat, route.params?.selectedLng]);
+
+  // Reset loading state khi focus lại màn hình
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setLocationLoading(false);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const validate = () => {
     if (!fullName.trim() || !phoneNumber.trim() || !addressDetail.trim() || !selectedProvince || !selectedWard) {
@@ -164,6 +176,11 @@ const UpdateAddressScreen = () => {
     }
     if (!/^0\d{9}$/.test(phoneNumber.trim())) {
       Alert.alert('Lỗi', 'Số điện thoại không hợp lệ.');
+      return false;
+    }
+    // Kiểm tra tọa độ có hợp lệ không
+    if (isNaN(latitude) || isNaN(longitude) || latitude === 0 || longitude === 0) {
+      Alert.alert('Lỗi', 'Tọa độ không hợp lệ. Vui lòng chọn vị trí trên bản đồ.');
       return false;
     }
     return true;
@@ -190,9 +207,11 @@ const UpdateAddressScreen = () => {
         addressDetail: fullAddress,
         phone_number: phoneNumber.trim(),
         is_default: isDefault,
-        latitude,
-        longitude
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude)
       };
+      
+      console.log('Gửi dữ liệu cập nhật địa chỉ:', body);
 
       const response = await fetch(`${API_ENDPOINTS.ADDRESS.UPDATE(address._id)}`, {
         method: 'PUT',
@@ -358,6 +377,37 @@ const UpdateAddressScreen = () => {
             value={addressDetail}
             onChangeText={setAddressDetail}
           />
+          {/* Map button */}
+          <TouchableOpacity
+            style={[styles.mapButton, locationLoading && styles.mapButtonDisabled]}
+            onPress={() => {
+              // Kiểm tra xem đã chọn tỉnh và xã chưa
+              if (!selectedProvince || !selectedWard) {
+                Alert.alert('Lỗi', 'Vui lòng chọn Tỉnh/Thành phố và Xã/Phường trước khi chọn vị trí trên bản đồ.');
+                return;
+              }
+              setLocationLoading(true);
+              navigation.navigate('MapScreen', { 
+                latitude, 
+                longitude, 
+                fromScreen: 'UpdateAddress',
+                skipGeocode: true,
+              });
+            }}
+            disabled={locationLoading}
+          >
+            {locationLoading ? (
+              <ActivityIndicator size="small" color="#1A73E8" style={{ marginRight: 8 }} />
+            ) : (
+              <Text style={styles.mapButtonText}>📍 Chọn vị trí trên bản đồ</Text>
+            )}
+          </TouchableOpacity>
+          {/* Hiển thị tọa độ hiện tại nếu có */}
+          {(latitude !== 21.028511 || longitude !== 105.804817) && (
+            <Text style={styles.coordinatesText}>
+              Tọa độ: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+            </Text>
+          )}
         </View>
         {/* Full name */}
         <View style={styles.formGroup}>
@@ -386,24 +436,13 @@ const UpdateAddressScreen = () => {
           <Checkbox
             status={isDefault ? 'checked' : 'unchecked'}
             onPress={() => setIsDefault(!isDefault)}
+            color="#1A73E8"
           />
           <Text style={styles.checkboxLabel}>Đặt làm địa chỉ mặc định</Text>
         </View>
         {/* Save button */}
         <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate} disabled={saving}>
           <Text style={styles.saveBtnText}>{saving ? 'Đang cập nhật...' : 'Cập nhật địa chỉ'}</Text>
-        </TouchableOpacity>
-        {/* Map button */}
-        <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: '#2196F3', marginBottom: 10 }]}
-          onPress={() => navigation.navigate('MapScreen', { 
-            latitude, 
-            longitude, 
-            fromScreen: 'UpdateAddress',
-            skipGeocode: true,
-          })}
-        >
-          <Text style={styles.saveBtnText}>Chọn vị trí trên bản đồ</Text>
         </TouchableOpacity>
         </ScrollView>
       )}
@@ -449,7 +488,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   formGroup: {
-    marginBottom: 18,
+    marginBottom: 20,
     marginHorizontal: 18,
   },
   label: {
@@ -486,6 +525,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 1,
+    color: '#333',
   },
   errorText: {
     color: 'red',
@@ -498,8 +538,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 18,
+    marginTop: 24,
     marginHorizontal: 18,
+    marginBottom: 20,
     elevation: 2,
     shadowColor: '#1A73E8',
     shadowOffset: { width: 0, height: 2 },
@@ -523,6 +564,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8,
     color: '#444',
+  },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E3E4E5',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 1,
+  },
+  mapIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+    tintColor: '#1A73E8',
+  },
+  mapButtonText: {
+    fontSize: 14,
+    color: '#1A73E8',
+    fontWeight: '600',
+  },
+  mapButtonDisabled: {
+    opacity: 0.6,
+  },
+  coordinatesText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });
 
