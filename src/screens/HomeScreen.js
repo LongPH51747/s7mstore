@@ -36,9 +36,11 @@ const HomeScreen = ({ navigation }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalPages, setTotalPages] = useState(0);
   const [activeTab, setActiveTab] = useState('Home');
+  const [userData, setUserData] = useState(null);
 
   useEffect(() => {
     fetchData();
+    fetchUserData();
   }, []);
 
   useEffect(() => {
@@ -73,6 +75,23 @@ const HomeScreen = ({ navigation }) => {
       checkReturningFromPaymentSuccess();
     }, [])
   );
+
+  const fetchUserData = async () => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      if (userId) {
+        const response = await fetch(API_ENDPOINTS.USERS.GET_BY_ID(userId), {
+          headers: API_HEADERS,
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setUserData(userData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchProductsByCategory = async (categoryId) => {
     try {
@@ -393,25 +412,27 @@ const HomeScreen = ({ navigation }) => {
         style={styles.card}
         onPress={() => navigation.navigate('ProductDetailScreen', { product: item })}
       >
-        <Image 
-          source={productImageSource} 
-          style={styles.image} 
-          resizeMode="cover"
-          onError={(e) => {
-            console.error('Product image loading error:', e.nativeEvent.error, 'for URL:', item.product_image);
-            e.target.setNativeProps({
-              source: require('../assets/errorimg.webp')
-            });
-          }}
-        />
-         <Text style={styles.name} numberOfLines={2}>{item.product_name}</Text>
-        <Text style={styles.price}>{item.product_price?.toLocaleString('vi-VN')}đ</Text>
-       
-        {/* Hiển thị số sản phẩm đã bán */}
-        <Text style={styles.soldText}>Đã bán: {typeof item.product_sold === 'number' ? item.product_sold : 0}</Text>
-        <TouchableOpacity style={styles.heart}>
-          <Text style={styles.heartIcon}>♡</Text>
-        </TouchableOpacity>
+        <View style={styles.cardImageContainer}>
+          <Image 
+            source={productImageSource} 
+            style={styles.image} 
+            resizeMode="cover"
+            onError={(e) => {
+              console.error('Product image loading error:', e.nativeEvent.error, 'for URL:', item.product_image);
+              e.target.setNativeProps({
+                source: require('../assets/errorimg.webp')
+              });
+            }}
+          />
+          <TouchableOpacity style={styles.heartButton}>
+            <Icon name="heart-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.cardContent}>
+          <Text style={styles.name} numberOfLines={2}>{item.product_name}</Text>
+          <Text style={styles.price}>{item.product_price?.toLocaleString('vi-VN')}đ</Text>
+          <Text style={styles.soldText}>Đã bán: {typeof item.product_sold === 'number' ? item.product_sold : 0}</Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -431,14 +452,33 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       {/* Header: logo và ô tìm kiếm */}
       <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Hello, Welcome 👋</Text>
+          <Text style={styles.userName}>{userData?.full_name || 'User'}</Text>
+        </View>
+        <TouchableOpacity style={styles.avatarContainer}>
+          <Image
+            source={userData?.avatar ? { uri: userData.avatar } : require('../assets/errorimg.webp')}
+            style={styles.avatar}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Search bar below header */}
+      <View style={styles.searchSection}>
         <TouchableOpacity 
           style={styles.searchContainer}
           onPress={() => navigation.navigate('SearchScreen')}
         >
-          <Text style={styles.searchPlaceholder}>🔍 Tìm kiếm sản phẩm...</Text>
+          <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+          <Text style={styles.searchPlaceholder}>Tìm kiếm sản phẩm...</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.filterButton}>
+          <Icon name="options-outline" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
-      <ScrollView>
+
+      <ScrollView style={styles.scrollView}>
         {/* Banner quảng cáo */}
         {banners.length > 0 && banners[bannerIndex] && (
           <View style={styles.bannerImgWrap}>
@@ -557,32 +597,44 @@ const HomeScreen = ({ navigation }) => {
           windowSize={10}
         />
       </ScrollView>
-      {/* Bottom Navigation: các icon điều hướng nhanh */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Home');
-          navigation.navigate('HomeScreen');
-        }}>
-          <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color="#000" />
+      
+            {/* Floating Bottom Navigation */}
+      <View style={styles.floatingBottomNav}>
+        <TouchableOpacity 
+          style={[styles.navButton, activeTab === 'Home' && styles.activeNavButton]}
+          onPress={() => {
+            setActiveTab('Home');
+            navigation.navigate('HomeScreen');
+          }}
+        >
+          <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color={activeTab === 'Home' ? '#E53935' : '#fff'} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Search');
-          navigation.navigate('SearchScreen');
-        }}>
-          <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#000" />
+        <TouchableOpacity 
+          style={[styles.navButton, activeTab === 'Search' && styles.activeNavButton]}
+          onPress={() => {
+            setActiveTab('Search');
+            navigation.navigate('SearchScreen');
+          }}
+        >
+          <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Cart');
-          navigation.navigate('CartScreen');
-        }}>
-          <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
+        <TouchableOpacity 
+          style={[styles.navButton, activeTab === 'Cart' && styles.activeNavButton]}
+          onPress={() => {
+            setActiveTab('Cart');
+            navigation.navigate('CartScreen');
+          }}
+        >
+          <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#fff" />
         </TouchableOpacity>
-       
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Profile');
-          navigation.navigate('ProfileScreen');
-        }}>
-          <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#000" />
+        <TouchableOpacity 
+          style={[styles.navButton, activeTab === 'Profile' && styles.activeNavButton]}
+          onPress={() => {
+            setActiveTab('Profile');
+            navigation.navigate('ProfileScreen');
+          }}
+        >
+          <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#fff" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -590,23 +642,99 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fff' 
+  },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 16, 
+    paddingVertical: 14, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderColor: '#eee' 
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitle: { 
+    fontSize: 16, 
+    color: '#666', 
+    marginBottom: 2 
+  },
+  userName: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    color: '#222' 
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  searchSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginVertical: 12,
+    gap: 12,
+  },
+    searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  filterButton: {
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchPlaceholder: {
+    color: '#666',
+    fontSize: 16,
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
   headerLogo: {
     width: 100,
     height: 40,
   },
-  searchContainer: {
-    flex: 1,
-    marginLeft: 10,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 8,
-  },
-  searchPlaceholder: {
-    color: '#666',
-  },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#222', letterSpacing: 1 },
   headerIcon: { fontSize: 26, color: '#222' },
   tabs: { 
     flexDirection: 'row', 
@@ -616,33 +744,110 @@ const styles = StyleSheet.create({
   },
   tab: { marginRight: 16, color: '#888', fontSize: 16 },
   tabActive: { marginRight: 16, fontWeight: 'bold', color: '#000', fontSize: 16 },
-  list: { padding: 12 },
+  list: { 
+    padding: 12,
+    paddingBottom: 100, // Add space for floating nav
+  },
   card: {
     width: ITEM_WIDTH,
     margin: 6,
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 8,
-    elevation: 2,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  cardImageContainer: {
     position: 'relative',
+    width: '100%',
+    height: 200,
   },
-  image: { width: '100%', height: 200, borderRadius: 8 },
-  price: { fontWeight: 'bold', marginTop: 8,color: '#E53935' },
-  name: { color: '#888', fontSize: 16, marginTop: 2, marginBottom: 8,fontWeight: 'bold'  },
-  heart: { position: 'absolute', top: 10, right: 10 },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  image: { 
+    width: '100%', 
+    height: '100%', 
+    borderRadius: 16,
+  },
+  heartButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardContent: {
     padding: 12,
-    borderTopWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fff',
   },
+  price: { 
+    fontWeight: 'bold', 
+    marginTop: 8,
+    color: '#E53935',
+    fontSize: 16,
+  },
+  name: { 
+    color: '#333', 
+    fontSize: 14, 
+    marginBottom: 8,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  heart: { position: 'absolute', top: 10, right: 10 },
+  floatingBottomNav: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    height: 60,
+    flexDirection: 'row',
+    backgroundColor: '#333',
+    borderRadius: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  navButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 25,
+  },
+  activeNavButton: {
+    backgroundColor: 'transparent',
+  },
+  
+  
   heartIcon: {
     fontSize: 20,
   },
-  bannerImgWrap: { width: '100%', height: 234, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  bannerImg: { width: '95%', height: 234, borderRadius: 12 },
+  bannerImgWrap: { 
+    width: '100%', 
+    height: 234, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: 8 
+  },
+  bannerImg: { 
+    width: '95%', 
+    height: 234, 
+    borderRadius: 12 
+  },
   categoriesContainer: {
     paddingVertical: 16,
     backgroundColor: '#fff',
@@ -653,7 +858,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   categoryTab: {
-    width: 100,
+    width: 70,
     marginRight: 12,
     alignItems: 'center',
     padding: 8,
@@ -666,7 +871,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#666',
     textAlign: 'center',
     marginTop: 4,
@@ -676,8 +881,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   categoryImageContainer: {
-    width: 80,
-    height: 80,
+    width: 50,
+    height: 50,
     borderRadius: 8,
     overflow: 'hidden',
     marginBottom: 8,

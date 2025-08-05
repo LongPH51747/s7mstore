@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://92f8fa709052.ngrok-free.app';
+export const API_BASE_URL = 'https://6bb16771d823.ngrok-free.app';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -7,7 +7,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN_GOOGLE: `${API_BASE_URL}/api/auth/login-google`,
     LOGIN_EMAIL: `${API_BASE_URL}/api/auth/login-email`,
-    REGISTER_EMAIL: `${API_BASE_URL}/api/auth/register-email`,
+   
 
    
     REGISTER: `${API_BASE_URL}/api/auth/register`,

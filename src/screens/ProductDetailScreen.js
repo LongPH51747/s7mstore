@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  SafeAreaView,
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -533,7 +534,8 @@ const ProductDetailScreen = () => {
     : null;
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={{flex:1}}>
+      <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 90}}>
       
 
       {/* 1. Ảnh sản phẩm lớn */}
@@ -609,27 +611,15 @@ const ProductDetailScreen = () => {
                       <Text style={styles.variantCardOverlayText}>Hết hàng</Text>
                     </View>
                   )}
-                  <View style={styles.variantCardInfo}>
-                    <Text style={[
-                      styles.variantCardText,
-                      isSelected && styles.selectedVariantCardText,
-                      isOutOfStock && styles.outOfStockVariantCardText
-                    ]}>
-                      {variant.variant_color} - {variant.variant_size}
-                    </Text>
-                    <Text style={[
-                      styles.variantCardPrice,
-                      isOutOfStock && styles.outOfStockVariantCardText
-                    ]}>
-                      {variant.variant_price?.toLocaleString('vi-VN')}đ
-                    </Text>
+                
+                   
                     <Text style={[
                       styles.variantCardStock,
                       isOutOfStock ? styles.variantCardStockOut : styles.variantCardStockIn
                     ]}>
-                      {isOutOfStock ? 'Hết hàng' : `${stockQuantity} sản phẩm`}
+                      {isOutOfStock ? 'Hết hàng' : `${stockQuantity} `}
                     </Text>
-                  </View>
+               
                 </TouchableOpacity>
               );
             })}
@@ -686,27 +676,6 @@ const ProductDetailScreen = () => {
         <Text style={styles.description}>{product.product_description}</Text>
       </View>
 
-      {/* 4. Nút thêm vào giỏ hàng */}
-      <TouchableOpacity
-        style={[
-          styles.addToCartButtonModern,
-          (!selectedVariant || !isSelectedVariantInStock) && styles.addToCartButtonModernDisabled
-        ]}
-        onPress={handleAddToCart}
-        disabled={!selectedVariant || !isSelectedVariantInStock}
-      >
-        <Text style={[
-          styles.addToCartTextModern,
-          (!selectedVariant || !isSelectedVariantInStock) && styles.addToCartTextModernDisabled
-        ]}>
-          {!selectedVariant ? 'Vui lòng chọn biến thể' :
-            !isSelectedVariantInStock ? 'Hết hàng' :
-            `Thêm vào giỏ hàng - ${selectedVariant.variant_color} ${selectedVariant.variant_size}`}
-        </Text>
-       
-      </TouchableOpacity>
-      {loading && <Loading visible={loading} text="Đang xử lý..." />}
-
       {/* Hiển thị danh sách review */}
       <View style={styles.reviewSection}>
         <Text style={styles.reviewTitle}>Đánh giá sản phẩm</Text>
@@ -756,7 +725,7 @@ const ProductDetailScreen = () => {
                     <Text style={{ fontWeight: 'bold', color: '#333', fontSize: 15 }}>{user?.fullname || 'Người dùng'}</Text>
                     {renderStars(review.review_rate)}
                     {/* Hiển thị tên biến thể dưới sao */}
-                    <Text style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{variantName}</Text>
+                   
                   </View>
                 </View>
                 <Text style={{ color: '#444', marginVertical: 6, fontSize: 14 }}>{review.review_comment}</Text>
@@ -835,6 +804,27 @@ const ProductDetailScreen = () => {
         </View>
       </Modal>
     </ScrollView>
+    <SafeAreaView style={{position:'absolute', left:0, right:0, bottom:0, backgroundColor:'#fff', padding:10, borderTopWidth:1, borderTopColor:'#eee', zIndex:10}}>
+      <TouchableOpacity
+        style={[
+          styles.addToCartButtonModern,
+          (!selectedVariant || !isSelectedVariantInStock) && styles.addToCartButtonModernDisabled
+        ]}
+        onPress={handleAddToCart}
+        disabled={!selectedVariant || !isSelectedVariantInStock}
+      >
+        <Text style={[
+          styles.addToCartTextModern,
+          (!selectedVariant || !isSelectedVariantInStock) && styles.addToCartTextModernDisabled
+        ]}>
+          {!selectedVariant ? 'Vui lòng chọn biến thể' :
+            !isSelectedVariantInStock ? 'Hết hàng' :
+            `Thêm vào giỏ hàng - ${selectedVariant.variant_price}$ `}
+        </Text>
+      </TouchableOpacity>
+    </SafeAreaView>
+    {loading && <Loading visible={loading} text="Đang xử lý..." />}
+  </View>
   );
 };
 
@@ -859,12 +849,16 @@ const styles = StyleSheet.create({
   productImage: {
     width: width,
     height: width * 0.9,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   mainImageWrapper: {
-    width: '100%',
-    height: 369,
+    width: 'auto',
+    height: '350',
     position: 'relative',
-    marginBottom: 10,
+    margin: 20,
+borderRadius: 20,
+    overflow: 'hidden',
   },
   productMainImageShadow: {
     shadowColor: '#000',
@@ -873,7 +867,7 @@ const styles = StyleSheet.create({
 
   
     width: '100%',
-    height: 369,
+    height: 370,
     
     backgroundColor: '#f5f5f5',
     overflow: 'hidden',
@@ -910,7 +904,7 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 20,
-    color: '#2ecc71',
+    color: '#000',
     marginBottom: 16,
   },
   variantInfo: {
@@ -1032,7 +1026,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   addToCartButton: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: '#000',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -1065,7 +1059,9 @@ const styles = StyleSheet.create({
     color: '#e74c3c',
   },
   variantCard: {
-    width: 130,
+    width: 
+    70
+    ,
     marginRight: 16,
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -1093,8 +1089,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   variantCardImage: {
-    width: '100%',
-    height: 110,
+    width: 70,
+    height: 70,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     backgroundColor: '#f5f5f5',
@@ -1131,7 +1127,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     fontWeight: '500',
-    marginBottom: 2,
+   
   },
   variantCardStockIn: {
     color: '#2ecc71',
@@ -1198,7 +1194,7 @@ stockLimitTextModern: {
     marginLeft: 16,
 },
 addToCartButtonModern: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: '#000',
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -1212,7 +1208,7 @@ addToCartButtonModernDisabled: {
 },
 addToCartTextModern: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
 },
 addToCartTextModernDisabled: {

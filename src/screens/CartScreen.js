@@ -5,6 +5,7 @@ import { Checkbox } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { Animated, LayoutAnimation, Platform, UIManager, Modal, Alert } from 'react-native';
 import Loading from '../components/Loading';
+import { PanResponder } from 'react-native';
 
 import { 
   SafeAreaView, 
@@ -37,6 +38,36 @@ const CartScreen = (props) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [variantStocks, setVariantStocks] = useState({}); // Lưu tồn kho theo id_variant
   const [isDeletingItems, setIsDeletingItems] = useState({}); // Thêm state để track các item đang xóa
+  const [swipeX, setSwipeX] = useState(new Animated.Value(0));
+  const swipeWidth = 220;
+  const swipeThreshold = 120;
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 10,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx > 0 && gestureState.dx < swipeWidth - 60) {
+          swipeX.setValue(gestureState.dx);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > swipeThreshold) {
+          Animated.timing(swipeX, {
+            toValue: swipeWidth - 60,
+            duration: 150,
+            useNativeDriver: false,
+          }).start(() => {
+            handleCheckout();
+            setTimeout(() => swipeX.setValue(0), 500);
+          });
+        } else {
+          Animated.spring(swipeX, {
+            toValue: 0,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -637,22 +668,33 @@ const CartScreen = (props) => {
                 <Text style={styles.totalLabel}>{"Total:"}</Text>
                 <Text style={styles.totalValue}>{`${finalTotal?.toLocaleString('vi-VN')}đ`}</Text>
               </View>
-              <TouchableOpacity 
-                style={[
-                  styles.checkoutButton,
-                  Object.values(selectedItems).every(value => !value) && styles.checkoutButtonDisabled
-                ]} 
-                onPress={handleCheckout}
-                disabled={Object.values(selectedItems).every(value => !value)}
-              >
-                <Image 
-                  source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e4f67212-d4f1-4513-bc97-88e16a24676d" }} 
-                  style={styles.checkoutIcon} 
-                />
-                <Text style={styles.checkoutText}>{"Checkout"}</Text>
-              </TouchableOpacity>
+              {/* Swipe to Checkout Button */}
+              <View style={{alignItems:'center', marginTop:8, marginBottom:4}}>
+                <View style={{width:swipeWidth, height:48, backgroundColor:'#e0e0e0', borderRadius:24, justifyContent:'center', overflow:'hidden'}}>
+                  <Animated.View
+                    {...panResponder.panHandlers}
+                    style={{
+                      position:'absolute',
+                      left:swipeX,
+                      top:0,
+                      width:60,
+                      height:48,
+                      backgroundColor:'#090A0A',
+                      borderRadius:24,
+                      justifyContent:'center',
+                      alignItems:'center',
+                      zIndex:2,
+                    }}
+                  >
+                    <Image source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e4f67212-d4f1-4513-bc97-88e16a24676d" }} style={{width:24, height:24}} />
+                  </Animated.View>
+                  <Text style={{textAlign:'center', color:'#222', fontWeight:'bold', fontSize:16, opacity:0.7}}>
+                    Vuốt để thanh toán
+                  </Text>
+                </View>
+              </View>
+              <Toast />
             </View>
-            <Toast />
           </SafeAreaView>
         )
       )}

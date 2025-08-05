@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Image, Platform } from 'react-native';
 import axios from 'axios';
-import { API_BASE_URL, API_HEADERS, API_ENDPOINTS } from '../config/api';
+import { API_BASE_URL, API_HEADERS } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'react-native-image-picker';
@@ -11,7 +11,6 @@ const EditProfileScreen = ({ route }) => {
   const navigation = useNavigation();
   const { user } = route.params || {};
   const [fullname, setFullname] = useState(user?.fullname || '');
-  const [username, setUsername] = useState(user?.username || '');
   const [avatar, setAvatar] = useState(user?.photoURL || user?.avatar || 'https://via.placeholder.com/150');
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
@@ -32,16 +31,6 @@ const EditProfileScreen = ({ route }) => {
   };
 
   const handleSave = async () => {
-    // Validation
-    if (!username.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tên đăng nhập');
-      return;
-    }
-    if (!fullname.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
-      return;
-    }
-
     setLoading(true);
     setLoadingText('Đang cập nhật...');
     try {
@@ -49,35 +38,21 @@ const EditProfileScreen = ({ route }) => {
       const userId = user._id;
       if (!userId) throw new Error('Không tìm thấy ID người dùng');
 
-      // Chuẩn bị dữ liệu để gửi
-      const formData = new FormData();
-      formData.append('fullname', fullname);
-      formData.append('username', username);
-
-      // Xử lý avatar
+      // Nếu avatar là URI local, cảnh báo và không gửi avatar lên server
+      let avatarUrl = avatar;
       if (avatar.startsWith('file://')) {
-        // Avatar là file local, thêm vào FormData
-        const avatarFile = {
-          uri: avatar,
-          type: 'image/jpeg',
-          name: 'avatar.jpg',
-        };
-        formData.append('avatar', avatarFile);
-      } else {
-        // Avatar là URL, gửi như string
-        formData.append('avatar', avatar);
+        Alert.alert('Cảnh báo', 'Ảnh local chưa được upload. Sẽ giữ nguyên ảnh hiện tại.');
+        avatarUrl = user?.photoURL || user?.avatar || 'https://via.placeholder.com/150'; // Giữ avatar cũ
       }
 
       // Gửi request PUT để cập nhật thông tin người dùng
       const response = await axios.put(
-        API_ENDPOINTS.USERS.UPDATE_INFO(userId),
-        formData,
-        { 
-          headers: { 
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}` 
-          } 
-        }
+        `${API_BASE_URL}/api/users/update-by-id/id/${userId}`,
+        {
+          fullname: fullname,
+          avatar: avatarUrl, // Gửi URL avatar hợp lệ (không phải URI local)
+        },
+        { headers: { ...API_HEADERS, Authorization: `Bearer ${token}` } }
       );
 
       // Cập nhật userInfo trong AsyncStorage
@@ -87,9 +62,8 @@ const EditProfileScreen = ({ route }) => {
         const updatedUserInfo = {
           ...userInfo,
           fullname: fullname,
-          username: username,
-          photoURL: response.data?.avatar || avatar,
-          avatar: response.data?.avatar || avatar,
+          photoURL: avatarUrl,
+          avatar: avatarUrl,
           displayName: fullname,
         };
         await AsyncStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
@@ -114,35 +88,12 @@ const EditProfileScreen = ({ route }) => {
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
         <TouchableOpacity onPress={handlePickAvatar}>
           <Image
-            source={(() => {
-              const avatarImg = avatar;
-              if (typeof avatarImg === 'string' && avatarImg.startsWith('uploads_avatar/')) {
-                return { uri: `${API_BASE_URL}/${avatarImg}` };
-              } else if (typeof avatarImg === 'string' && (avatarImg.startsWith('http://') || avatarImg.startsWith('https://') || avatarImg.startsWith('data:image') || avatarImg.startsWith('file://'))) {
-                return { uri: avatarImg };
-              } else {
-                return { uri: 'https://via.placeholder.com/150' };
-              }
-            })()}
+            source={{ uri: avatar }}
             style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 8, borderWidth: 2, borderColor: '#007bff' }}
-            onError={(e) => {
-              console.error('Edit profile avatar image loading error:', e.nativeEvent.error, 'for URL:', avatar);
-              e.target.setNativeProps({
-                source: { uri: 'https://via.placeholder.com/150' }
-              });
-            }}
           />
           <Text style={{ color: '#007bff', textAlign: 'center' }}>Đổi ảnh đại diện</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Username Input */}
-      <TextInput
-        style={styles.input}
-        placeholder="Tên đăng nhập"
-        value={username}
-        onChangeText={setUsername}
-      />
 
       {/* Fullname Input */}
       <TextInput
