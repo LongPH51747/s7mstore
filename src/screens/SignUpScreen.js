@@ -41,15 +41,15 @@ const SignUpScreen = () => {
 
   const handleSignUp = async () => {
     if (!username || !fullname || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
       return;
     }
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert('Lỗi', 'Vui lòng nhập email hợp lệ');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      Alert.alert('Lỗi', 'Mât khẩu phải có ít nhất 6 ký tự');
       return;
     }
     if (password !== confirmPassword) {

@@ -191,7 +191,7 @@ const ProfileScreen = () => {
         </View>
 
        
-        <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfile', { user })}>
+        <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfileScreen', { user })}>
           <Image
             style={styles.avatar}
             source={{ uri: user.avatar || 'https://via.placeholder.com/150' }} 
@@ -199,7 +199,7 @@ const ProfileScreen = () => {
           <View style={styles.profileTextContainer}>
          
             <Text style={styles.name}>{user.displayName || user.fullname || 'Tên người dùng'}</Text> 
-            <Text>{user.email || user.phoneNumber || 'Không có email/SĐT'}</Text> 
+            <Text style={{fontFamily: 'Nunito-VariableFont_wght'}}>{user.email || user.phoneNumber || 'Không có email/SĐT'}</Text> 
           </View>
           <Ionicons name="chevron-forward-outline" size={24} color="#555" />
         </TouchableOpacity>
@@ -311,13 +311,13 @@ const ProfileScreen = () => {
 
         {/* LOGOUT BUTTON */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Feather name="log-out" size={20} color="red" />
+          <Feather name="log-out" size={20} color="#EF5350" />
           <Text style={styles.logoutButtonText}>Đăng xuất</Text>
         </TouchableOpacity>
 
         <View style={{ height: 100 }} />
       </ScrollView>
-      <CustomNavBottom />
+      <CustomNavBottom/>
     </View>
   );
 };
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'Nunito-Black',
     color: 'black',
   },
   profileInfo: {
@@ -387,8 +387,9 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Medium',
     color: '#333',
+  
   },
   orderHistory: {
     flexDirection: 'row',
@@ -408,6 +409,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginRight: 5,
+    fontFamily: 'Nunito-Black',
+    fontStyle: 'normal',
+    fontWeight: '600',
   },
   statusBarContainer: {
     flexDirection: 'row',
@@ -434,6 +438,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     textAlign: 'center',
     color: '#555',
+    fontFamily: 'Nunito-Medium',
   },
   sectionTitle: {
     fontWeight: '600',
@@ -464,7 +469,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 13,
     marginTop: 8,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Medium',
   },
   itemRow: {
     flexDirection: 'row',
@@ -479,6 +484,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     flex: 1,
+    fontFamily: 'Nunito-Medium',
   },
   itemRowChevron: {
     marginLeft: 'auto',
@@ -506,6 +512,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 15,
     color: '#333',
+    fontFamily: 'Nunito-Medium',
   },
   logoutButton: {
     flexDirection: 'row',
@@ -521,9 +528,9 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontSize: 16,
-    color: 'red',
-    fontWeight: 'bold',
+    color: '#EF5350',
     marginLeft: 10,
+    fontFamily: 'Nunito-Black',
   },
 });
 

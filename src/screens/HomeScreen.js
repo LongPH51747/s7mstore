@@ -5,12 +5,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '../firebase/firebaseConfig';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const numColumns = 2;
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width / numColumns - 24;
 const PRODUCTS_PER_PAGE = 2;
-
 
 /**
  * Màn hình Trang chủ (Home Screen)
@@ -34,16 +35,67 @@ const HomeScreen = ({ navigation }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalPages, setTotalPages] = useState(0);
   const [activeTab, setActiveTab] = useState('Home');
-
+  const [topPage, setTopPage] = useState(0);
+  const [newProducts, setNewProducts] = useState([]);
+  const [newPage, setNewPage] = useState(0);
+  
   useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    if (page > 1) {
+    if (page > 1 && selectedCategory === 'All') {
       fetchMoreProducts();
     }
-  }, [page]);
+  }, [page, selectedCategory]);
+
+  useEffect(() => {
+  const fetchNewProducts = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.PRODUCTS.GET_NEW_PRODUCTS, {
+        headers: API_HEADERS,
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setNewProducts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching new products:', error);
+    }
+  };
+  fetchNewProducts();
+}, []);
+
+const NEW_PRODUCTS_PER_PAGE = 4;
+const newTotalPages = Math.ceil(newProducts.length / NEW_PRODUCTS_PER_PAGE);
+const newProductsPage = newProducts.slice(newPage * NEW_PRODUCTS_PER_PAGE, (newPage + 1) * NEW_PRODUCTS_PER_PAGE);
+
+  // Add useFocusEffect to refresh data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      // Check if returning from payment success
+      const checkReturningFromPaymentSuccess = async () => {
+        try {
+          const returningFromPaymentSuccess = await AsyncStorage.getItem('returningFromPaymentSuccess');
+          if (returningFromPaymentSuccess === 'true') {
+            console.log('HomeScreen: Returning from payment success, refreshing data');
+            // Clear the flag
+            await AsyncStorage.removeItem('returningFromPaymentSuccess');
+            // Reset pagination state
+            setPage(1);
+            setHasMore(true);
+            setProducts([]);
+            // Refresh data to get updated information
+            fetchData();
+          }
+        } catch (error) {
+          console.error('Error checking returning from payment success flag:', error);
+        }
+      };
+      
+      checkReturningFromPaymentSuccess();
+    }, [])
+  );
 
   const fetchProductsByCategory = async (categoryId) => {
     try {
@@ -53,6 +105,7 @@ const HomeScreen = ({ navigation }) => {
       const productsController = new AbortController();
       const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
       
+      // Category API doesn't support pagination - it returns all products for the category
       const url = `${API_ENDPOINTS.PRODUCTS.GET_BY_CATEGORY(categoryId)}`;
       console.log('Category API URL:', url);
       
@@ -72,14 +125,16 @@ const HomeScreen = ({ navigation }) => {
       } catch (e) {
         console.error('Error parsing JSON from category response:', e);
         setProducts([]);
+        setHasMore(false);
         setLoading(false);
         return;
       }
 
+      // Category API returns an array of products (no pagination)
       if (responseData && Array.isArray(responseData)) {
         console.log('Number of products for category:', responseData.length);
         setProducts(responseData);
-        setHasMore(false); // No pagination for category filter
+        setHasMore(false); // No pagination for category products
         setPage(1);
       } else {
         console.log('No products found for category or invalid data format');
@@ -95,7 +150,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const fetchMoreProducts = async () => {
-      try {
+    try {
       setLoadingMore(true);
       console.log('Fetching more products - Page:', page);
       
@@ -125,7 +180,6 @@ const HomeScreen = ({ navigation }) => {
         return;
       }
 
-      // console.log('Parsed API Response for page', page, ':', responseData);
       console.log('Type of responseData:', typeof responseData);
       console.log('Is responseData truthy?', !!responseData);
       console.log('Does responseData have data property?', 'data' in responseData);
@@ -137,21 +191,36 @@ const HomeScreen = ({ navigation }) => {
 
       if (responseData && responseData.data && Array.isArray(responseData.data)) {
         console.log('Number of products received:', responseData.data.length);
-        setProducts(prevProducts => {
-          const newProducts = [...prevProducts, ...responseData.data];
-          console.log('Total products after update:', newProducts.length);
-          return newProducts;
-        });
         
-        setTotalPages(responseData.totalPages);
-        setHasMore(page < responseData.totalPages);
-        console.log('Has more:', page < responseData.totalPages, 'Total pages:', responseData.totalPages);
+        // Kiểm tra xem có sản phẩm mới không
+        if (responseData.data.length > 0) {
+          setProducts(prevProducts => {
+            const newProducts = [...prevProducts, ...responseData.data];
+            console.log('Total products after update:', newProducts.length);
+            return newProducts;
+          });
+          
+          setTotalPages(responseData.totalPages || 1);
+          setHasMore(page < (responseData.totalPages || 1));
+          console.log('Has more:', page < (responseData.totalPages || 1), 'Total pages:', responseData.totalPages || 1);
+        } else {
+          // Không có sản phẩm mới, dừng pagination
+          console.log('No new products received, stopping pagination');
+          setHasMore(false);
+        }
       } else {
         console.log('Condition failed: No products received or invalid data format');
         setHasMore(false);
       }
     } catch (error) {
       console.error('Error fetching more products:', error);
+      // Thử lại sau 3 giây nếu có lỗi
+      setTimeout(() => {
+        if (hasMore && !loadingMore) {
+          console.log('Retrying to fetch more products...');
+          setPage(prevPage => prevPage);
+        }
+      }, 3000);
     } finally {
       setLoadingMore(false);
     }
@@ -160,10 +229,15 @@ const HomeScreen = ({ navigation }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      console.log('Initial fetch - Page:', 1);
+      console.log('HomeScreen: Fetching fresh data - Page:', 1);
       
-        const productsController = new AbortController();
-        const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
+      // Reset pagination state when fetching fresh data
+      setPage(1);
+      setHasMore(true);
+      setProducts([]);
+      
+      const productsController = new AbortController();
+      const productsTimeout = setTimeout(() => productsController.abort(), API_TIMEOUT);
         
       const url = `${API_ENDPOINTS.PRODUCTS.GET_ALL_LIMIT}?page=1&limit=${PRODUCTS_PER_PAGE}`;
       console.log('Initial API URL:', url);
@@ -189,7 +263,6 @@ const HomeScreen = ({ navigation }) => {
         return;
       }
 
-      // console.log('Parsed Initial API Response:', responseData);
       console.log('Type of responseData:', typeof responseData);
       console.log('Is responseData truthy?', !!responseData);
       console.log('Does responseData have data property?', 'data' in responseData);
@@ -202,9 +275,9 @@ const HomeScreen = ({ navigation }) => {
       if (responseData && responseData.data && Array.isArray(responseData.data)) {
         console.log('Initial number of products:', responseData.data.length);
         setProducts(responseData.data);
-        setTotalPages(responseData.totalPages);
-        setHasMore(1 < responseData.totalPages);
-        console.log('Initial has more:', 1 < responseData.totalPages, 'Total pages:', responseData.totalPages);
+        setTotalPages(responseData.totalPages || 1);
+        setHasMore(1 < (responseData.totalPages || 1));
+        console.log('Initial has more:', 1 < (responseData.totalPages || 1), 'Total pages:', responseData.totalPages || 1);
         } else {
         console.log('Condition failed: No initial products or invalid data format');
           setProducts([]);
@@ -282,6 +355,15 @@ const HomeScreen = ({ navigation }) => {
       }
     };
 
+    const TOP_PRODUCTS_PER_PAGE = 4;
+  const topProductsSorted = [...products]
+    .sort((a, b) => (b.product_sold || 0) - (a.product_sold || 0));
+  const topProducts = selectedCategory === 'All'
+    ? topProductsSorted.slice(topPage * TOP_PRODUCTS_PER_PAGE, (topPage + 1) * TOP_PRODUCTS_PER_PAGE)
+    : [];
+  const topTotalPages = Math.ceil(topProductsSorted.length / TOP_PRODUCTS_PER_PAGE);
+
+
   /**
    * Tự động chuyển banner sau mỗi 3s
    */
@@ -298,15 +380,12 @@ const HomeScreen = ({ navigation }) => {
    */
   const filteredProducts = selectedCategory === 'All'
     ? products
-    : products.filter(product =>
-        product.category_id === selectedCategory
-      );
+    : products; // When category is selected, products array already contains category-specific products
 
   // Add error handling for filtering
   useEffect(() => {
     if (selectedCategory !== 'All') {
-      console.log('Filtering products for category:', selectedCategory);
-      console.log('Filtered products count:', filteredProducts.length);
+      console.log('Category products count:', products.length);
     }
   }, [selectedCategory, products]);
 
@@ -342,11 +421,13 @@ const HomeScreen = ({ navigation }) => {
         : require('../assets/errorimg.webp');
 
     return (
+      
       <TouchableOpacity 
         style={styles.card}
         onPress={() => navigation.navigate('ProductDetailScreen', { product: item })}
       >
-        <Image 
+        <View style={styles.imageContainer}>
+          <Image 
           source={productImageSource} 
           style={styles.image} 
           resizeMode="cover"
@@ -357,14 +438,16 @@ const HomeScreen = ({ navigation }) => {
             });
           }}
         />
+        </View>
+        
          <Text style={styles.name} numberOfLines={2}>{item.product_name}</Text>
-        <Text style={styles.price}>{item.product_price?.toLocaleString('vi-VN')}đ</Text>
-       
-        {/* Hiển thị số sản phẩm đã bán */}
+
+         <View style={styles.priceContainer}>
+        <Text style={styles.price}>{item.product_price?.toLocaleString('vi-VN')}Đ</Text>
         <Text style={styles.soldText}>Đã bán: {typeof item.product_sold === 'number' ? item.product_sold : 0}</Text>
-        <TouchableOpacity style={styles.heart}>
-          <Text style={styles.heartIcon}>♡</Text>
-        </TouchableOpacity>
+         </View>
+       
+       
       </TouchableOpacity>
     );
   };
@@ -384,11 +467,12 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       {/* Header: logo và ô tìm kiếm */}
       <View style={styles.header}>
+        <Text style={{fontFamily: 'Nunito-Black'}}>S7M STORE</Text>
         <TouchableOpacity 
           style={styles.searchContainer}
           onPress={() => navigation.navigate('SearchScreen')}
         >
-          <Text style={styles.searchPlaceholder}>🔍 Tìm kiếm sản phẩm...</Text>
+          <Text style={styles.searchPlaceholder}> Tìm kiếm sản phẩm...</Text>
         </TouchableOpacity>
       </View>
       <ScrollView>
@@ -430,13 +514,17 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => {
                 if (selectedCategory !== 'All') {
                   setSelectedCategory('All');
+                  // Reset pagination state for all products
+                  setPage(1);
+                  setHasMore(true);
+                  setProducts([]);
                   fetchData(); // Reset to all products
                 }
               }}
             >
               <View style={styles.categoryImageContainer}>
                 <Image
-                  source={require('../assets/errorimg.webp')}
+                  source={require('../assets/all.jpg')}
                   style={styles.categoryImage}
                 />
               </View>
@@ -455,6 +543,7 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => {
                 if (selectedCategory !== category._id) {
                   setSelectedCategory(category._id);
+                  // Category products don't use pagination, so just fetch all products
                   fetchProductsByCategory(category._id);
                 }
               }}
@@ -488,7 +577,112 @@ const HomeScreen = ({ navigation }) => {
             ))}
           </ScrollView>
         </View>
-        {/* Grid sản phẩm */}
+       
+       {selectedCategory === 'All' && (
+  <>
+    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginTop: 8}}>
+      <Text style={{fontSize: 16, fontFamily: 'Nunito-Black', color: '#DB6A34'}}>Top sale</Text>
+      {topTotalPages > 1 && (
+        <TouchableOpacity onPress={() => setTopPage((prev) => (prev + 1) % topTotalPages)}>
+          <Text style={{color: '#007AFF', fontFamily: 'Nunito-Black'}}>Xem thêm <Icon name="arrow-forward" size={16} color="#007AFF" /></Text>
+        </TouchableOpacity>
+      )}
+    </View>
+
+    <FlatList
+      data={topProducts}
+      horizontal
+      keyExtractor={item => item._id}
+      showsHorizontalScrollIndicator={false}
+      style={{marginVertical: 8, marginLeft: 12}}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={{
+            width: 170,
+            marginRight: 12,
+            backgroundColor: '#fff',
+            borderRadius: 10,
+            padding: 8,
+           
+           
+          }}
+          onPress={() => navigation.navigate('ProductDetailScreen', { product: item })}
+        >
+          <Image
+            source={
+              typeof item.product_image === 'string' && item.product_image.startsWith('/uploads_product/')
+                ? { uri: `${API_BASE_URL}${item.product_image}` }
+                : (typeof item.product_image === 'string' && (item.product_image.startsWith('http://') || item.product_image.startsWith('https://') || item.product_image.startsWith('data:image')))
+                  ? { uri: item.product_image }
+                  : require('../assets/errorimg.webp')
+            }
+            style={{ width: 150, height: 150, borderRadius: 8, marginBottom: 6 }}
+            resizeMode="cover"
+          />
+          <Text style={{fontSize: 13, fontFamily: 'Nunito-Black', color: '#222'}} numberOfLines={2}>{item.product_name}</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4, width: '100%'}}>
+          <Text style={{fontSize: 12, color: '#DB6A34', fontFamily: 'Nunito-Black', marginRight: 20}}>{item.product_price?.toLocaleString('vi-VN')}Đ</Text>
+          <Text style={{fontSize: 11, color: '#888', fontFamily: 'Nunito-Medium'}}>Đã bán: {item.product_sold || 0}</Text>
+          </View>
+          
+        </TouchableOpacity>
+      )}
+    />
+  </>
+)}
+
+    {selectedCategory === 'All' && (
+  <>
+    {/* ...Top sale code... */}
+    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginTop: 8}}>
+  <Text style={{fontSize: 16, fontFamily: 'Nunito-Black', color: '#3498db'}}>Sản phẩm mới</Text>
+  {newTotalPages > 1 && (
+    <TouchableOpacity onPress={() => setNewPage((prev) => (prev + 1) % newTotalPages)}>
+      <Text style={{color: '#007AFF', fontFamily: 'Nunito-Black'}}>See All <Icon name="arrow-forward" size={16} color="#007AFF" /></Text>
+    </TouchableOpacity>
+  )}
+</View>
+    <FlatList
+      data={newProductsPage}
+      horizontal
+      keyExtractor={item => item._id}
+      showsHorizontalScrollIndicator={false}
+      style={{marginVertical: 8, marginLeft: 12}}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={{
+            width: 140,
+            marginRight: 12,
+            backgroundColor: '#fff',
+            borderRadius: 10,
+            padding: 8,
+            alignItems: 'center',
+           
+          }}
+          onPress={() => navigation.navigate('ProductDetailScreen', { product: item })}
+        >
+          <Image
+            source={
+              typeof item.product_image === 'string' && item.product_image.startsWith('/uploads_product/')
+                ? { uri: `${API_BASE_URL}${item.product_image}` }
+                : (typeof item.product_image === 'string' && (item.product_image.startsWith('http://') || item.product_image.startsWith('https://') || item.product_image.startsWith('data:image')))
+                  ? { uri: item.product_image }
+                  : require('../assets/errorimg.webp')
+            }
+            style={{ width: 100, height: 100, borderRadius: 8, marginBottom: 6 }}
+            resizeMode="cover"
+          />
+          <Text style={{fontSize: 13, fontFamily: 'Nunito-Black', color: '#222'}} numberOfLines={2}>{item.product_name}</Text>
+          <Text style={{fontSize: 12, color: '#DB6A34', fontFamily: 'Nunito-Black'}}>{item.product_price?.toLocaleString('vi-VN')}Đ</Text>
+        </TouchableOpacity>
+      )}
+    />
+  </>
+)}
+
+ {selectedCategory === 'All' && (
+          <Text style={styles.recomentText}>Có thể bạn sẽ thích</Text>
+        )}
         <FlatList
           data={filteredProducts}
           renderItem={renderItem}
@@ -497,9 +691,12 @@ const HomeScreen = ({ navigation }) => {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           onEndReached={loadMoreProducts}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.1}
           ListFooterComponent={renderFooter}
           scrollEnabled={false}
+          removeClippedSubviews={false}
+          maxToRenderPerBatch={10}
+          windowSize={10}
         />
       </ScrollView>
       {/* Bottom Navigation: các icon điều hướng nhanh */}
@@ -535,7 +732,7 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#fff', fontFamily: 'Nunito-Black' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' },
   headerLogo: {
     width: 100,
@@ -550,6 +747,7 @@ const styles = StyleSheet.create({
   },
   searchPlaceholder: {
     color: '#666',
+    fontFamily: 'Nunito-Medium',
   },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#222', letterSpacing: 1 },
   headerIcon: { fontSize: 26, color: '#222' },
@@ -566,33 +764,26 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     margin: 6,
     backgroundColor: '#fff',
-    borderRadius: 10,
     padding: 8,
-    elevation: 2,
     position: 'relative',
   },
-  image: { width: '100%', height: 200, borderRadius: 8 },
-  price: { fontWeight: 'bold', marginTop: 8,color: '#E53935' },
-  name: { color: '#888', fontSize: 16, marginTop: 2, marginBottom: 8,fontWeight: 'bold'  },
-  heart: { position: 'absolute', top: 10, right: 10 },
+  image: { width: '100%', height: 194, borderRadius: 12 },
+  price: {fontFamily: 'Nunito-Black',color: '#DB6A34', fontSize: 13 },
+  name: { color: 'black', fontSize: 14, marginTop: 2, marginBottom: 8, fontFamily: 'Nunito-Medium',  },
+ 
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 12,
-    borderTopWidth: 1,
-    borderColor: '#eee',
     backgroundColor: '#fff',
   },
-  heartIcon: {
-    fontSize: 20,
-  },
+ 
   bannerImgWrap: { width: '100%', height: 234, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   bannerImg: { width: '95%', height: 234, borderRadius: 12 },
   categoriesContainer: {
     paddingVertical: 16,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderColor: '#eee',
+       borderColor: '#eee',
   },
   categoriesScrollContent: {
     paddingHorizontal: 12,
@@ -606,8 +797,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
   },
   selectedCategoryTab: {
-    backgroundColor: '#f0f0f0',
-    borderWidth: 1,
+    backgroundColor: '#FFF1E9',
     borderColor: '#ddd',
   },
   categoryText: {
@@ -615,10 +805,11 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 4,
+    fontFamily: 'Nunito-Medium'
   },
   selectedCategoryText: {
-    color: '#000',
-    fontWeight: 'bold',
+    color: '#DB6A34',
+   fontFamily: 'Nunito-Black',
   },
   categoryImageContainer: {
     width: 80,
@@ -626,7 +817,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     marginBottom: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#F0F0F0',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -635,6 +826,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    
   },
   categoryImage: {
     width: '100%',
@@ -647,8 +839,33 @@ const styles = StyleSheet.create({
   soldText: {
     color: '#888',
     fontSize: 12,
-    marginBottom: 4,
+    fontFamily: 'Nunito-Medium',
   },
+  imageContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 8,
+    backgroundColor: '#ffffffff',
+    shadowColor: '#000',
+    
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    padding: 3,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'},
+
+  recomentText: {
+    fontSize: 16,
+    marginLeft: 20,
+    fontFamily: 'Nunito-Black',
+    color:'#A9CFCF'
+    }
 });
 
 export default HomeScreen; 
