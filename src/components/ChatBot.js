@@ -15,8 +15,10 @@ import {
   Image,
   PanResponder,
   Animated,
+  PermissionsAndroid,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Voice from '@react-native-voice/voice';
 import { chatbotService } from '../services/chatbotService';
 
 
@@ -28,7 +30,9 @@ const ChatBot = () => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const flatListRef = useRef(null);
+  const [isVoiceAvailable, setIsVoiceAvailable] = useState(false);
   
   // Animation values for draggable button
   const scale = useRef(new Animated.Value(1)).current;
@@ -92,74 +96,353 @@ const ChatBot = () => {
     })
   ).current;
 
-  // Add welcome message when component mounts
+  // Monitor inputText changes
   useEffect(() => {
+    console.log('[ChatBot] inputText changed:', inputText);
+    console.log('[ChatBot] inputText type:', typeof inputText);
+    console.log('[ChatBot] inputText length:', inputText.length);
+    
+    // Reset inputText if it's not a string
+    if (typeof inputText !== 'string') {
+      console.log('[ChatBot] WARNING: inputText is not a string, resetting to empty string');
+      setInputText('');
+    }
+  }, [inputText]);
+
+  useEffect(() => {
+    console.log('🚀 [SETUP] Bắt đầu setup Voice Recognition');
     setMessages([
-      {
-        id: '1',
-        text: 'Xin chào! Tôi là trợ lý AI của S7M Store. Bạn cần hỗ trợ gì?',
-        isUser: false,
-        timestamp: new Date(),
-      },
-    ]);
+          {
+            id: '1',
+            text: 'Xin chào! Tôi là trợ lý AI của S7M Store. Bạn cần hỗ trợ gì?',
+            isUser: false,
+            timestamp: new Date(),
+          },
+        ]);
+    const initializeVoice = async () => {
+      try {
+        // Kiểm tra xem Voice có khả dụng không
+        const available = await Voice.isAvailable();
+        console.log('🔍 [SETUP] Voice available:', available);
+        setIsVoiceAvailable(available);
+        
+        if (!available) {
+          console.error('❌ [SETUP] Voice không khả dụng trên thiết bị này');
+          return;
+        }
+  
+        // QUAN TRỌNG: Đăng ký các event listeners
+        Voice.onSpeechStart = onSpeechStart;         // Khi bắt đầu nghe
+        Voice.onSpeechEnd = onSpeechEnd;             // Khi kết thúc nghe  
+        Voice.onSpeechResults = onSpeechResults;     // Khi có kết quả cuối cùng
+        Voice.onSpeechPartialResults = onSpeechPartialResults; // Kết quả real-time
+        Voice.onSpeechError = onSpeechError;         // Khi có lỗi
+        
+        console.log('✅ [SETUP] Voice listeners đã được đăng ký');
+        
+      } catch (error) {
+        console.error('❌ [SETUP] Lỗi khởi tạo Voice:', error);
+        setIsVoiceAvailable(false);
+      }
+    };
+  
+    initializeVoice();
+  
+    // Cleanup khi component bị hủy
+    return () => {
+      console.log('🧹 [CLEANUP] Dọn dẹp Voice listeners');
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
   }, []);
 
-  const sendMessage = async () => {
-    if (!inputText.trim()) return;
+  // Add welcome message when component mounts
+  // useEffect(() => {
+  //   console.log('[ChatBot] Component mounted, setting up voice recognition');
+    
+  //   setMessages([
+  //     {
+  //       id: '1',
+  //       text: 'Xin chào! Tôi là trợ lý AI của S7M Store. Bạn cần hỗ trợ gì?',
+  //       isUser: false,
+  //       timestamp: new Date(),
+  //     },
+  //   ]);
+
+  //   // Setup Voice event listeners
+  //   Voice.onSpeechStart = onSpeechStart;
+  //   Voice.onSpeechEnd = onSpeechEnd;
+  //   Voice.onSpeechError = onSpeechError;
+  //   Voice.onSpeechResults = onSpeechResults;
+  //   Voice.onSpeechPartialResults = onSpeechPartialResults;
+
+  //   console.log('[ChatBot] Voice event listeners set up');
+    
+
+  //   return () => {
+  //     console.log('[ChatBot] Component unmounting, cleaning up voice listeners');
+  //     Voice.destroy().then(Voice.removeAllListeners);
+  //   };
+  // }, []);
+
+  // Voice recognition functions
+  const onSpeechStart = () => {
+    console.log('[Voice] Speech recognition started');
+    setIsListening(true);
+  };
+
+  const onSpeechEnd = () => {
+    console.log('[Voice] Speech recognition ended');
+    setIsListening(false);
+  };
+
+  const onSpeechError = (error) => {
+    console.log('[Voice] Speech recognition error:', error);
+    setIsListening(false);
+    
+    let errorMessage = 'Không thể nhận dạng giọng nói. Vui lòng thử lại.';
+    
+    if (error.error) {
+      switch (error.error.code) {
+        case '13':
+        case '11':
+          errorMessage = 'Không hiểu được giọng nói. Vui lòng nói rõ ràng hơn.';
+          break;
+        case '5':
+          errorMessage = 'Lỗi kết nối. Vui lòng kiểm tra internet và thử lại.';
+          break;
+        case '7':
+          errorMessage = 'Không có audio được phát hiện. Vui lòng nói to hơn.';
+          break;
+        case '9':
+          errorMessage = 'Lỗi permission. Vui lòng cấp quyền microphone.';
+          break;
+        default:
+          errorMessage = `Lỗi: ${error.error.message || 'Không xác định'}`;
+      }
+    }
+    
+    Alert.alert('Lỗi nhận dạng giọng nói', errorMessage);
+  };
+
+  const onSpeechResults = (event) => {
+    console.log('[Voice] Speech results received:', event);
+    
+    if (event.value && event.value.length > 0) {
+      const text = event.value[0];
+      console.log('[Voice] Extracted text:', text);
+      console.log('[Voice] Type of text:', typeof text);
+      
+      // Đảm bảo text là string
+      const safeText = typeof text === 'string' ? text : String(text || '');
+      console.log('[Voice] Safe text:', safeText);
+      
+      setInputText(safeText);
+      
+      // Auto-send after 1.5 seconds of silence
+      setTimeout(() => {
+        console.log('[Voice] Auto-sending message after silence');
+        if (safeText.trim()) {
+          sendMessage(safeText);
+        }
+      }, 1500);
+    }
+  };
+
+  const onSpeechPartialResults = (event) => {
+    console.log('[Voice] Partial speech results:', event);
+    if (event.value && event.value.length > 0) {
+      const text = event.value[0];
+      const safeText = typeof text === 'string' ? text : String(text || '');
+      setInputText(safeText);
+    }
+  };
+
+  const requestMicrophonePermission = async () => {
+    console.log('[Voice] Requesting microphone permission');
+    
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: 'Quyền truy cập microphone',
+            message: 'Ứng dụng cần quyền truy cập microphone để nhận dạng giọng nói.',
+            buttonNeutral: 'Hỏi lại sau',
+            buttonNegative: 'Từ chối',
+            buttonPositive: 'Đồng ý',
+          }
+        );
+        
+        const hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED;
+        console.log('[Voice] Permission result:', hasPermission);
+        return hasPermission;
+      } catch (err) {
+        console.error('[Voice] Permission error:', err);
+        return false;
+      }
+    }
+    return true; // iOS handles permissions differently
+  };
+
+  const startListening = async () => {
+    console.log('[Voice] Starting voice recognition');
+    
+    try {
+      const hasPermission = await requestMicrophonePermission();
+      if (!hasPermission) {
+        console.log('[Voice] Permission denied');
+        Alert.alert('Quyền truy cập', 'Cần quyền truy cập microphone để sử dụng tính năng nhận dạng giọng nói.');
+        return;
+      }
+      setIsListening(true);
+      // Stop any existing recognition first
+      await Voice.stop();
+      console.log('[Voice] Stopped any existing recognition');
+      
+      // Start new recognition with Vietnamese language
+      await Voice.start('vi-VN');
+      console.log('[Voice] Voice recognition started successfully');
+      
+    } catch (error) {
+      console.error('[Voice] Error starting voice recognition:', error);
+      Alert.alert('Lỗi', 'Không thể khởi động nhận dạng giọng nói.');
+    }
+  };
+
+  const stopListening = async () => {
+    console.log('[Voice] Stopping voice recognition');
+    try {
+      await Voice.stop();
+      setIsListening(false);
+      console.log('[Voice] Voice recognition stopped successfully');
+    } catch (error) {
+      console.error('[Voice] Error stopping voice recognition:', error);
+    }
+  };
+
+  // Helper function để xử lý response từ API
+  const processApiResponse = (response) => {
+    console.log('[ChatBot] Processing API response:', response);
+    console.log('[ChatBot] Response type:', typeof response);
+    
+    // Kiểm tra nếu response là số hoặc có thể convert thành số
+    if (typeof response === 'number' || !isNaN(Number(response))) {
+      console.log('[ChatBot] Response is numeric, showing default message');
+      return 'Thực hiện yêu cầu';
+    }
+    
+    // Kiểm tra nếu response là null/undefined
+    if (response === null || response === undefined) {
+      console.log('[ChatBot] Response is null/undefined, showing default message');
+      return 'Thực hiện yêu cầu';
+    }
+    
+    // Kiểm tra nếu response là object
+    if (typeof response === 'object') {
+      console.log('[ChatBot] Response is object, showing default message');
+      return 'Thực hiện yêu cầu';
+    }
+    
+    // Nếu là string, trả về nguyên bản
+    if (typeof response === 'string') {
+      console.log('[ChatBot] Response is string, returning as is');
+      return response;
+    }
+    
+    // Trường hợp khác, convert thành string
+    console.log('[ChatBot] Response is other type, converting to string');
+    return String(response || 'Lỗi: Không nhận được phản hồi');
+  };
+
+  const sendMessage = async (customText = null) => {
+    console.log('[ChatBot] sendMessage called');
+    console.log('[ChatBot] customText:', customText);
+    console.log('[ChatBot] inputText:', inputText);
+    
+    const messageText = customText || inputText.trim();
+    console.log('[ChatBot] Final messageText:', messageText);
+    
+    if (!messageText) {
+      console.log('[ChatBot] No message text, returning');
+      return;
+    }
+
+    const safeMessageText = typeof messageText === 'string' ? messageText : String(messageText || '');
+    console.log('[ChatBot] Safe messageText:', safeMessageText);
 
     const userMessage = {
       id: Date.now().toString(),
-      text: inputText.trim(),
+      text: safeMessageText,
       isUser: true,
       timestamp: new Date(),
     };
+
+    console.log('[ChatBot] User message object:', userMessage);
 
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsLoading(true);
 
     try {
-      const response = await chatbotService.sendMessage(inputText.trim());
+      console.log('[ChatBot] Calling chatbot service');
+      const response = await chatbotService.sendMessage(safeMessageText);
+      
+      console.log('[ChatBot] API response received:', response);
+      
+      // Xử lý response bằng helper function
+      const responseText = processApiResponse(response);
+      console.log('[ChatBot] Final response text:', responseText);
+      
       const botMessage = {
         id: (Date.now() + 1).toString(),
-        text: response,
+        text: responseText,
         isUser: false,
         timestamp: new Date(),
       };
 
+      console.log('[ChatBot] Bot message object:', botMessage);
+
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('[ChatBot] Error sending message:', error);
       Alert.alert('Lỗi', 'Không thể gửi tin nhắn. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const renderMessage = ({ item }) => (
-    <View style={[
-      styles.messageContainer,
-      item.isUser ? styles.userMessage : styles.botMessage
-    ]}>
+  const renderMessage = ({ item }) => {
+    console.log('[ChatBot] Rendering message:', item);
+    console.log('[ChatBot] Message text:', item.text);
+    console.log('[ChatBot] Message text type:', typeof item.text);
+    const messageText = typeof item.text === 'string' ? item.text : String(item.text || '');
+    console.log('[ChatBot] Final message text:', messageText);
+    
+    return (
       <View style={[
-        styles.messageBubble,
-        item.isUser ? styles.userBubble : styles.botBubble
+        styles.messageContainer,
+        item.isUser ? styles.userMessage : styles.botMessage
       ]}>
-        <Text style={[
-          styles.messageText,
-          item.isUser ? styles.userText : styles.botText
+        <View style={[
+          styles.messageBubble,
+          item.isUser ? styles.userBubble : styles.botBubble
         ]}>
-          {item.text}
-        </Text>
-        <Text style={styles.timestamp}>
-          {item.timestamp.toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
-        </Text>
+          <Text style={[
+            styles.messageText,
+            item.isUser ? styles.userText : styles.botText
+          ]}>
+            {messageText}
+          </Text>
+          <Text style={styles.timestamp}>
+            {item.timestamp.toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <>
@@ -247,12 +530,42 @@ const ChatBot = () => {
             </View>
           )}
 
+          {/* Voice listening indicator */}
+          {isListening && (
+            <View style={styles.listeningContainer}>
+              <View style={styles.listeningIndicator}>
+                <ActivityIndicator size="small" color="white" />
+              </View>
+              <Text style={styles.listeningText}>Đang nghe...</Text>
+            </View>
+          )}
+
           {/* Input */}
           <View style={styles.inputContainer}>
+            {/* Voice Button */}
+            <TouchableOpacity
+              style={[
+                styles.voiceButton,
+                isListening && styles.voiceButtonListening
+              ]}
+              onPress={isListening ? stopListening : startListening}
+              disabled={isLoading}
+            >
+              <Icon 
+                name={isListening ? "mic" : "mic-none"} 
+                size={24} 
+                color={isListening ? "white" : "#FF6B35"} 
+              />
+            </TouchableOpacity>
+
             <TextInput
               style={styles.textInput}
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={(text) => {
+                console.log('[ChatBot] TextInput onChangeText:', text);
+                console.log('[ChatBot] TextInput type:', typeof text);
+                setInputText(text);
+              }}
               placeholder="Nhập tin nhắn..."
               placeholderTextColor="#999"
               multiline
@@ -263,7 +576,7 @@ const ChatBot = () => {
                 styles.sendButton,
                 !inputText.trim() && styles.sendButtonDisabled
               ]}
-              onPress={sendMessage}
+              onPress={() => sendMessage()}
               disabled={!inputText.trim() || isLoading}
             >
               <Icon 
@@ -421,6 +734,21 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 8,
   },
+  listeningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: '#FF6B35',
+  },
+  listeningIndicator: {
+    marginRight: 8,
+  },
+  listeningText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: 'bold',
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -428,6 +756,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+  },
+  voiceButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'white',
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  voiceButtonListening: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
   },
   textInput: {
     flex: 1,
