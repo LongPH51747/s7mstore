@@ -45,6 +45,11 @@ export const API_ENDPOINTS = {
     CREATE_ORDER: (userId) => `${API_BASE_URL}/api/order/create/userId/${userId}`,
     UPDATE_STATUS: (orderId) => `${API_BASE_URL}/api/order/updateStatus/${orderId}`,
   },
+
+  // Return request endpoints
+  RETURN_REQUEST: {
+    CREATE: (userId) => `${API_BASE_URL}/api/return-request/createReturnRequest/${userId}`,
+  },
   
   // Banner endpoints
   BANNERS: {

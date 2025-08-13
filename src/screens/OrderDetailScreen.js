@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { API_BASE_URL, API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { convertStatusToNumber, convertNumberToStatus } from '../utils/orderStatusUtils';
 
 const OrderDetailScreen = ({ route }) => {
   const navigation = useNavigation();
   const { order, onOrderUpdate } = route.params;
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Convert order status to text for display if it's a number
+  const displayOrder = {
+    ...order,
+    status: typeof order.status === 'number' ? convertNumberToStatus(order.status) : order.status
+  };
 
   const handleCancelOrder = () => {
     Alert.alert(
@@ -23,7 +30,7 @@ const OrderDetailScreen = ({ route }) => {
               const response = await fetch(API_ENDPOINTS.ORDERS.UPDATE_STATUS(order._id), {
                 method: 'PATCH',
                 headers: API_HEADERS,
-                body: JSON.stringify({ status: 'Đã hủy' }),
+                body: JSON.stringify({ status: convertStatusToNumber('Đã hủy') }),
               });
 
               if (!response.ok) {
@@ -54,7 +61,7 @@ const OrderDetailScreen = ({ route }) => {
   };
 
   const handleReturnOrder = () => {
-    Alert.alert('Trả hàng', 'Chức năng trả hàng hiện đang được phát triển. Vui lòng quay lại sau.');
+    navigation.navigate('ReturnRequestScreen', { order });
   };
 
   return (
@@ -82,7 +89,7 @@ const OrderDetailScreen = ({ route }) => {
         {/* Trạng thái đơn hàng */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trạng thái đơn hàng</Text>
-          <Text style={styles.statusText}>{order.status}</Text>
+          <Text style={styles.statusText}>{displayOrder.status}</Text>
         </View>
 
         {/* Thông tin đơn hàng */}
@@ -160,7 +167,7 @@ const OrderDetailScreen = ({ route }) => {
         </View>
       </ScrollView>
 
-      {order.status === 'Chờ xác nhận' && (
+      {displayOrder.status === 'Chờ xác nhận' && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.fullWidthButton, isCancelling && styles.disabledButton]}
@@ -172,7 +179,7 @@ const OrderDetailScreen = ({ route }) => {
         </View>
       )}
 
-      {order.status === 'Giao thành công' && (
+      {displayOrder.status === 'Giao thành công' && (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.halfWidthButtonSecondary} onPress={handleReturnOrder}>
             <Text style={styles.buttonTextSecondary}>Trả hàng</Text>

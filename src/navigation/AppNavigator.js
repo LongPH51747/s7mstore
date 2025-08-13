@@ -27,6 +27,7 @@ import ChangePasswordScreen from '../screens/ChangePassword';
 import RefundReturnScreen from '../screens/TraHangScreen';
 import UserReviewsScreen from '../screens/UserReviewsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import ReturnRequestScreen from '../screens/ReturnRequestScreen';
 
 const Stack = createStackNavigator();
 
@@ -79,6 +80,7 @@ const AppNavigator = () => {
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="OrderScreen" component={OrderScreen} />
         <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
+        <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} />
         <Stack.Screen name="Rating" component={RatingScreen} />
         <Stack.Screen name='ProfileScreen' component={ProfileScreen}/>
         <Stack.Screen name='ChatScreen' component={UserChatScreen}/>
