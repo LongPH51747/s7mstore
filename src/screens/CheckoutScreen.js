@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Linking, TextInput} from 'react-native';
 import { RadioButton } from 'react-native-paper';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 
 export default function CheckoutScreen() {
@@ -20,6 +21,15 @@ export default function CheckoutScreen() {
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [hasAddresses, setHasAddresses] = useState(false);
   const [userNote, setUserNote] = useState('');
+  const [orderCreated, setOrderCreated] = useState(false);
+
+  // Function to notify other screens that order was created successfully
+  const notifyOrderCreated = () => {
+    // Set a flag in AsyncStorage to notify other screens
+    AsyncStorage.setItem('orderCreated', 'true');
+    setOrderCreated(true);
+    console.log('Order created flag set in AsyncStorage');
+  };
 
   useEffect(() => {
     if (route.params?.selectedAddress) {
@@ -61,6 +71,27 @@ export default function CheckoutScreen() {
 
     fetchDefaultAddress();
   }, []);
+
+  // Add useFocusEffect to refresh data when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      // Refresh cart items data when screen is focused
+      if (route.params?.cartItems) {
+        setCartItems(route.params.cartItems);
+      } else if (route.params?.product && route.params?.quantity) {
+        const singleProduct = {
+          ...route.params.product,
+          quantity: route.params.quantity,
+          unit_price_item: route.params.product.selectedVariant?.variant_price || route.params.product.product_price,
+          color: route.params.product.selectedVariant?.variant_color || '',
+          size: route.params.product.selectedVariant?.variant_size || '',
+          image: route.params.product.selectedVariant?.variant_image_url || route.params.product.product_image,
+          name_product: route.params.product.product_name,
+        };
+        setCartItems([singleProduct]);
+      }
+    }, [route.params])
+  );
 
   useEffect(() => {
     console.log('Route Params:', route.params);
@@ -113,7 +144,8 @@ export default function CheckoutScreen() {
         throw new Error('User information not found');
       }
 
-      // Format order items
+      if(paymentMethod === 'COD'){
+        // Format order items
       const orderItems = cartItems.map(item => ({
         id_product: item.id_product,
         id_variant: item.id_variant || '',
@@ -141,15 +173,76 @@ export default function CheckoutScreen() {
           body: JSON.stringify(orderData)
         }
       );
+      console.log("Order data: ",JSON.stringify(orderData));
+
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const result_cod = await response.json();
+      console.log('Order created:', result_cod);
+      notifyOrderCreated(); // Notify other screens that order was created
+      navigation.navigate('PaymentSuccessScreen', { orderId: result_cod._id || result_cod.id });
+      }else if( paymentMethod === 'MOMO'){
+        console.log('Tiến hành thanh toán với MOMO...');
+
+        const orderItems = cartItems.map(item => ({
+          id_product: item.id_product,
+          id_variant: item.id_variant || '',
+          quantity: item.quantity
+        }));
+
+        // Prepare order data
+        const orderData = {
+          orderItems,
+          id_address: selectedAddress._id,
+          payment_method: paymentMethod,
+          id_cart: route.params?.cartId || null
+        };
+
+        // Call create order API
+      const response = await fetch(
+        `${API_ENDPOINTS.ORDERS.CREATE_ORDER(userInfo._id)}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderData)
+        }
+      );
       console.log(JSON.stringify(orderData));
 
       if (!response.ok) {
         throw new Error('Failed to create order');
       }
 
-      const result = await response.json();
-      console.log('Order created:', result);
-      navigation.navigate('PaymentSuccess', { orderId: result._id || result.id });
+      const result_momo = await response.json();
+      console.log('Order created:', result_momo);
+      notifyOrderCreated(); // Notify other screens that order was created
+        
+        const result = await axios.post(`${API_BASE_URL}/api/momo/create-payment`,{
+          total_amount: result_momo.total_amount,
+          orderId: result_momo._id
+        })
+
+        if (result.status !== 200) {
+          throw new Error('Thanh toán thất bại với MOMO')
+        }
+
+        console.log('Data:', result.data);
+        
+     
+        const { deeplink } = result?.data?.data
+        console.log('LINK:', deeplink);
+        
+        if (deeplink) {
+          await Linking.openURL(deeplink)
+        }
+      }else{
+        throw new Error('MOMO payUrl not received from server')
+      }
+      // Đã xử lý response và navigation trong từng block, không cần xử lý ở ngoài nữa
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');
@@ -180,7 +273,7 @@ export default function CheckoutScreen() {
           <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
           <TouchableOpacity 
             style={styles.addressContainer}
-            onPress={() => navigation.navigate('Address')}
+            onPress={() => navigation.navigate('AddressScreen')}
           >
             {selectedAddress ? (
               <>
@@ -228,14 +321,21 @@ export default function CheckoutScreen() {
                     });
                   }}
                 />
+                <View style={styles.editQuantity}>
+                  <Text>{item.quantity}</Text>
+                </View>
+
                 <View style={styles.productDetails}>
                   <Text style={styles.productName}>{item.name_product || item.product_name}</Text>
                   <Text style={styles.productColor}>Color: {item.color}</Text>
                   <Text style={styles.productSize}>Size: {item.size}</Text>
-                  <Text style={styles.price}>
+                 
+                </View>
+                     <Text style={styles.price}>
                     {(item.unit_price_item || item.price)?.toLocaleString('vi-VN')}đ
                   </Text>
-                  <Text style={styles.quantity}>Số lượng: {item.quantity}</Text>
+                <View>
+
                 </View>
               </View>
             );
@@ -269,9 +369,9 @@ export default function CheckoutScreen() {
           </View>
           <View style={styles.radioRow}>
             <RadioButton
-              value="momo"
-              status={paymentMethod === 'momo' ? 'checked' : 'unchecked'}
-              onPress={() => setPaymentMethod('momo')}
+              value="MOMO"
+              status={paymentMethod === 'MOMO' ? 'checked' : 'unchecked'}
+              onPress={() => setPaymentMethod('MOMO')}
             />
             <Text style={styles.paymentMethodText}>Thanh toán qua Momo</Text>
           </View>
@@ -313,7 +413,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1,
-    backgroundColor: '#fff' 
+    backgroundColor: '#F5F7F8' 
   },
   header: {
     flexDirection: 'row',
@@ -334,7 +434,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#333333',
   },
   headerRight: {
     width: 40,
@@ -353,12 +453,13 @@ const styles = StyleSheet.create({
     color: '#000'
   },
   section: { 
-    marginBottom: 16 
+    marginBottom: 16 ,
+
   },
   sectionTitle: { 
     fontSize: 16, 
-    fontWeight: 'bold',
-    color: '#000'
+    color: '#000',
+    fontFamily: 'Nunito-Black',
   },
   editBtn: { 
     position: 'absolute', 
@@ -367,58 +468,63 @@ const styles = StyleSheet.create({
   },
   editText: { 
     color: '#000',
-    fontSize: 14
+    fontSize: 14,
+    fontFamily: 'Nunito-Medium',
   },
   productColor: {
     color: '#444',
-    fontSize: 14
+    fontSize: 14,
+    fontFamily: 'Nunito-Medium',
   },
   productSize: {
     color: '#444',
-    fontSize: 14
-  },
-  text: { 
-    marginTop: 2,
     fontSize: 14,
-    color: '#000'
+    fontFamily: 'Nunito-Medium',
   },
   productRow: { 
     flexDirection: 'row', 
     marginTop: 8,
-    backgroundColor: '#F6F8F9',
+    alignItems: 'center',
+    
     padding: 8,
     borderRadius: 8
   },
   image: { 
     width: 80, 
-    height: 100, 
-    borderRadius: 6, 
-    marginRight: 8 
+    height: 80, 
+    borderRadius: 40, 
+    marginRight: 8,
+    position: 'relative',
   },
   productDetails: { 
-    flex: 1 
+    flex: 1, 
+    marginLeft: 8,
   },
   productName: { 
-    fontWeight: 'bold', 
+    fontFamily: 'Nunito-Black',
     marginBottom: 2,
-    fontSize: 14,
+    fontSize: 16,
     color: '#000'
   },
   price: { 
-    color: 'green', 
+    color: '#10B981', 
     marginTop: 4,
     fontSize: 14,
-    fontWeight: 'bold'
+    fontFamily: 'Nunito-Black',
   },
   quantity: {
     marginTop: 4,
     fontSize: 14,
     color: '#666'
+   
   },
   radioRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    marginTop: 4 
+    marginTop: 4,
+    backgroundColor: 'rgba(224, 212, 246, 1)',
+    padding: 8,
+    borderRadius: 15  
   },
   fixedFooter: {
     position: 'absolute',
@@ -454,21 +560,21 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#D3180C',
+    color: '#10B981',
   },
   orderBtn: { 
-    backgroundColor: 'black', 
+    backgroundColor: 'rgba(191, 165, 240, 1)', 
     paddingVertical: 10, 
     paddingHorizontal: 20, 
     borderRadius: 6 
   },
   orderText: { 
     color: '#fff', 
-    fontWeight: 'bold',
-    fontSize: 14
+    fontSize: 14,
+    fontFamily: 'Nunito-Black',
   },
   addressContainer: {
-    backgroundColor: '#F6F8F9',
+    backgroundColor: 'rgba(233, 226, 245, 1)',
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
@@ -499,11 +605,13 @@ const styles = StyleSheet.create({
   paymentText: {
     fontSize: 14,
     color: '#000',
-    marginVertical: 2
+    marginVertical: 2,
+    fontFamily: 'Nunito-Medium',
   },
   paymentMethodText: {
     fontSize: 14,
-    color: '#000'
+    color: '#000',
+    fontFamily: 'Nunito-Medium',
   },
   noteInput: {
     borderWidth: 1,
@@ -515,11 +623,25 @@ const styles = StyleSheet.create({
     color: '#000',
     backgroundColor: '#F6F8F9',
     minHeight: 80,
+    fontFamily: 'Nunito-Medium',
   },
   characterCount: {
     fontSize: 12,
     color: '#666',
     textAlign: 'right',
     marginTop: 4,
+  },
+  editQuantity: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#CCEEEF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: 13,
+    left: 70,
+    borderWidth: 2,
+    borderColor: 'white',
+    position: 'absolute',
   },
 });

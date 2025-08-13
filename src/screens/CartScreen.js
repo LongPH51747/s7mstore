@@ -4,6 +4,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { Animated, LayoutAnimation, Platform, UIManager, Modal, Alert } from 'react-native';
+import Loading from '../components/Loading';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 import { 
   SafeAreaView, 
@@ -16,6 +18,7 @@ import {
   ActivityIndicator
 } from "react-native";
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api'; // Import API config
+import CustomAlertConfirmDelete from "../components/CustomAlertDelete";
 
 // Main component
 const CartScreen = (props) => {
@@ -36,6 +39,21 @@ const CartScreen = (props) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [variantStocks, setVariantStocks] = useState({}); // Lưu tồn kho theo id_variant
   const [isDeletingItems, setIsDeletingItems] = useState({}); // Thêm state để track các item đang xóa
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [cartItemToDelete, setCartItemToDelete] = useState(null);
+
+  const confirmRemoveItem = (cartItemId) => {
+  setCartItemToDelete(cartItemId);
+  setShowDeleteAlert(true);
+};
+
+const handleConfirmDelete = () => {
+  if (cartItemToDelete) {
+    handleRemoveItem(cartItemToDelete);
+    setCartItemToDelete(null);
+    setShowDeleteAlert(false);
+  }
+};
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -74,10 +92,18 @@ const CartScreen = (props) => {
       return;
     }
 
+    console.log('CartScreen: Fetching fresh cart data for user:', idUser);
+
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
       const response = await fetch(`${API_ENDPOINTS.CART.GET_BY_USER_ID}/${idUser}`, {
         headers: API_HEADERS,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       let data;
       const contentType = response.headers.get('content-type');
@@ -92,16 +118,33 @@ const CartScreen = (props) => {
       }
 
       if (data && data.cartItem && Array.isArray(data.cartItem)) {
+        console.log('CartScreen: Received cart data with', data.cartItem.length, 'items');
         setCart(data);
         setCartItem(data.cartItem);
+        
+        // Reset selected items if cart is empty
+        if (data.cartItem.length === 0) {
+          setSelectedItems({});
+          setSelectAll(false);
+        }
       } else {
+        console.log('CartScreen: No cart items found or invalid data format');
         setCart({ cartItem: [] });
         setCartItem([]);
+        setSelectedItems({});
+        setSelectAll(false);
       }
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể tải giỏ hàng. Vui lòng thử lại sau.' });
+      console.error('CartScreen: Error fetching cart:', error);
+      if (error.name === 'AbortError') {
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Thời gian tải giỏ hàng đã hết. Vui lòng thử lại.' });
+      } else {
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Không thể tải giỏ hàng. Vui lòng thử lại sau.' });
+      }
       setCart({ cartItem: [] });
       setCartItem([]);
+      setSelectedItems({});
+      setSelectAll(false);
     }
   }, [idUser]);
 
@@ -208,12 +251,18 @@ const CartScreen = (props) => {
     setIsDeletingItems(prev => ({ ...prev, [cartItemId]: true }));
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
       // Gửi request xóa lên server TRƯỚC
       const response = await fetch(`${API_ENDPOINTS.CART.DELETE_CART_ITEM(currentItem._id)}`, {
         method: 'DELETE',
         headers: API_HEADERS,
         body: JSON.stringify({ userId: idUser }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       const responseText = await response.text();
       let responseData;
@@ -274,7 +323,11 @@ const CartScreen = (props) => {
       
     } catch (error) {
       console.error('Error removing item:', error);
-      Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Có lỗi khi xóa sản phẩm khỏi giỏ hàng.' });
+      if (error.name === 'AbortError') {
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Thời gian xóa sản phẩm đã hết. Vui lòng thử lại.' });
+      } else {
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: 'Có lỗi khi xóa sản phẩm khỏi giỏ hàng.' });
+      }
       
       // Đồng bộ lại dữ liệu từ server nếu có lỗi
       await getCart();
@@ -303,7 +356,7 @@ const CartScreen = (props) => {
       return;
     }
     
-    navigation.navigate('Checkout', { cartItems: selectedProducts, cartId: cart._id });
+            navigation.navigate('CheckoutScreen', { cartItems: selectedProducts, cartId: cart._id });
   };
 
   const handleSelectAll = () => {
@@ -390,7 +443,7 @@ const CartScreen = (props) => {
           {isDeletingItems[product.id_variant] ? (
             <ActivityIndicator size="small" color="#666" />
           ) : (
-            <Image source={require('../assets/x.png')} style={styles.deleteIcon} />
+           <Icon name="backspace" size={24} color="#EF4444" />
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -451,6 +504,7 @@ const CartScreen = (props) => {
   useFocusEffect(
     React.useCallback(() => {
       let isActive = true;
+      
       const checkLogin = async () => {
         const token = await AsyncStorage.getItem('userToken');
         if (!token && isActive) {
@@ -458,29 +512,69 @@ const CartScreen = (props) => {
         }
       };
       checkLogin();
-      return () => { isActive = false; }; // clean-up
-    }, [])
+      
+      // Check if an order was created recently
+      const checkOrderCreated = async () => {
+        try {
+          const orderCreatedFlag = await AsyncStorage.getItem('orderCreated');
+          if (orderCreatedFlag === 'true') {
+            console.log('CartScreen: Order created flag found, refreshing cart data');
+            // Clear the flag
+            await AsyncStorage.removeItem('orderCreated');
+            // Refresh cart data to get updated information
+            if (idUser && isActive) {
+              await getCart();
+            }
+          }
+          
+          // Check if returning from payment success
+          const returningFromPaymentSuccess = await AsyncStorage.getItem('returningFromPaymentSuccess');
+          if (returningFromPaymentSuccess === 'true') {
+            console.log('CartScreen: Returning from payment success, refreshing cart data');
+            // Clear the flag
+            await AsyncStorage.removeItem('returningFromPaymentSuccess');
+            // Refresh cart data to get updated information
+            if (idUser && isActive) {
+              await getCart();
+            }
+          }
+        } catch (error) {
+          console.error('Error checking order created flag:', error);
+        }
+      };
+      
+      checkOrderCreated();
+      
+      // Refresh cart data when screen is focused
+      if (idUser && isActive) {
+        getCart();
+      }
+      
+      return () => { 
+        isActive = false; 
+      }; // clean-up
+    }, [idUser, getCart])
   );
 
   // Thêm hàm xác nhận xóa
-  const confirmRemoveItem = (cartItemId) => {
-    Alert.alert(
-      'Xác nhận',
-      'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?',
-      [
-        {
-          text: 'Hủy',
-          style: 'cancel',
-        },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: () => handleRemoveItem(cartItemId),
-        },
-      ],
-      { cancelable: true }
-    );
-  };
+  // const confirmRemoveItem = (cartItemId) => {
+  //   Alert.alert(
+  //     'Xác nhận',
+  //     'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?',
+  //     [
+  //       {
+  //         text: 'Hủy',
+  //         style: 'cancel',
+  //       },
+  //       {
+  //         text: 'Xóa',
+  //         style: 'destructive',
+  //         onPress: () => handleRemoveItem(cartItemId),
+  //       },
+  //     ],
+  //     { cancelable: true }
+  //   );
+  // };
 
   return (
     <>
@@ -496,7 +590,7 @@ const CartScreen = (props) => {
               style={{backgroundColor:'#1c2b38', padding:12, borderRadius:8}}
               onPress={() => {
                 setShowLoginModal(false);
-                navigation.navigate('Login');
+                navigation.navigate('LoginScreen');
               }}
             >
               <Text style={{color:'#fff', fontWeight:'bold'}}>Đăng nhập</Text>
@@ -504,6 +598,15 @@ const CartScreen = (props) => {
           </View>
         </View>
       </Modal>
+
+      <CustomAlertConfirmDelete
+  visible={showDeleteAlert}
+  title="Xác nhận xóa"
+  message="Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?"
+  onCancel={() => setShowDeleteAlert(false)}
+  onConfirm={handleConfirmDelete}
+/>
+      <Loading visible={!cartItem} text="Đang tải dữ liệu giỏ hàng..." />
       {showLoginModal ? null : (
         !cartItem ? (
           <View style={{flex:1, backgroundColor:"#FFFFFF", alignItems:"center", justifyContent:"center", flexDirection:"column", color:"black"}}>
@@ -521,10 +624,7 @@ const CartScreen = (props) => {
               </TouchableOpacity>
               <Text style={styles.headerTitle}>{"Cart"}</Text>
               <TouchableOpacity onPress={() => navigation.navigate('UserReviewScreen')}>
-                <Image 
-                  source={require('../assets/search.png')} 
-                  style={styles.headerIcon}
-                />
+               <Icon name="search-outline" size={24} color="black" />
               </TouchableOpacity>
             </View>
             <View style={styles.cartTextContainer}>
@@ -538,7 +638,7 @@ const CartScreen = (props) => {
                   status={selectAll ? 'checked' : 'unchecked'}
                   onPress={handleSelectAll}
                 />
-                <Text style={{color: '#222', fontSize: 14}}>Chọn tất cả</Text>
+                <Text style={{color: '#222', fontSize: 14, fontFamily: 'Nunito-Medium'}}>Chọn tất cả</Text>
               </View>
             )}
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
@@ -612,14 +712,14 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E3E4E5',
   },
   headerIcon: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: 'Nunito-Black',
     color: "#000",
   },
   cartTextContainer: {
@@ -629,6 +729,7 @@ const styles = StyleSheet.create({
   cartText: {
     color: "#000000",
     fontSize: 16,
+    fontFamily: 'Nunito-Black',
   },
   divider: {
     height: 2,
@@ -638,16 +739,21 @@ const styles = StyleSheet.create({
   productContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F6F8F9",
+    backgroundColor: "rgba(237, 234, 242, 1)",
     paddingVertical: 8,
     paddingHorizontal: 24,
     marginBottom: 16,
     position: 'relative',
+    width: '95%',
+    alignSelf: 'center',
+    borderRadius: 12,
+    shadowColor: "#000",
   },
   productImage: {
     width: 98,
     height: 127,
     marginRight: 16,
+    borderRadius: 12
   },
   productDetails: {
     flex: 1,
@@ -658,7 +764,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginRight: 36,
     flex: 1,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black'
   },
   productInfo: {
     flexDirection: "row",
@@ -670,15 +776,18 @@ const styles = StyleSheet.create({
     color: "#444",
     fontSize: 14,
     marginRight: 16,
+    fontFamily: 'Nunito-Medium'
   },
   productSizeLabel: {
     color: "#444",
     fontSize: 14,
     marginRight: 5,
+    fontFamily: 'Nunito-Medium'
   },
   productSize: {
     color: "#444",
     fontSize: 14,
+    fontFamily: 'Nunito-Medium'
   },
   productPriceContainer: {
     flexDirection: "row",
@@ -686,9 +795,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   discountedPrice: {
-    color: "#D3180C",
+    color: "#DB6A34",
     fontSize: 16,
-    fontWeight: "bold",
+    fontFamily: 'Nunito-Black'
+
   },
   quantityContainer: {
     flexDirection: "row",
@@ -741,12 +851,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 4,
     flex: 1,
+    fontFamily: 'Nunito-Medium',
   },
   summaryValue: {
     color: "#979C9E",
     fontSize: 14,
     textAlign: "right",
     flex: 1,
+    fontFamily: 'Nunito-Medium',
   },
   totalContainer: {
     backgroundColor: "#F2F3F4",
@@ -755,6 +867,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderRadius: 8,
   },
   totalLabel: {
     color: "#090A0A",
@@ -789,7 +902,7 @@ const styles = StyleSheet.create({
   checkoutText: {
     color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: "bold",
+    fontFamily: 'Nunito-Black',
   },
   deleteButton: {
     position: 'absolute',
@@ -801,6 +914,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
+    
   },
   deleteIcon: {
     width: 18,
@@ -811,6 +925,7 @@ const styles = StyleSheet.create({
   },
   checkbox: {
     marginRight: 8,
+    
   },
 });
 

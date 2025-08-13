@@ -13,12 +13,23 @@ import { View, Image, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { NavigationContainer } from '@react-navigation/native';
 
 const WelcomeScreen = ({ navigation }) => {
   // Kiểm tra token người dùng khi component được mount
   useEffect(() => {
+    const checkAutoLogin = async () => {
+      const shouldAutoLogin = await AsyncStorage.getItem('shouldAutoLogin');
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      if (shouldAutoLogin === 'true' && userInfo) {
+        navigation.replace('HomeScreen');
+      } else {
+        navigation.replace('LoginScreen');
+      }
+    };
+    checkAutoLogin();
     const timer = setTimeout(() => {
-      navigation.replace('Home');
+      navigation.replace('LoginScreen');
     }, 1500);
     return () => clearTimeout(timer);
   }, []);

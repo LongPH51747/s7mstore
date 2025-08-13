@@ -3,7 +3,7 @@ import { SafeAreaView, StatusBar, useColorScheme, View, ActivityIndicator, Text 
 import { NavigationContainer } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { initializeSdks } from './src/utils/initializeSdks';
-import { AuthProvider } from './src/contexts/AuthContext';
+
 import { SocketProvider } from './src/contexts/SocketContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import ChatBot from './src/components/ChatBot';
@@ -36,19 +36,31 @@ const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  const linking = {
+  prefixes: ['s7mstore://'], // URL scheme của bạn
+  config: {
+    screens: {
+      // Ánh xạ đường dẫn trong URL với tên màn hình trong Stack Navigator
+      PaymentSuccessScreen: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
+      OrderDetail: 'order/:orderId', // s7mstore://order/123
+      // ... ánh xạ các màn hình khác nếu cần
+    },
+  },
+};
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      <NavigationContainer>
-        <AuthProvider>
+      <NavigationContainer linking={linking} fallback={<Text>Loading...</Text>}>
+        
           <SocketProvider>
             <AppNavigator />
+            <ChatBot/>
           </SocketProvider>
-          <ChatBot/>
-        </AuthProvider>
+       
       </NavigationContainer>
     </SafeAreaView>
   );

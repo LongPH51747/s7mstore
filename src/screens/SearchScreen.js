@@ -118,7 +118,7 @@ const SearchScreen = ({ navigation }) => {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       saveSearchHistory(searchQuery.trim());
-      navigation.navigate('SearchResults', { searchQuery: searchQuery.trim() });
+              navigation.navigate('SearchResultsScreen', { searchQuery: searchQuery.trim() });
       Keyboard.dismiss();
     }
   };
@@ -168,7 +168,7 @@ const SearchScreen = ({ navigation }) => {
     return (
       <TouchableOpacity 
         style={styles.recommendedCard}
-        onPress={() => navigation.navigate('ProductDetail', { product: item })}
+        onPress={() => navigation.navigate('ProductDetailScreen', { product: item })}
       >
         <Image 
           source={productImageSource} 
@@ -192,7 +192,7 @@ const SearchScreen = ({ navigation }) => {
       style={styles.historyItem}
       onPress={() => {
         setSearchQuery(item);
-        navigation.navigate('SearchResults', { searchQuery: item });
+        navigation.navigate('SearchResultsScreen', { searchQuery: item });
       }}
     >
       <Icon name="time-outline" size={20} color="#666" />
@@ -261,7 +261,7 @@ const SearchScreen = ({ navigation }) => {
                 style={styles.suggestionItem}
                 onPress={() => {
                   setSearchQuery(item.product_name);
-                  navigation.navigate('SearchResults', { searchQuery: item.product_name });
+                  navigation.navigate('SearchResultsScreen', { searchQuery: item.product_name });
                 }}
               >
                 <Text style={styles.suggestionText}>{item.product_name}</Text>

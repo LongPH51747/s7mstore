@@ -112,7 +112,7 @@ const RegisterScreen = () => {
                 Alert.alert('Success', 'Account created successfully', [
                     {
                         text: 'OK',
-                        onPress: () => navigation.navigate('login'),
+                        onPress: () => navigation.navigate('LoginScreen'),
                     },
                 ]);
             } else {
@@ -245,7 +245,7 @@ const RegisterScreen = () => {
                 )}
             </TouchableOpacity>
             <Text style={styles.orText}>or continue with</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('login')}>
+            <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
                 <Text style={styles.bottomLink}>Already have an account? <Text style={styles.linkText}>Sign in</Text></Text>
             </TouchableOpacity>
             {/* Modal nhập OTP */}

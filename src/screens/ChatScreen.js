@@ -11,262 +11,589 @@ import {
     Platform,
     ActivityIndicator,
     Alert,
-    Image
+    Image, 
+    Modal,
+    Dimensions,
+    StatusBar
 } from 'react-native';
 import { useSocket } from '../contexts/SocketContext';
 import moment from 'moment';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useFocusEffect } from '@react-navigation/native'; // Import hook tối ưu cho focus màn hình
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker'; // Import image picker
+import { API_BASE_URL } from '../config/api'; // Import base URL
+import ImageMessage from '../components/ImageMessage';
 
 const UserChatScreen = () => {
-    // Lấy tất cả state và hàm cần thiết từ Context.
-    // Cấu trúc này rất tốt vì UI và logic được tách biệt.
     const {
         isSocketReady,
         messages,
         isLoadingMessages,
         messagesError,
-        sendUserMessage,
-        currentUserId,
+        sendMessage, // Updated function name
+        user,
         loadingAuth,
         currentUserChatRoomId,
         markMessagesAsRead,
+        socket
     } = useSocket();
 
     const [newMessage, setNewMessage] = useState('');
+    const [selectedImage, setSelectedImage] = useState(null); // State for selected image
     const flatListRef = useRef(null);
+    const currentUserId = user?._id;
+    const [selectedImageForViewer, setSelectedImageForViewer] = useState(null); // State cho ảnh đang xem
+    const [isImageViewerVisible, setIsImageViewerVisible] = useState(false); // State để điều khiển hiển thị trình xem ảnh
+    const navigation = useNavigation();
 
-    // TỐI ƯU HÓA 1: SỬ DỤNG useFocusEffect ĐỂ ĐÁNH DẤU ĐÃ ĐỌC
-    // useFocusEffect chạy mỗi khi người dùng quay lại màn hình này,
-    // đảm bảo logic chạy đúng lúc và hiệu quả hơn useEffect thông thường.
+    // Clear selected image when chat room changes
+    useEffect(() => {
+        setSelectedImage(null);
+    }, [currentUserChatRoomId]);
+
     useFocusEffect(
         useCallback(() => {
-            if (isSocketReady && currentUserChatRoomId && currentUserId) {
-                console.log(`UserChatScreen (Focused): Đánh dấu tin nhắn trong phòng ${currentUserChatRoomId} là đã đọc.`);
-                markMessagesAsRead(currentUserChatRoomId);
+            if (isSocketReady && currentUserChatRoomId && currentUserId && messages.length > 0) {
+                const unreadMessageIds = messages
+                    .filter(msg => !msg.readBy.includes(currentUserId) && msg.sender?._id !== currentUserId)
+                    .map(msg => msg._id);
+
+                if (unreadMessageIds.length > 0) {
+                    markMessagesAsRead(unreadMessageIds, currentUserChatRoomId);
+                }
             }
-            // Không cần hàm dọn dẹp ở đây trừ khi bạn muốn làm gì đó khi màn hình mất focus
             return () => {};
-        }, [isSocketReady, currentUserChatRoomId, currentUserId, markMessagesAsRead])
+        }, [isSocketReady, currentUserChatRoomId, currentUserId, messages, markMessagesAsRead])
     );
 
-    // Hiển thị lỗi một cách nhất quán
     useEffect(() => {
         if (messagesError && messagesError.message) {
-           console.log("Lỗi chat: " ,messagesError.message)
+            console.log("Chat error: ", messagesError.message);
         }
     }, [messagesError]);
 
-    const handleSend = () => {
-        if (!newMessage.trim()) return;
-        sendUserMessage(newMessage);
-        setNewMessage('');
+        const imagePickerOptions = {
+            mediaType: 'photo',
+            quality: 0.8,
+            maxWidth: 1024,
+            maxHeight: 1024,
+        };
+    const handleChoosePhoto = () => {
+       
+        launchImageLibrary(imagePickerOptions, (response) => {
+            if (response.didCancel) {
+                console.log('User cancelled image picker');
+            } else if (response.errorCode) {
+                console.log('ImagePicker Error: ', response.errorMessage);
+                Alert.alert('Lỗi', 'Không thể chọn ảnh. Vui lòng thử lại.');
+            } else if (response.assets && response.assets.length > 0) {
+                const source = { uri: response.assets[0].uri, type: response.assets[0].type, name: response.assets[0].fileName };
+                setSelectedImage(source);
+            }
+        });
     };
-    
-    // TỐI ƯU HÓA 2: SỬ DỤNG useCallback CHO HÀM RENDER ITEM
-    // Giúp FlatList không phải render lại các item không cần thiết khi component cha re-render.
-    // Cải thiện hiệu năng đáng kể với danh sách dài.
-    const renderMessage = useCallback(({ item: msg }) => {
-        const isMyMessage = msg.sender?._id === currentUserId;
-        const messageStatus = msg.status; // 'sending', 'sent', 'failed'
+
+    const handleTakePhoto = () => {
+        launchCamera(imagePickerOptions, (response) => {
+            if(response.didCancel){
+                console.log("User cancelled camera");
+            }else if(response.errorCode){
+                console.log('ImagePicker Error (Camera): ', response.errorMessage);
+                Alert.alert('Lỗi', 'Không thể chụp ảnh. Vui lòng kiểm tra quyền truy cập camera.');
+            }else if(response.assets && response.assets.length > 0){
+                const asset = response.assets[0];
+                const source = {uri: asset.uri, type: asset.type, name: asset.fileName || 'camera_photo.jpg'};
+                setSelectedImage(source)
+            }
+        })
+    }
+
+    const uploadImage = async (image) => {
+        const formData = new FormData();
+        formData.append('image', {
+            uri: image.uri,
+            type: image.type,
+            name: image.name || 'photo.jpg',
+        });
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                return data.url;
+            } else {
+                Alert.alert('Lỗi Upload', data.message || 'Không thể tải ảnh lên.');
+                return null;
+            }
+        } catch (error) {
+            console.error('Upload Error:', error);
+            Alert.alert('Lỗi Mạng', 'Không thể kết nối đến máy chủ để tải ảnh lên.');
+            return null;
+        }
+    };
+
+    const handleSend = async () => {
+        if (selectedImage) {
+            const imageUrl = await uploadImage(selectedImage);
+            if (imageUrl) {
+                sendMessage({
+                    content: newMessage, // Gửi kèm text dưới dạng caption
+                    messageType: 'image',
+                    mediaUrl: imageUrl,
+                });
+                setSelectedImage(null);
+                setNewMessage('');
+            }
+        } else if (newMessage.trim()) {
+            sendMessage({
+                content: newMessage,
+                messageType: 'text',
+            });
+            setNewMessage('');
+        }
+    };
+
+    const handleImagePress = (imageUrl) => {
+        setSelectedImageForViewer(imageUrl);
+        setIsImageViewerVisible(true);
+    };
+
+    const handleDeleteMessage = useCallback((messageId, senderIdOfMessage) => {
+        if(!user || user._id !== senderIdOfMessage){
+            Alert.alert("Không có quyền", "Bạn chỉ có thể xóa tin nhắn của chính mình.");
+            return; 
+        }
+        Alert.alert(
+            "Xóa tin nhắn", 
+            "Bạn có chắc muốn xóa tin nhắn này không?", 
+            [
+                {text: 'Hủy', style: 'cancel'},
+                {text: 'Xóa', 
+                 onPress: ()=> {
+                    if(socket && user && currentUserChatRoomId){
+                       console.log(`[UserChatScreen] Đang gửi yêu cầu xóa tin nhắn ID: ${messageId} trong phòng ${currentUserChatRoomId}`);
+                        socket.emit('delete_message', { messageId, chatRoomId: currentUserChatRoomId });
+                    }else{
+                        let errorMessage = 'Không thể xóa tin nhắn. ';
+                        if (!socket) errorMessage += 'Socket chưa sẵn sàng. ';
+                        if (!user) errorMessage += 'Người dùng chưa được xác định. ';
+                        if (!currentUserChatRoomId) errorMessage += 'Phòng chat chưa xác định. ';
+                        Alert.alert('Lỗi', errorMessage + 'Vui lòng thử lại.');
+                        console.error('Lỗi xóa tin nhắn (client):', { socketReady: !!socket, userExists: !!user, chatRoomIdExists: !!currentUserChatRoomId });
+                    }
+                 }
+                }
+            ], {cancelable:  true}
+        )
+    }, [socket, user, currentUserChatRoomId])
+
+    const renderMessage = useCallback(({ item: msg, user, handleDeleteMessage, handleImagePress }) => {
+        const isAdmin = msg.sender?.role === 'admin';
+        const isUser = !isAdmin;
         const displayTime = moment(msg.createdAt || msg.timestamp).format('HH:mm DD/MM');
-        console.log('DEBUG NEW MESSAGE:', {
-        isMyMessage: isMyMessage,
-        senderId: msg.sender?._id,
-        currentUserId: currentUserId,
-        // Log thêm cả object sender để xem cấu trúc của nó
-        senderObject: JSON.stringify(msg.sender), 
-        messageContent: msg.content
-    });
-          const avatarUrl = msg.sender?.avatar || 'https://www.gravatar.com/avatar/?d=mp';
+        const defaultAvatarUrl = `https://www.gravatar.com/avatar/${msg.sender?.email ? encodeURIComponent(msg.sender.email) : 'default'}?d=mp&s=200`;
+        const avatarSource = msg.sender?.avatar ? { uri: msg.sender.avatar } : { uri: defaultAvatarUrl };
+        const isMyMessage = msg.sender?._id === user?._id;
+    //     console.log("msg.sender?._id:", msg.sender?._id);
+    // console.log("user?._id:", user?._id);
+    // console.log("isMyMessage:", isMyMessage);
+    // console.log("Full User Object:", user);
 
         return (
-            <View style={[
-            styles.messageRow,
-            isMyMessage ? styles.myMessageRow : styles.otherMessageRow
-        ]}>
-            {/* Avatar của người gửi */}
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-
-            {/* Bubble chứa nội dung tin nhắn */}
-            <View style={[
-                styles.messageBubble,
-                isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble
-            ]}>
-                <Text style={[
-                    styles.messageContent,
-                    isMyMessage ? styles.myMessageContent : styles.otherMessageContent
-                ]}>{msg.content}</Text>
-                <View style={styles.messageInfoRow}>
-                    <Text style={[
-                        styles.messageTime,
-                        isMyMessage ? styles.myMessageTime : styles.otherMessageTime
-                    ]}>
-                        {displayTime}
-                    </Text>
-                    {isMyMessage && (
-                        <View style={styles.messageStatusContainer}>
-                            {messageStatus === 'sending' && <ActivityIndicator size="small" color={styles.myMessageTime.color} style={styles.statusIcon} />}
-                            {messageStatus === 'sent' && <Icon name="checkmark-done-sharp" size={14} color={styles.myMessageTime.color} style={styles.statusIcon} />}
-                            {messageStatus === 'failed' && <Icon name="warning-outline" size={14} color="#ef4444" style={styles.statusIcon} />}
+            <View style={{
+                flexDirection: isAdmin ? 'row' : 'row-reverse',
+                alignItems: 'flex-end',
+                marginBottom: 10,
+                
+                
+            }}>
+                <Image source={avatarSource} style={styles.avatar} />
+                {/* Logic mới để điều khiển bubble cho text và ảnh */}
+                {msg.messageType === 'image' && msg.mediaUrl ? (
+                    // Nếu là tin nhắn ảnh, không áp dụng messageBubble
+                    <View style={isAdmin ? styles.adminImageContainer : styles.userImageContainer}>
+                        <TouchableOpacity
+                        style={[styles.image1, {
+                            //  flexDirection: isAdmin ? 'row' : 'row-reverse',
+                        }]}
+                        onLongPress={() => {
+                            if (isMyMessage) {
+                handleDeleteMessage(msg._id, msg.sender?._id);
+            } else {
+                Alert.alert("Không có quyền", "Bạn chỉ có thể xóa tin nhắn của chính mình.");
+            }
+                        }}
+                        onPress={() => handleImagePress(msg.mediaUrl)}>
+                           <ImageMessage imageUrl={msg.mediaUrl} /> 
+                        </TouchableOpacity>
+                        
+                        {/* Nếu có nội dung văn bản kèm ảnh (caption) */}
+                        {msg.content && msg.content.trim() !== '' && (
+                             <Text style={
+                                isAdmin ? styles.adminImageCaption : styles.userImageCaption
+                            }>
+                                {msg.content}
+                            </Text>
+                        )}
+                        <View style={[
+                            styles.messageInfoRow,
+                            isAdmin ? styles.adminMessageInfoRow : styles.userMessageInfoRow // Thêm style riêng cho info row của ảnh
+                        ]}>
+                            <Text style={[
+                                styles.messageTime,
+                                { color: isAdmin ? '#718096' : 'rgba(255,255,255,0.7)' }
+                            ]}>
+                                {displayTime}
+                            </Text>
+                            {isUser && (
+                                <View style={styles.messageStatusContainer}>
+                                    {msg.status === 'pending' && <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" style={styles.statusIcon} />}
+                                    {msg.status === 'sent' && <Icon name="checkmark-done-sharp" size={14} color="rgba(255,255,255,0.7)" style={styles.statusIcon} />}
+                                    {msg.status === 'failed' && <Icon name="warning-outline" size={14} color="#ef4444" style={styles.statusIcon} />}
+                                </View>
+                            )}
                         </View>
-                    )}
-                </View>
+                    </View>
+                ) : (
+                    // Nếu là tin nhắn văn bản, áp dụng messageBubble
+                    <View style={[
+                        styles.messageBubble,
+                        {
+                            backgroundColor: isAdmin ? '#E5E7EB' : '#3B82F6',
+                            alignSelf: isAdmin ? 'flex-start' : 'flex-end',
+                        }
+                    ]}>
+                        {isAdmin && msg.sender?.fullname && (
+                            <Text style={styles.senderName}>{msg.sender.fullname}</Text>
+                        )}
+                        <Text style={[
+                            styles.messageContent,
+                            { color: isAdmin ? '#2d3748' : '#fff' }
+                        ]}>{msg.content}</Text>
+                        <View style={styles.messageInfoRow}>
+                            <Text style={[
+                                styles.messageTime,
+                                { color: isAdmin ? '#718096' : 'rgba(255,255,255,0.7)' }
+                            ]}>
+                                {displayTime}
+                            </Text>
+                            {isUser && (
+                                <View style={styles.messageStatusContainer}>
+                                    {msg.status === 'pending' && <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" style={styles.statusIcon} />}
+                                    {msg.status === 'sent' && <Icon name="checkmark-done-sharp" size={14} color="rgba(255,255,255,0.7)" style={styles.statusIcon} />}
+                                    {msg.status === 'failed' && <Icon name="warning-outline" size={14} color="#ef4444" style={styles.statusIcon} />}
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                )}
             </View>
-        </View>
         );
-    }, [currentUserId]); // Dependency là currentUserId, vì isMyMessage phụ thuộc vào nó.
+    }, [user, handleDeleteMessage, handleImagePress]);
 
-    // Các màn hình chờ (loading states)
     if (loadingAuth || !isSocketReady) {
         return (
             <SafeAreaView style={styles.statusContainer}>
                 <ActivityIndicator size="large" color="#3b82f6" />
                 <Text style={styles.statusText}>
-                    {loadingAuth ? 'Đang tải thông tin đăng nhập...' : 'Đang kết nối đến máy chủ chat...'}
+                    {loadingAuth ? 'Loading login information...' : 'Connecting to chat server...'}
                 </Text>
             </SafeAreaView>
         );
     }
-    
+
     if (isLoadingMessages) {
         return (
             <SafeAreaView style={styles.statusContainer}>
                 <ActivityIndicator size="large" color="#3b82f6" />
-                <Text style={styles.statusText}>Đang tải lịch sử trò chuyện...</Text>
+                <Text style={styles.statusText}>Loading chat history...</Text>
             </SafeAreaView>
         );
     }
 
+
+
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
+            <StatusBar backgroundColor='transparent' translucent  />
             <KeyboardAvoidingView
                 style={styles.keyboardAvoidingView}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} 
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Hỗ trợ Trực tuyến</Text>
+                    <TouchableOpacity onPress={()=> navigation.goBack()} style={{marginTop: 15}}>
+                    <Icon name="arrow-back" size={24} color="#000000ff" />
+                    </TouchableOpacity>
+                     <Image style={styles.logo} source={require('../assets/LogoS7MStore.png')}/>
+                   <Text style={styles.s7m}>S7M Store</Text>
+                   
                 </View>
 
                 <FlatList
                     ref={flatListRef}
                     data={messages}
-                    renderItem={renderMessage}
-                    // TỐI ƯU HÓA 3: CẢI THIỆN KEY EXTRACTOR
-                    // Tránh dùng Math.random() vì nó sẽ tạo key mới mỗi lần render.
-                    // Sử dụng index làm phương án cuối cùng.
-                    keyExtractor={(item, index) => item._id?.toString() || item.tempMessageId?.toString() || `index-${index}`}
-                    contentContainerStyle={styles.messagesContainer}
-                    // TỐI ƯU HÓA 4: GIỮ LẠI LOGIC CUỘN TỐI ƯU
-                    // onContentSizeChange là cách hiệu quả để xử lý cuộn khi có nội dung mới.
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+                   renderItem={({ item }) => renderMessage({ item, user: user, handleDeleteMessage: handleDeleteMessage, handleImagePress: handleImagePress })}
+                    keyExtractor={(item, index) => item._id?.toString() || `index-${index}`}
+                    contentContainerStyle={{ paddingHorizontal: 8, paddingVertical: 15 }}
+                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                     ListEmptyComponent={() => (
                         <View style={styles.noMessagesContainer}>
-                            <Text style={styles.noMessagesText}>Chưa có tin nhắn nào. Bắt đầu cuộc trò chuyện!</Text>
+                            <Text style={styles.noMessagesText}>No messages yet. Start a conversation!</Text>
                         </View>
                     )}
                 />
 
+                {/* Image Preview Area */}
+                {selectedImage && (
+                    <View style={styles.previewContainer}>
+                        <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+                        <TouchableOpacity onPress={() => setSelectedImage(null)} style={styles.removeImageButton}>
+                            <Icon name="close-circle" size={24} color="#000" />
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 <View style={styles.inputForm}>
+                    <TouchableOpacity style={styles.imagePickerButton} onPress={handleTakePhoto}>
+                        <Icon name="aperture-outline" size={24} color="#3B82F6" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.imagePickerButton} onPress={handleChoosePhoto}>
+                        <Icon name="images-outline" size={24} color="#3B82F6" />
+                    </TouchableOpacity>
                     <TextInput
                         style={styles.textInput}
                         value={newMessage}
                         onChangeText={setNewMessage}
-                        placeholder="Nhập tin nhắn của bạn..."
+                        placeholder="..."
                         placeholderTextColor="#888"
                         editable={isSocketReady}
+                        multiline
                     />
                     <TouchableOpacity
                         style={[
                             styles.sendButton,
-                            (!isSocketReady || !newMessage.trim()) && styles.sendButtonDisabled
+                            (!isSocketReady || (!newMessage.trim() && !selectedImage)) && styles.sendButtonDisabled
                         ]}
                         onPress={handleSend}
-                        disabled={!isSocketReady || !newMessage.trim()}
+                        disabled={!isSocketReady || (!newMessage.trim() && !selectedImage)}
                     >
-                        <Text style={styles.sendButtonText}>Gửi</Text>
+                       <Icon name="send" size={24} color="#2563EB" />
+
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+
+            <Modal 
+            visible = {isImageViewerVisible}
+            transparent= {true}
+            onRequestClose={() => setIsImageViewerVisible(false)}
+            animationType='slide'
+            >
+                <View style = {styles.imageViewerContainer}>
+                        <TouchableOpacity style ={styles.closeButton}
+                         onPress={() => {setIsImageViewerVisible(false);
+                            setSelectedImageForViewer(null);
+                         }}>
+                        <Icon name="close-circle" size={30} color="#fff"/>
+                        </TouchableOpacity>
+                        {selectedImageForViewer && (
+                            <Image
+                            source={{uri: selectedImageForViewer}}
+                            style={styles.fullScreenImage}
+                            resizeMode='contain'
+                            />
+                        )}
+                </View>
+            </Modal>
+        </View>
+
+        
     );
 };
-
-// Giữ nguyên phần styles của bạn
+const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#f8f8f8' },
-    keyboardAvoidingView: { flex: 1 },
+    safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+    keyboardAvoidingView: { flex: 1,},
     statusContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f8f8' },
     statusText: { marginTop: 10, fontSize: 16, color: '#4a5568' },
     errorText: { fontSize: 16, color: '#ef4444', textAlign: 'center', paddingHorizontal: 20 },
-    header: { paddingVertical: 18, paddingHorizontal: 20, backgroundColor: '#f0f5fa', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+    header: { paddingTop: 10, paddingHorizontal: 10, backgroundColor: '#FFFFFF ', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', alignItems: 'center', justifyContent: 'flex-start', flexDirection: 'row' },
     headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#2c5282', textTransform: 'uppercase', letterSpacing: 0.5 },
     messagesContainer: { paddingVertical: 15, paddingHorizontal: 10, backgroundColor: '#f8f8f8', flexGrow: 1 },
     noMessagesContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     noMessagesText: { textAlign: 'center', color: '#a0aec0', fontSize: 16, padding: 20 },
-    messageBubble: { maxWidth: '75%', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 20, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 3 },
-    myMessageBubble: { backgroundColor: '#3b82f6', alignSelf: 'flex-end', borderBottomRightRadius: 5 },
-    otherMessageBubble: { backgroundColor: '#e2e8f0', alignSelf: 'flex-start', borderBottomLeftRadius: 5 },
-    messageContent: { fontSize: 16, lineHeight: 22 },
-    myMessageContent: { color: '#ffffff' },
-    otherMessageContent: { color: '#2d3748' },
-    messageInfoRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 5 },
-    messageTime: { fontSize: 12 },
-    myMessageTime: { color: 'rgba(255, 255, 255, 0.7)' },
-    otherMessageTime: { color: '#718096' },
-    messageStatusContainer: { marginLeft: 5 },
-    statusIcon: {},
-    inputForm: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#e2e8f0' },
-    textInput: { flex: 1, height: 45, paddingHorizontal: 15, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 25, fontSize: 16, color: '#4a5568', backgroundColor: '#f9fafb' },
-    sendButton: { marginLeft: 10, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25, backgroundColor: '#3b82f6', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
-    sendButtonDisabled: { backgroundColor: '#93c5fd' },
-    sendButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
+
+    // ============ Styles for Message Row and Avatar ============
     messageRow: {
-        flexDirection: 'row', // Sắp xếp avatar và bubble theo hàng ngang
+        flexDirection: 'row', // Arrange avatar and bubble horizontally
         marginBottom: 15,
-        alignItems: 'flex-end', // Căn chỉnh avatar và bubble theo đáy
+        alignItems: 'flex-end', // Align avatar and bubble to the bottom
+        maxWidth: '100%', // Ensure row doesn't exceed screen width
     },
-    // STYLE MỚI: Căn chỉnh cho hàng tin nhắn của người khác (bên trái)
-    otherMessageRow: {
-        justifyContent: 'flex-start', // Đẩy về bên trái
-    },
-    // STYLE MỚI: Căn chỉnh cho hàng tin nhắn của bạn (bên phải)
-    myMessageRow: {
-        justifyContent: 'flex-end', // Đẩy về bên phải
-        flexDirection: 'row-reverse', // Đảo ngược thứ tự: [Bubble] [Avatar]
-    },
-    // STYLE MỚI: Style cho avatar hình tròn
+    
     avatar: {
         width: 40,
         height: 40,
-        borderRadius: 20, // Nửa chiều rộng/cao để tạo hình tròn
-        backgroundColor: '#ccc', // Màu nền phòng khi ảnh lỗi
+        borderRadius: 20, // Bo tròn
+        backgroundColor: '#ccc',
+        marginHorizontal: 8,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
     },
+    // ============ End Styles ============
 
-    // STYLE ĐÃ SỬA ĐỔI: messageBubble
     messageBubble: {
         maxWidth: '75%',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 20,
-        // Bỏ alignSelf vì đã có messageRow xử lý
-        // Thêm margin để tạo khoảng cách với avatar
-        marginHorizontal: 10, 
+        paddingVertical: 8,
+        paddingHorizontal: 8,
+        borderRadius: 15,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
+        marginHorizontal: 0, // Không margin ngang, sát mép
     },
-    myMessageBubble: {
-        backgroundColor: '#3b82f6',
-        borderBottomRightRadius: 5,
+    senderName: { // Style for sender's name (if available)
+        fontSize: 13,
+        color: '#666',
+        marginBottom: 4,
+        fontWeight: 'bold',
     },
-    otherMessageBubble: {
-        backgroundColor: '#e2e8f0',
-        borderBottomLeftRadius: 5,
+    messageContent: { fontSize: 13, lineHeight: 22, fontFamily: 'Nunito-Medium', },
+    myMessageContent: { color: '#ffffff' },
+    otherMessageContent: { color: '#e0e1e4ff' },
+    messageInfoRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 5 },
+    messageTime: { fontSize: 10, fontFamily: 'Nunito-Medium', },
+    myMessageTime: { color: 'rgba(255, 255, 255, 0.7)' },
+    otherMessageTime: { color: '#718096' },
+    messageStatusContainer: { marginLeft: 5 },
+    statusIcon: {},
+    inputForm: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
+        backgroundColor: '#ffffff',
+        borderTopWidth: 1,
+        borderTopColor: '#e2e8f0'
     },
+    textInput: {
+        flex: 1,
+        height: 45,
+        paddingHorizontal: 15,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        borderRadius: 25,
+        fontSize: 16,
+        color: '#4a5568',
+        backgroundColor: '#f9fafb',
+        marginHorizontal: 5,
+        fontFamily: 'Nunito-Medium',
+    },
+    sendButton: { marginLeft: 10, paddingVertical: 8,
+         paddingHorizontal: 15, borderWidth: 0.5,
+          borderRadius: 25, backgroundColor: '#ffffffff', 
+          shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+           shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
+    sendButtonDisabled: { backgroundColor: '#ffffffff' },
+    sendButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16, fontFamily: 'Nunito-Medium' },
+
+    previewContainer: {
+        flexDirection: 'row',
+        padding: 10,
+        backgroundColor: '#e9e9e9',
+        borderTopWidth: 1,
+        borderColor: '#ddd',
+        alignItems: 'center',
+    },
+    previewImage: {
+        width: 60,
+        height: 60,
+        borderRadius: 10,
+        marginRight: 10,
+    },
+    removeImageButton: {
+        position: 'absolute',
+        top: 0,
+        left: 60,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 12,
+    },
+    imagePickerButton: {
+        paddingHorizontal: 10,
+    },
+   
+    adminImageCaption: {
+        fontSize: 13,
+        lineHeight: 20,
+        color: '#2d3748',
+        paddingHorizontal: 15,
+        paddingTop: 5,
+        paddingBottom: 5,
+        backgroundColor: '#e2e8f0', // Màu nền cho caption
+        borderRadius: 15,
+        overflow: 'hidden',
+        marginBottom: 5,
+    },
+    userImageCaption: {
+        fontSize: 13,
+        lineHeight: 20,
+        color: '#fff',
+        paddingHorizontal: 15,
+        paddingTop: 5,
+        paddingBottom: 5,
+        backgroundColor: '#9be9ffff', // Màu nền cho caption
+        borderRadius: 15,
+        overflow: 'hidden',
+        marginBottom: 5,
+    },
+    // Có thể điều chỉnh styles.messageInfoRow nếu muốn nó có nền khác khi đi kèm ảnh
+    adminMessageInfoRow: {
+        paddingHorizontal: 15, // Giữ padding nếu muốn nó align với caption
+    },
+    userMessageInfoRow: {
+        paddingHorizontal: 15,
+    },
+    imageViewerContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)', // Nền đen mờ
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        zIndex: 1,
+        padding: 10,
+    },
+    fullScreenImage: {
+        width: width,
+        height: height * 0.8,
+        resizeMode: 'contain',
+    },
+    logo: {
+        width: 60,
+        height: 60,
+        marginTop: 15
+    }, 
+    s7m: {
+        marginTop: 15,
+        fontSize: 15,
+        color: 'black',
+        fontFamily: 'Nunito-Medium',
+        marginLeft: 10,
+    }
+    
 });
 
 export default UserChatScreen;

@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import axios from 'axios';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
 import { useNavigation } from '@react-navigation/native';
+import Loading from '../components/Loading';
 
 const SignUpScreen = () => {
   const [email, setEmail] = useState('');
@@ -40,19 +41,19 @@ const SignUpScreen = () => {
 
   const handleSignUp = async () => {
     if (!username || !fullname || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
       return;
     }
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert('Lỗi', 'Vui lòng nhập email hợp lệ');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      Alert.alert('Lỗi', 'Mât khẩu phải có ít nhất 6 ký tự');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert('Lỗi', 'Mật khẩu không trùng khớp');
       return;
     }
     try {
@@ -122,7 +123,7 @@ const SignUpScreen = () => {
         Alert.alert('Success', 'Account created successfully', [
           {
             text: 'OK',
-                        onPress: () => navigation.navigate('login'),
+                        onPress: () => navigation.navigate('LoginScreen'),
           },
         ]);
       } else {
@@ -255,7 +256,7 @@ const SignUpScreen = () => {
                 )}
             </TouchableOpacity>
             <Text style={styles.orText}>or continue with</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('login')}>
+            <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
                 <Text style={styles.bottomLink}>Already have an account? <Text style={styles.linkText}>Sign in</Text></Text>
             </TouchableOpacity>
       {/* Modal nhập OTP */}
@@ -297,6 +298,7 @@ const SignUpScreen = () => {
           </View>
         </View>
       </Modal>
+      <Loading visible={loading || verifying} text={verifying ? 'Đang xác thực OTP...' : 'Đang đăng ký...'} />
         </View>
   );
 };

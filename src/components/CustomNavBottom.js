@@ -15,7 +15,7 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Home');
-          navigation.navigate('Home');
+          navigation.navigate('HomeScreen');
         }}>
         <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color="#000" />
         {/* Tùy chọn: Thêm Text cho nhãn */}
@@ -25,7 +25,7 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Search');
-          navigation.navigate('Search');
+          navigation.navigate('SearchScreen');
         }}>
         <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#000" />
       </TouchableOpacity>
@@ -33,23 +33,16 @@ const CustomNavBottom = () => {
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Cart');
-          navigation.navigate('Cart');
+          navigation.navigate('CartScreen');
         }}>
         <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
       </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => {
-          setActiveTab('Favorites');
-          navigation.navigate('Favorites');
-        }}>
-        <Icon name={activeTab === 'Favorites' ? 'heart' : 'heart-outline'} size={24} color="#000" />
-      </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => {
           setActiveTab('Profile');
-          navigation.navigate('Profile');
+          navigation.navigate('ProfileScreen');
         }}>
         <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#000" />
       </TouchableOpacity>
@@ -64,16 +57,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 12,
-    borderTopWidth: 1,
-    borderColor: '#eee',
     backgroundColor: '#fff',
-    // Thêm các thuộc tính position nếu bạn muốn nó luôn ở cuối màn hình
-    // position: 'absolute',
-    // bottom: 0,
-    // left: 0,
-    // right: 0,
+   
   },
-  // heartIcon: { // thuộc tính này đang không được sử dụng
-  //   fontSize: 20,
-  // },
+ 
 });

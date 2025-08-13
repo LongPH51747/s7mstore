@@ -50,7 +50,7 @@ const OrderDetailScreen = ({ route }) => {
   };
 
   const handleRateOrder = () => {
-    navigation.navigate('Rating', { order });
+            navigation.navigate('RatingScreen', { order });
   };
 
   const handleReturnOrder = () => {

@@ -21,11 +21,12 @@ import ProfileScreen from '../screens/ProfileScreen';
 import UserChatScreen from '../screens/ChatScreen';
 import MapScreen from '../screens/MapScreen';
 import ForgotPasswordScreen from '../screens/ForgotPassword';
-import OtpVerificationScreen from '../screens/OtpScreen';
+import OtpScreen from '../screens/OtpScreen';
 import ResetPasswordScreen from '../screens/ResetPassword';
 import ChangePasswordScreen from '../screens/ChangePassword';
 import RefundReturnScreen from '../screens/TraHangScreen';
 import UserReviewsScreen from '../screens/UserReviewsScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 
 const Stack = createStackNavigator();
 
@@ -41,47 +42,51 @@ const AppNavigator = () => {
   return (
     
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="HomeScreen"
         screenOptions={{
           headerShown: false,
         }}
       >
         {/* Màn hình chào mừng */}
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
         
         {/* Màn hình đăng nhập */}
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="LoginScreen" component={LoginScreen} />
+        <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
         {/* Màn hình trang chủ */}
-        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="HomeScreen" component={HomeScreen} />
         {/* Màn hình tìm kiếm */}
-        <Stack.Screen name="Search" component={SearchScreen} />
+        <Stack.Screen name="SearchScreen" component={SearchScreen} />
         {/* Màn hình kết quả tìm kiếm */}
-        <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+        <Stack.Screen name="SearchResultsScreen" component={SearchResultsScreen} />
         {/* Màn hình chi tiết sản phẩm */}
-        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+        <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
         
         {/* Màn hình giỏ hàng */}
-        <Stack.Screen name="Cart" component={CartScreen} />
+        <Stack.Screen name="CartScreen" component={CartScreen} />
         {/* Màn hình đặt hàng */}
-        <Stack.Screen name="Checkout" component={CheckoutScreen}/>
+        <Stack.Screen name="CheckoutScreen" component={CheckoutScreen}/>
         {/* Màn hình chọn địa chỉ */}
-        <Stack.Screen name="Address" component={AddressScreen} />
+        <Stack.Screen name="AddressScreen" component={AddressScreen} />
         {/* Màn hình thêm địa chỉ */}
-        <Stack.Screen name="AddAddress" component={AddAddressScreen} />
+        <Stack.Screen name="AddAddressScreen" component={AddAddressScreen} />
         {/* Màn hình sửa địa chỉ */}
-        <Stack.Screen name="UpdateAddress" component={UpdateAddressScreen} />
-        <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+        <Stack.Screen name="UpdateAddressScreen" component={UpdateAddressScreen} />
+        <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen} />
         <Stack.Screen name="MapScreen" component={MapScreen} />
         <Stack.Screen name="UserReviewScreen" component={UserReviewsScreen}/>
         
         {/* Màn hình đơn hàng */}
-        <Stack.Screen name="Orders" component={OrderScreen} />
-        <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+        <Stack.Screen name="OrderScreen" component={OrderScreen} />
+        <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
         <Stack.Screen name="Rating" component={RatingScreen} />
-        <Stack.Screen name='Profile' component={ProfileScreen}/>
-        <Stack.Screen name='Chat' component={UserChatScreen}/>
-        
+        <Stack.Screen name='ProfileScreen' component={ProfileScreen}/>
+        <Stack.Screen name='ChatScreen' component={UserChatScreen}/>
+        <Stack.Screen name='ChangePass' component={ChangePasswordScreen}/>
+        <Stack.Screen name='ForgotPass' component={ForgotPasswordScreen}/>
+        <Stack.Screen name='ResetPasswordScreen' component={ResetPasswordScreen}/>
+        <Stack.Screen name='Otp' component={OtpScreen}/>
+        <Stack.Screen name='EditProfileScreen' component={EditProfileScreen}/>
       </Stack.Navigator>
 
   );
