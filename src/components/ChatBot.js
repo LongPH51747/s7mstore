@@ -20,12 +20,15 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Voice from '@react-native-voice/voice';
 import { chatbotService } from '../services/chatbotService';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT } from '../config/api';
 
 
 const { width, height } = Dimensions.get('window');
 
 const ChatBot = () => {
-  // const navigation = useNavigation();
+  const navigation = useNavigation();
   const [isVisible, setIsVisible] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -327,7 +330,8 @@ const ChatBot = () => {
     
     // Kiểm tra nếu response là số hoặc có thể convert thành số
     if (typeof response === 'number' || !isNaN(Number(response))) {
-      console.log('[ChatBot] Response is numeric, showing default message');
+      console.log('[ChatBot] Response is numeric, executing action:', response);
+      executeAction(Number(response));
       return 'Thực hiện yêu cầu';
     }
     
@@ -352,6 +356,179 @@ const ChatBot = () => {
     // Trường hợp khác, convert thành string
     console.log('[ChatBot] Response is other type, converting to string');
     return String(response || 'Lỗi: Không nhận được phản hồi');
+  };
+
+  // Function để thực hiện các action dựa trên số
+  const executeAction = async (actionNumber) => {
+    console.log('[ChatBot] Executing action:', actionNumber);
+    
+    try {
+      switch (actionNumber) {
+        case 1: // Đăng xuất
+          await handleLogout();
+          setIsVisible(false); // Đóng modal
+          break;
+        case 2: // Đổi mật khẩu
+          handleChangePassword();
+          setIsVisible(false); // Đóng modal
+          break;
+        case 3: // Xóa sản phẩm giỏ hàng
+          await handleDeleteAllCartItems();
+          setIsVisible(false); // Đóng modal
+          break;
+        case 4: // Đặt hàng
+          await handlePlaceOrder();
+          setIsVisible(false); // Đóng modal
+          break;
+        case 5: // Xem danh sách đơn hàng
+          handleViewOrders();
+          setIsVisible(false); // Đóng modal
+          break;
+        case 6: // Xem danh sách địa chỉ
+          handleViewAddresses();
+          setIsVisible(false); // Đóng modal
+          break;
+        default:
+          console.log('[ChatBot] Unknown action number:', actionNumber);
+      }
+    } catch (error) {
+      console.error('[ChatBot] Error executing action:', error);
+    }
+  };
+
+  // Function đăng xuất
+  const handleLogout = async () => {
+    try {
+      console.log('[ChatBot] Logging out...');
+      await AsyncStorage.clear();
+      // Reset navigation stack và chuyển về LoginScreen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'LoginScreen' }],
+      });
+    } catch (error) {
+      console.error('[ChatBot] Logout error:', error);
+    }
+  };
+
+  // Function đổi mật khẩu
+  const handleChangePassword = () => {
+    console.log('[ChatBot] Navigating to change password...');
+    navigation.navigate('ChangePass');
+  };
+
+  // Function xóa tất cả items trong cart
+  const handleDeleteAllCartItems = async () => {
+    try {
+      console.log('[ChatBot] Deleting all cart items...');
+      
+      // Lấy user info
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      if (!userInfoString) {
+        console.log('[ChatBot] No user info found');
+        return;
+      }
+      
+      const userInfo = JSON.parse(userInfoString);
+      const userId = userInfo._id;
+      
+      // Lấy cart data
+      const cartResponse = await fetch(`${API_ENDPOINTS.CART.GET_BY_USER_ID}/${userId}`, {
+        headers: API_HEADERS,
+      });
+      
+      if (!cartResponse.ok) {
+        console.log('[ChatBot] Failed to fetch cart data');
+        return;
+      }
+      
+      const cartData = await cartResponse.json();
+      const cartItems = cartData.cartItem || [];
+      
+      if (cartItems.length === 0) {
+        console.log('[ChatBot] Cart is already empty');
+        return;
+      }
+      
+      // Lấy danh sách cart item IDs
+      const cartItemIds = cartItems.map(item => item._id);
+      
+      // Xóa tất cả items
+      const deleteResponse = await fetch(API_ENDPOINTS.CART.DELETE_ALL_ITEMS(userId), {
+        method: 'DELETE',
+        headers: API_HEADERS,
+        body: JSON.stringify({
+          listIdCartItem: cartItemIds
+        }),
+      });
+      
+      if (deleteResponse.ok) {
+        console.log('[ChatBot] All cart items deleted successfully');
+        // Navigate đến CartScreen để user thấy kết quả
+        navigation.navigate('CartScreen');
+      } else {
+        console.log('[ChatBot] Failed to delete cart items');
+      }
+      
+    } catch (error) {
+      console.error('[ChatBot] Error deleting cart items:', error);
+    }
+  };
+
+  // Function đặt hàng
+  const handlePlaceOrder = async () => {
+    try {
+      console.log('[ChatBot] Navigating to checkout...');
+      
+      // Lấy user info
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      if (!userInfoString) {
+        console.log('[ChatBot] No user info found');
+        return;
+      }
+      
+      const userInfo = JSON.parse(userInfoString);
+      const userId = userInfo._id;
+      
+      // Lấy cart data
+      const cartResponse = await fetch(`${API_ENDPOINTS.CART.GET_BY_USER_ID}/${userId}`, {
+        headers: API_HEADERS,
+      });
+      
+      if (!cartResponse.ok) {
+        console.log('[ChatBot] Failed to fetch cart data');
+        return;
+      }
+      
+      const cartData = await cartResponse.json();
+      const cartItems = cartData.cartItem || [];
+      
+      if (cartItems.length === 0) {
+        console.log('[ChatBot] Cart is empty, cannot place order');
+        return;
+      }
+      
+      // Navigate to checkout với cart items
+      navigation.navigate('CheckoutScreen', { 
+        cartItems: cartItems,
+        cartId: cartData._id 
+      });
+      
+    } catch (error) {
+      console.error('[ChatBot] Error navigating to checkout:', error);
+    }
+  };
+
+  // Function xem danh sách đơn hàng
+  const handleViewOrders = () => {
+    console.log('[ChatBot] Navigating to orders...');
+    navigation.navigate('OrderScreen');
+  };
+
+  // Function xem danh sách địa chỉ
+  const handleViewAddresses = () => {
+    console.log('[ChatBot] Navigating to addresses...');
+    navigation.navigate('AddressScreen');
   };
 
   const sendMessage = async (customText = null) => {

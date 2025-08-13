@@ -36,6 +36,7 @@ export const API_ENDPOINTS = {
     ADD_TO_CART: `${API_BASE_URL}/api/cart/addToCart`,
     UPDATE_QUANTITY: (id) => `${API_BASE_URL}/api/cart/updateQuantity/cartItemId/${id}`,
     DELETE_CART_ITEM: (id) => `${API_BASE_URL}/api/cart/deleteCartItem/${id}`,
+    DELETE_ALL_ITEMS: (userId) => `${API_BASE_URL}/api/cart/deleteListCartItem/userID/${userId}`,
   },
   
   // Order endpoints

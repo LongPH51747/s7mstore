@@ -7,10 +7,8 @@ About the app:
 S7M Store is a fashion shopping app for individuals, small businesses, and large showrooms.
 S7M is a major fashion brand in Vietnam and exports internationally.
 Users can place orders, pay via COD or Momo e-wallet.
-
 How to track an order: Profile → Order History → Order Details.
 How to place an order:
-
 Sign up / Log in
 Browse products
 Add to cart
