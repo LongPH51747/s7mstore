@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Loading from '../components/Loading';
+import CustomAlert from '../components/CustomAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +37,13 @@ const ProductDetailScreen = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertData, setAlertData] = useState({ title: '', message: '', buttons: [] });
+
+  const showCustomAlert = (title, message, buttons) => {
+  setAlertData({ title, message, buttons });
+  setAlertVisible(true);
+};
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -410,32 +418,14 @@ const ProductDetailScreen = () => {
 
       const responseData = await response.json();
       
-      // Hiển thị dialog cho người dùng chọn
-      Alert.alert(
-        'Thành công',
-        `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`,
-        [
-          {
-            text: 'Ở lại trang sản phẩm',
-            style: 'cancel',
-            onPress: () => {
-              // Reset quantity về 1
-              setQuantity(1);
-            }
-          },
-          {
-            text: 'Đi đến giỏ hàng',
-            style: 'default',
-            onPress: () => {
-              // Reset quantity về 1
-              setQuantity(1);
-              // Điều hướng đến giỏ hàng
-              navigation.navigate('CartScreen');
-            }
-          }
-        ],
-        { cancelable: true }
-      );
+      showCustomAlert(
+    '🎉 Thành công',
+    `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`,
+    [
+      { text: 'Ở lại', style: 'cancel', onPress: () => setAlertVisible(false) },
+      { text: 'Đi đến giỏ hàng', onPress: () => navigation.navigate('CartScreen') }
+    ]
+  );
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -813,6 +803,15 @@ const ProductDetailScreen = () => {
           )}
         </View>
       </Modal>
+
+      <CustomAlert
+  visible={alertVisible}
+  title={alertData.title}
+  message={alertData.message}
+  buttons={alertData.buttons}
+  onClose={() => setAlertVisible(false)}
+/>
+
 
       <Modal
         visible={showLoginModal}

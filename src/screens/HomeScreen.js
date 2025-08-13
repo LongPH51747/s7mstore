@@ -355,7 +355,7 @@ const newProductsPage = newProducts.slice(newPage * NEW_PRODUCTS_PER_PAGE, (newP
       }
     };
 
-    const TOP_PRODUCTS_PER_PAGE = 4;
+    const TOP_PRODUCTS_PER_PAGE = 5;
   const topProductsSorted = [...products]
     .sort((a, b) => (b.product_sold || 0) - (a.product_sold || 0));
   const topProducts = selectedCategory === 'All'
@@ -467,7 +467,7 @@ const newProductsPage = newProducts.slice(newPage * NEW_PRODUCTS_PER_PAGE, (newP
     <SafeAreaView style={styles.container}>
       {/* Header: logo và ô tìm kiếm */}
       <View style={styles.header}>
-        <Text style={{fontFamily: 'Nunito-Black'}}>S7M STORE</Text>
+        <Text style={{fontFamily: 'Nunito-Black', color: 'black'}}>S7M STORE</Text>
         <TouchableOpacity 
           style={styles.searchContainer}
           onPress={() => navigation.navigate('SearchScreen')}

@@ -53,7 +53,7 @@ const SignUpScreen = () => {
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert('Lỗi', 'Mật khẩu không trùng khớp');
       return;
     }
     try {

@@ -18,6 +18,7 @@ import {
   ActivityIndicator
 } from "react-native";
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api'; // Import API config
+import CustomAlertConfirmDelete from "../components/CustomAlertDelete";
 
 // Main component
 const CartScreen = (props) => {
@@ -38,6 +39,21 @@ const CartScreen = (props) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [variantStocks, setVariantStocks] = useState({}); // Lưu tồn kho theo id_variant
   const [isDeletingItems, setIsDeletingItems] = useState({}); // Thêm state để track các item đang xóa
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [cartItemToDelete, setCartItemToDelete] = useState(null);
+
+  const confirmRemoveItem = (cartItemId) => {
+  setCartItemToDelete(cartItemId);
+  setShowDeleteAlert(true);
+};
+
+const handleConfirmDelete = () => {
+  if (cartItemToDelete) {
+    handleRemoveItem(cartItemToDelete);
+    setCartItemToDelete(null);
+    setShowDeleteAlert(false);
+  }
+};
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -541,24 +557,24 @@ const CartScreen = (props) => {
   );
 
   // Thêm hàm xác nhận xóa
-  const confirmRemoveItem = (cartItemId) => {
-    Alert.alert(
-      'Xác nhận',
-      'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?',
-      [
-        {
-          text: 'Hủy',
-          style: 'cancel',
-        },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: () => handleRemoveItem(cartItemId),
-        },
-      ],
-      { cancelable: true }
-    );
-  };
+  // const confirmRemoveItem = (cartItemId) => {
+  //   Alert.alert(
+  //     'Xác nhận',
+  //     'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?',
+  //     [
+  //       {
+  //         text: 'Hủy',
+  //         style: 'cancel',
+  //       },
+  //       {
+  //         text: 'Xóa',
+  //         style: 'destructive',
+  //         onPress: () => handleRemoveItem(cartItemId),
+  //       },
+  //     ],
+  //     { cancelable: true }
+  //   );
+  // };
 
   return (
     <>
@@ -582,6 +598,14 @@ const CartScreen = (props) => {
           </View>
         </View>
       </Modal>
+
+      <CustomAlertConfirmDelete
+  visible={showDeleteAlert}
+  title="Xác nhận xóa"
+  message="Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?"
+  onCancel={() => setShowDeleteAlert(false)}
+  onConfirm={handleConfirmDelete}
+/>
       <Loading visible={!cartItem} text="Đang tải dữ liệu giỏ hàng..." />
       {showLoginModal ? null : (
         !cartItem ? (
