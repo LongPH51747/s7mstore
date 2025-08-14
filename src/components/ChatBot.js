@@ -36,6 +36,10 @@ const ChatBot = () => {
   const [isListening, setIsListening] = useState(false);
   const flatListRef = useRef(null);
   const [isVoiceAvailable, setIsVoiceAvailable] = useState(false);
+  const [fabPosition, setFabPosition] = useState({ 
+    x: Dimensions.get('window').width - 76, 
+    y: Dimensions.get('window').height - 86 
+  });
   
   // Animation values for draggable button
   const scale = useRef(new Animated.Value(1)).current;
@@ -43,6 +47,17 @@ const ChatBot = () => {
     x: Dimensions.get('window').width - 76,
     y: Dimensions.get('window').height - 86
   })).current;
+
+  // Animation values for modal
+  const modalScale = useRef(new Animated.Value(0)).current;
+  const modalOpacity = useRef(new Animated.Value(0)).current;
+  const backgroundOpacity = useRef(new Animated.Value(0)).current;
+  const modalTranslateX = useRef(new Animated.Value(0)).current;
+  const modalTranslateY = useRef(new Animated.Value(0)).current;
+  
+  // Animation values for FAB
+  const fabOpacity = useRef(new Animated.Value(1)).current;
+  const fabScale = useRef(new Animated.Value(1)).current;
 
   // PanResponder for draggable functionality
   const panResponder = useRef(
@@ -95,6 +110,9 @@ const ChatBot = () => {
          
          // Update position
          pan.setValue({ x: newX, y: newY });
+         
+         // Save FAB position for modal animation
+         setFabPosition({ x: newX, y: newY });
        },
     })
   ).current;
@@ -157,36 +175,6 @@ const ChatBot = () => {
       Voice.destroy().then(Voice.removeAllListeners);
     };
   }, []);
-
-  // Add welcome message when component mounts
-  // useEffect(() => {
-  //   console.log('[ChatBot] Component mounted, setting up voice recognition');
-    
-  //   setMessages([
-  //     {
-  //       id: '1',
-  //       text: 'Xin chào! Tôi là trợ lý AI của S7M Store. Bạn cần hỗ trợ gì?',
-  //       isUser: false,
-  //       timestamp: new Date(),
-  //     },
-  //   ]);
-
-  //   // Setup Voice event listeners
-  //   Voice.onSpeechStart = onSpeechStart;
-  //   Voice.onSpeechEnd = onSpeechEnd;
-  //   Voice.onSpeechError = onSpeechError;
-  //   Voice.onSpeechResults = onSpeechResults;
-  //   Voice.onSpeechPartialResults = onSpeechPartialResults;
-
-  //   console.log('[ChatBot] Voice event listeners set up');
-    
-
-  //   return () => {
-  //     console.log('[ChatBot] Component unmounting, cleaning up voice listeners');
-  //     Voice.destroy().then(Voice.removeAllListeners);
-  //   };
-  // }, []);
-
   // Voice recognition functions
   const onSpeechStart = () => {
     console.log('[Voice] Speech recognition started');
@@ -321,6 +309,170 @@ const ChatBot = () => {
     } catch (error) {
       console.error('[Voice] Error stopping voice recognition:', error);
     }
+  };
+
+
+
+  const openModal = () => {
+    // Calculate modal position based on FAB position
+    const screenWidth = Dimensions.get('window').width;
+    const screenHeight = Dimensions.get('window').height;
+    const modalWidth = screenWidth * 0.85; // 85% of screen width
+    const modalHeight = screenHeight * 0.75; // 75% of screen height
+    
+    // Calculate FAB center position
+    const fabCenterX = fabPosition.x + 28; // FAB center (56/2)
+    const fabCenterY = fabPosition.y + 28; // FAB center (56/2)
+    
+    // Calculate center position for modal (final position) - slightly offset towards FAB
+    const baseCenterX = (screenWidth - modalWidth) / 2;
+    const baseCenterY = (screenHeight - modalHeight) / 2;
+    
+    // Offset towards FAB side (20% of the distance from center to FAB)
+    const offsetX = (fabCenterX - baseCenterX) * 0.2;
+    const offsetY = (fabCenterY - baseCenterY) * 0.2;
+    
+    const modalCenterX = baseCenterX + offsetX;
+    const modalCenterY = baseCenterY + offsetY;
+    
+    // Calculate initial position (start from FAB position)
+    const initialX = fabCenterX - modalWidth / 2;
+    const initialY = fabCenterY - modalHeight / 2;
+    
+    // Calculate translation to center
+    const translateX = modalCenterX - initialX;
+    const translateY = modalCenterY - initialY;
+    
+    // Set initial position (modal starts at FAB position)
+    modalTranslateX.setValue(-translateX);
+    modalTranslateY.setValue(-translateY);
+    
+    console.log('[ChatBot] FAB Position:', fabPosition);
+    console.log('[ChatBot] FAB Center:', { x: fabCenterX, y: fabCenterY });
+    console.log('[ChatBot] Modal Center:', { x: modalCenterX, y: modalCenterY });
+    console.log('[ChatBot] Initial Position:', { x: initialX, y: initialY });
+    console.log('[ChatBot] Translation:', { x: translateX, y: translateY });
+    console.log('[ChatBot] Set Values:', { x: -translateX, y: -translateY });
+    
+    setIsVisible(true);
+    Animated.parallel([
+      Animated.timing(backgroundOpacity, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalOpacity, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScale, {
+        toValue: 1,
+        tension: 50,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalTranslateX, {
+        toValue: 0,
+        tension: 50,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalTranslateY, {
+        toValue: 0,
+        tension: 50,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      // Hide FAB at the same time
+      Animated.timing(fabOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(fabScale, {
+        toValue: 0.8,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeModal = () => {
+    // Calculate final position back to FAB
+    const screenWidth = Dimensions.get('window').width;
+    const screenHeight = Dimensions.get('window').height;
+    const modalWidth = screenWidth * 0.85;
+    const modalHeight = screenHeight * 0.75;
+    
+    // Calculate FAB center position
+    const fabCenterX = fabPosition.x + 28;
+    const fabCenterY = fabPosition.y + 28;
+    
+    // Calculate center position for modal (final position) - slightly offset towards FAB
+    const baseCenterX = (screenWidth - modalWidth) / 2;
+    const baseCenterY = (screenHeight - modalHeight) / 2;
+    
+    // Offset towards FAB side (20% of the distance from center to FAB)
+    const offsetX = (fabCenterX - baseCenterX) * 0.2;
+    const offsetY = (fabCenterY - baseCenterY) * 0.2;
+    
+    const modalCenterX = baseCenterX + offsetX;
+    const modalCenterY = baseCenterY + offsetY;
+    
+    // Calculate initial position (start from FAB position)
+    const initialX = fabCenterX - modalWidth / 2;
+    const initialY = fabCenterY - modalHeight / 2;
+    
+    // Calculate translation to center
+    const translateX = modalCenterX - initialX;
+    const translateY = modalCenterY - initialY;
+    
+    Animated.parallel([
+      Animated.timing(backgroundOpacity, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalOpacity, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScale, {
+        toValue: 0,
+        tension: 50,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalTranslateX, {
+        toValue: -translateX,
+        tension: 50,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalTranslateY, {
+        toValue: -translateY,
+        tension: 50,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      // Show FAB at the same time
+      Animated.timing(fabOpacity, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.spring(fabScale, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsVisible(false);
+    });
   };
 
   // Helper function để xử lý response từ API
@@ -624,23 +776,25 @@ const ChatBot = () => {
   return (
     <>
       {/* Floating Chat Button */}
-             <Animated.View
-         style={[
-           styles.floatingButton,
-           {
-             transform: [
-               { translateX: pan.x },
-               { translateY: pan.y },
-               { scale: scale },
-             ],
-           },
-         ]}
-         {...panResponder.panHandlers}
-       >
+      <Animated.View
+        style={[
+          styles.floatingButton,
+          {
+            opacity: fabOpacity,
+            transform: [
+              { translateX: pan.x },
+              { translateY: pan.y },
+              { scale: Animated.multiply(scale, fabScale) },
+            ],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
         <TouchableOpacity
-          onPress={() => setIsVisible(true)}
+          onPress={openModal}
           activeOpacity={0.8}
           style={styles.buttonContent}
+          disabled={isVisible}
         >
           <Image 
             source={require('../assets/chatbot.png')} 
@@ -650,17 +804,31 @@ const ChatBot = () => {
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Chat Modal */}
-      <Modal
-        visible={isVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setIsVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+      {/* Chat Modal Overlay */}
+      {isVisible && (
+        <Animated.View style={[styles.modalOverlay, { opacity: backgroundOpacity }]}>
+          <TouchableOpacity
+            style={styles.backgroundTouchable}
+            activeOpacity={1}
+            onPress={closeModal}
+          >
+            <Animated.View
+                              style={[
+                  styles.modalContainer,
+                  {
+                    opacity: modalOpacity,
+                    transform: [
+                      { scale: modalScale },
+                      { translateX: modalTranslateX },
+                      { translateY: modalTranslateY }
+                    ],
+                  },
+                ]}
+            >
+              <KeyboardAvoidingView
+                style={styles.modalContent}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              >
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
@@ -679,7 +847,7 @@ const ChatBot = () => {
                </View>
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setIsVisible(false)}
+                onPress={closeModal}
               >
                 <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -764,7 +932,10 @@ const ChatBot = () => {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </Modal>
+              </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
     </>
   );
 };
@@ -800,17 +971,49 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
   },
-  modalContainer: {
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  backgroundTouchable: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '85%',
+    height: '75%',
     backgroundColor: '#f5f5f5',
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    position: 'absolute',
+  },
+  modalContent: {
+    flex: 1,
   },
   header: {
     backgroundColor: 'white',
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 15,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
   },
   headerContent: {
     flexDirection: 'row',
@@ -933,6 +1136,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   voiceButton: {
     width: 40,

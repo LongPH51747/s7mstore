@@ -638,6 +638,11 @@ const RatingScreen = () => {
               throw new Error('Token đã hết hạn. Vui lòng đăng nhập lại.');
             }
             
+            // Check for 500 error - inappropriate content
+            if (response.status === 500) {
+              throw new Error('Hình ảnh chứa nội dung không phù hợp');
+            }
+            
             throw new Error(`Server error: ${response.status} - ${errorText}`);
           }
 
