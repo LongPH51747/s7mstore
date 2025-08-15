@@ -1,31 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Linking, TextInput} from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Linking, TextInput, Modal } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import VoucherScreen from './VoucherScreen'; // Đảm bảo đường dẫn này đúng
 
 
 export default function CheckoutScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-
+  const [isVoucherModalVisible, setIsVoucherModalVisible] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [subTotalPrice, setSubTotalPrice] = useState(0);
   const [voucherAmount, setVoucherAmount] = useState(0);
-  const [shippingFee, setShippingFee] = useState(0);
+  const [shippingFee, setShippingFee] = useState(20000); // Phí vận chuyển cố định
   const [totalAmount, setTotalAmount] = useState(0);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [hasAddresses, setHasAddresses] = useState(false);
   const [userNote, setUserNote] = useState('');
   const [orderCreated, setOrderCreated] = useState(false);
+  const [appliedVoucher, setAppliedVoucher] = useState(null); // Thêm state cho voucher đã áp dụng
+
 
   // Function to notify other screens that order was created successfully
   const notifyOrderCreated = () => {
-    // Set a flag in AsyncStorage to notify other screens
     AsyncStorage.setItem('orderCreated', 'true');
     setOrderCreated(true);
     console.log('Order created flag set in AsyncStorage');
@@ -60,7 +62,6 @@ export default function CheckoutScreen() {
         const defaultAddr = addresses.find(addr => addr.is_default);
         setDefaultAddress(defaultAddr);
         
-        // If no address is selected yet, use the default address
         if (!selectedAddress && defaultAddr) {
           setSelectedAddress(defaultAddr);
         }
@@ -70,12 +71,10 @@ export default function CheckoutScreen() {
     };
 
     fetchDefaultAddress();
-  }, []);
+  }, [selectedAddress]);
 
-  // Add useFocusEffect to refresh data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      // Refresh cart items data when screen is focused
       if (route.params?.cartItems) {
         setCartItems(route.params.cartItems);
       } else if (route.params?.product && route.params?.quantity) {
@@ -94,36 +93,75 @@ export default function CheckoutScreen() {
   );
 
   useEffect(() => {
-    console.log('Route Params:', route.params);
-  }, [route.params]);
-
-  useEffect(() => {
-    if (route.params?.cartItems) {
-      setCartItems(route.params.cartItems);
-    } else if (route.params?.product && route.params?.quantity) {
-      const singleProduct = {
-        ...route.params.product,
-        quantity: route.params.quantity,
-        unit_price_item: route.params.product.selectedVariant?.variant_price || route.params.product.product_price,
-        color: route.params.product.selectedVariant?.variant_color || '',
-        size: route.params.product.selectedVariant?.variant_size || '',
-        image: route.params.product.selectedVariant?.variant_image_url || route.params.product.product_image,
-        name_product: route.params.product.product_name,
-      };
-      setCartItems([singleProduct]);
-    }
-  }, [route.params]);
-
-  useEffect(() => {
     let subTotal = 0;
     cartItems.forEach(item => {
       subTotal += (item.unit_price_item || item.price) * item.quantity;
     });
     setSubTotalPrice(subTotal);
-    setVoucherAmount(30000);
-    setShippingFee(20000);
-    setTotalAmount(subTotal - 30000 + 20000);
   }, [cartItems]);
+
+  useEffect(() => {
+    // Tính toán lại tổng tiền khi subtotal, voucher hoặc phí ship thay đổi
+    const newTotal = subTotalPrice - voucherAmount + shippingFee;
+    setTotalAmount(newTotal > 0 ? newTotal : 0);
+  }, [subTotalPrice, voucherAmount, shippingFee]);
+
+
+  // HÀM MỚI: Xử lý khi người dùng chọn voucher từ VoucherScreen
+  const handleVoucherSelect = async (voucher) => {
+    setIsVoucherModalVisible(false);
+
+    // Nếu người dùng chọn voucher
+    if (voucher) {
+      try {
+        const userInfoString = await AsyncStorage.getItem('userInfo');
+        const userInfo = JSON.parse(userInfoString);
+        
+        if (!userInfo || !userInfo._id) {
+          throw new Error('User information not found');
+        }
+
+        // Gọi API apply voucher
+        const response = await axios.post(
+           API_ENDPOINTS.VOUCHER.APPLY_VOUCHER(userInfo._id),
+          { 
+            code: voucher.code, 
+            subtotal: subTotalPrice 
+          },
+          { headers: { 'ngrok-skip-browser-warning': 'true' } }
+        );
+
+        if (response.status === 200) {
+          const newTotal = response.data; // API trả về tổng tiền mới
+          console.log("Giá tiền voucher giảm ",response.data)
+          console.log("Giá tiền trước khi có voucher: ",subTotalPrice)
+          const calculatedDiscount = subTotalPrice + shippingFee - newTotal;
+          console.log("Giá tiền sau khi áp voucher: ",calculatedDiscount)
+          setAppliedVoucher(voucher); // Lưu lại voucher đã áp dụng
+          setVoucherAmount(newTotal); // Cập nhật số tiền giảm giá
+          setTotalAmount(newTotal); // Cập nhật tổng tiền cuối cùng
+          Alert.alert('Thành công', 'Voucher đã được áp dụng.');
+        } else {
+          Alert.alert('Lỗi', response.data || 'Không thể áp dụng voucher.');
+          setAppliedVoucher(null);
+          setVoucherAmount(0);
+          setTotalAmount(subTotalPrice + shippingFee);
+        }
+      } catch (error) {
+        console.error("Lỗi khi áp dụng voucher:", error);
+        Alert.alert('Lỗi', 'Đã xảy ra lỗi trong quá trình áp dụng voucher.');
+        setAppliedVoucher(null);
+        setVoucherAmount(0);
+        setTotalAmount(subTotalPrice + shippingFee);
+      }
+    } else {
+      // Nếu người dùng đóng modal mà không chọn voucher
+      setAppliedVoucher(null);
+      setVoucherAmount(0);
+      setTotalAmount(subTotalPrice + shippingFee);
+    }
+  };
+
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
@@ -144,82 +182,68 @@ export default function CheckoutScreen() {
         throw new Error('User information not found');
       }
 
-      if(paymentMethod === 'COD'){
-        // Format order items
+      // Format order items
       const orderItems = cartItems.map(item => ({
         id_product: item.id_product,
         id_variant: item.id_variant || '',
         quantity: item.quantity
       }));
-
-      // Prepare order data
+      
+      // Chuẩn bị dữ liệu cho order
       const orderData = {
         orderItems,
         id_address: selectedAddress._id,
         payment_method: paymentMethod,
         id_cart: route.params?.cartId || null,
-        user_note: userNote.trim()
+        user_note: userNote.trim(),
+        id_voucher: appliedVoucher ? appliedVoucher._id : null, // Thêm ID voucher
       };
 
 
-      // Call create order API
-      const response = await fetch(
-        `${API_ENDPOINTS.ORDERS.CREATE_ORDER(userInfo._id)}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderData)
+      if(paymentMethod === 'COD'){
+        // Call create order API for COD
+        const response = await fetch(
+          `${API_ENDPOINTS.ORDERS.CREATE_ORDER(userInfo._id)}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData)
+          }
+        );
+        console.log("Order data: ",JSON.stringify(orderData));
+
+        if (!response.ok) {
+          throw new Error('Failed to create order');
         }
-      );
-      console.log("Order data: ",JSON.stringify(orderData));
 
-      if (!response.ok) {
-        throw new Error('Failed to create order');
-      }
-
-      const result_cod = await response.json();
-      console.log('Order created:', result_cod);
-      notifyOrderCreated(); // Notify other screens that order was created
-      navigation.navigate('PaymentSuccessScreen', { orderId: result_cod._id || result_cod.id });
-      }else if( paymentMethod === 'MOMO'){
+        const result_cod = await response.json();
+        console.log('Order created:', result_cod);
+        notifyOrderCreated();
+        navigation.navigate('PaymentSuccessScreen', { orderId: result_cod._id || result_cod.id });
+      } else if( paymentMethod === 'MOMO'){
         console.log('Tiến hành thanh toán với MOMO...');
 
-        const orderItems = cartItems.map(item => ({
-          id_product: item.id_product,
-          id_variant: item.id_variant || '',
-          quantity: item.quantity
-        }));
+        const response = await fetch(
+          `${API_ENDPOINTS.ORDERS.CREATE_ORDER(userInfo._id)}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData)
+          }
+        );
+        console.log(JSON.stringify(orderData));
 
-        // Prepare order data
-        const orderData = {
-          orderItems,
-          id_address: selectedAddress._id,
-          payment_method: paymentMethod,
-          id_cart: route.params?.cartId || null
-        };
-
-        // Call create order API
-      const response = await fetch(
-        `${API_ENDPOINTS.ORDERS.CREATE_ORDER(userInfo._id)}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderData)
+        if (!response.ok) {
+          throw new Error('Failed to create order');
         }
-      );
-      console.log(JSON.stringify(orderData));
 
-      if (!response.ok) {
-        throw new Error('Failed to create order');
-      }
-
-      const result_momo = await response.json();
-      console.log('Order created:', result_momo);
-      notifyOrderCreated(); // Notify other screens that order was created
+        const result_momo = await response.json();
+        console.log('Order created:', result_momo);
+        notifyOrderCreated();
         
         const result = await axios.post(`${API_BASE_URL}/api/momo/create-payment`,{
           total_amount: result_momo.total_amount,
@@ -232,17 +256,15 @@ export default function CheckoutScreen() {
 
         console.log('Data:', result.data);
         
-     
         const { deeplink } = result?.data?.data
         console.log('LINK:', deeplink);
         
         if (deeplink) {
           await Linking.openURL(deeplink)
+        } else {
+          throw new Error('MOMO payUrl not received from server')
         }
-      }else{
-        throw new Error('MOMO payUrl not received from server')
       }
-      // Đã xử lý response và navigation trong từng block, không cần xử lý ở ngoài nữa
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Lỗi', 'Không thể đặt hàng. Vui lòng thử lại.');
@@ -329,14 +351,10 @@ export default function CheckoutScreen() {
                   <Text style={styles.productName}>{item.name_product || item.product_name}</Text>
                   <Text style={styles.productColor}>Color: {item.color}</Text>
                   <Text style={styles.productSize}>Size: {item.size}</Text>
-                 
                 </View>
-                     <Text style={styles.price}>
-                    {(item.unit_price_item || item.price)?.toLocaleString('vi-VN')}đ
-                  </Text>
-                <View>
-
-                </View>
+                <Text style={styles.price}>
+                  {(item.unit_price_item || item.price)?.toLocaleString('vi-VN')}đ
+                </Text>
               </View>
             );
           })}
@@ -345,7 +363,11 @@ export default function CheckoutScreen() {
         {/* Voucher */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>S7M Voucher</Text>
-          <TouchableOpacity><Text style={styles.editText}>Chọn voucher </Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setIsVoucherModalVisible(true)}>
+            <Text style={styles.editText}>
+              {appliedVoucher ? `Đã chọn: ${appliedVoucher.code}` : 'Chọn voucher'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Chi tiết thanh toán */}
@@ -406,6 +428,19 @@ export default function CheckoutScreen() {
           <Text style={styles.orderText}>Đặt hàng</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal cho VoucherScreen */}
+      <Modal
+        visible={isVoucherModalVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setIsVoucherModalVisible(false)}
+      >
+        <VoucherScreen 
+          onSelectVoucher={handleVoucherSelect}
+          currentSubtotal={subTotalPrice} 
+        />
+      </Modal>
     </View>
   );
 }

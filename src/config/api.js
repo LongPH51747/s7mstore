@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://389a5362809e.ngrok-free.app';
+export const API_BASE_URL = 'https://290538b87be0.ngrok-free.app';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -84,6 +84,12 @@ export const API_ENDPOINTS = {
     FORGOT_PASS_OUT_APP: `${API_BASE_URL}/api/auth/forget-password`},
   MOMO:{
     CREATE_PAY: () => `${API_BASE_URL}/api/momo/create-payment`
+  },
+  VOUCHER: {
+    GET_ALL: `${API_BASE_URL}/api/voucher/getVoucherForUser`,
+    GET_BY_ID: (id) => `${API_BASE_URL}/api/voucher/getVoucherById/${id}`,
+    GET_VOUCHER_BY_CODE:`${API_BASE_URL}/api/voucher/getVoucherByCode`,
+    APPLY_VOUCHER: (userId) => `${API_BASE_URL}/api/voucher/applyVoucher/${userId}`,
   },
 }
 
