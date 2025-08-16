@@ -130,6 +130,13 @@ const ChatBot = () => {
     }
   }, [inputText]);
 
+  // Ensure FAB is visible when component mounts
+  useEffect(() => {
+    console.log('[ChatBot] Component mounted, ensuring FAB is visible');
+    fabOpacity.setValue(1);
+    fabScale.setValue(1);
+  }, []);
+
   useEffect(() => {
     console.log('🚀 [SETUP] Bắt đầu setup Voice Recognition');
     setMessages([
@@ -400,6 +407,17 @@ const ChatBot = () => {
   };
 
   const closeModal = () => {
+    console.log('[ChatBot] closeModal called');
+    
+    // Kiểm tra nếu modal đã đóng
+    if (!isVisible) {
+      console.log('[ChatBot] Modal already closed, ensuring FAB is visible');
+      // Đảm bảo FAB hiển thị
+      fabOpacity.setValue(1);
+      fabScale.setValue(1);
+      return;
+    }
+    
     // Calculate final position back to FAB
     const screenWidth = Dimensions.get('window').width;
     const screenHeight = Dimensions.get('window').height;
@@ -429,50 +447,59 @@ const ChatBot = () => {
     const translateX = modalCenterX - initialX;
     const translateY = modalCenterY - initialY;
     
-    Animated.parallel([
-      Animated.timing(backgroundOpacity, {
-        toValue: 0,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalOpacity, {
-        toValue: 0,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(modalScale, {
-        toValue: 0,
-        tension: 50,
-        friction: 12,
-        useNativeDriver: true,
-      }),
-      Animated.spring(modalTranslateX, {
-        toValue: -translateX,
-        tension: 50,
-        friction: 12,
-        useNativeDriver: true,
-      }),
-      Animated.spring(modalTranslateY, {
-        toValue: -translateY,
-        tension: 50,
-        friction: 12,
-        useNativeDriver: true,
-      }),
-      // Show FAB at the same time
-      Animated.timing(fabOpacity, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(fabScale, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    try {
+      Animated.parallel([
+        Animated.timing(backgroundOpacity, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(modalOpacity, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalScale, {
+          toValue: 0,
+          tension: 50,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalTranslateX, {
+          toValue: -translateX,
+          tension: 50,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalTranslateY, {
+          toValue: -translateY,
+          tension: 50,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+        // Show FAB at the same time
+        Animated.timing(fabOpacity, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.spring(fabScale, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setIsVisible(false);
+        console.log('[ChatBot] Modal closed successfully');
+      });
+    } catch (error) {
+      console.error('[ChatBot] Error in closeModal animation:', error);
+      // Fallback: đóng modal ngay lập tức và hiển thị FAB
       setIsVisible(false);
-    });
+      fabOpacity.setValue(1);
+      fabScale.setValue(1);
+    }
   };
 
   // Helper function để xử lý response từ API
@@ -518,33 +545,32 @@ const ChatBot = () => {
       switch (actionNumber) {
         case 1: // Đăng xuất
           await handleLogout();
-          setIsVisible(false); // Đóng modal
           break;
         case 2: // Đổi mật khẩu
           handleChangePassword();
-          setIsVisible(false); // Đóng modal
           break;
         case 3: // Xóa sản phẩm giỏ hàng
           await handleDeleteAllCartItems();
-          setIsVisible(false); // Đóng modal
           break;
         case 4: // Đặt hàng
           await handlePlaceOrder();
-          setIsVisible(false); // Đóng modal
           break;
         case 5: // Xem danh sách đơn hàng
           handleViewOrders();
-          setIsVisible(false); // Đóng modal
           break;
         case 6: // Xem danh sách địa chỉ
           handleViewAddresses();
-          setIsVisible(false); // Đóng modal
           break;
         default:
           console.log('[ChatBot] Unknown action number:', actionNumber);
       }
+      
+      // Đảm bảo modal luôn được đóng sau khi thực hiện action
+      closeModal();
     } catch (error) {
       console.error('[ChatBot] Error executing action:', error);
+      // Đảm bảo FAB hiển thị ngay cả khi có lỗi
+      closeModal();
     }
   };
 
@@ -560,13 +586,19 @@ const ChatBot = () => {
       });
     } catch (error) {
       console.error('[ChatBot] Logout error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
     }
   };
 
   // Function đổi mật khẩu
   const handleChangePassword = () => {
-    console.log('[ChatBot] Navigating to change password...');
-    navigation.navigate('ChangePass');
+    try {
+      console.log('[ChatBot] Navigating to change password...');
+      navigation.navigate('ChangePass');
+    } catch (error) {
+      console.error('[ChatBot] Navigation error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
+    }
   };
 
   // Function xóa tất cả items trong cart
@@ -617,13 +649,18 @@ const ChatBot = () => {
       if (deleteResponse.ok) {
         console.log('[ChatBot] All cart items deleted successfully');
         // Navigate đến CartScreen để user thấy kết quả
-        navigation.navigate('CartScreen');
+        try {
+          navigation.navigate('CartScreen');
+        } catch (navError) {
+          console.error('[ChatBot] Navigation error:', navError);
+        }
       } else {
         console.log('[ChatBot] Failed to delete cart items');
       }
       
     } catch (error) {
       console.error('[ChatBot] Error deleting cart items:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
     }
   };
 
@@ -661,26 +698,41 @@ const ChatBot = () => {
       }
       
       // Navigate to checkout với cart items
-      navigation.navigate('CheckoutScreen', { 
-        cartItems: cartItems,
-        cartId: cartData._id 
-      });
+      try {
+        navigation.navigate('CheckoutScreen', { 
+          cartItems: cartItems,
+          cartId: cartData._id 
+        });
+      } catch (navError) {
+        console.error('[ChatBot] Navigation error:', navError);
+      }
       
     } catch (error) {
       console.error('[ChatBot] Error navigating to checkout:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
     }
   };
 
   // Function xem danh sách đơn hàng
   const handleViewOrders = () => {
-    console.log('[ChatBot] Navigating to orders...');
-    navigation.navigate('OrderScreen');
+    try {
+      console.log('[ChatBot] Navigating to orders...');
+      navigation.navigate('OrderScreen');
+    } catch (error) {
+      console.error('[ChatBot] Navigation error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
+    }
   };
 
   // Function xem danh sách địa chỉ
   const handleViewAddresses = () => {
-    console.log('[ChatBot] Navigating to addresses...');
-    navigation.navigate('AddressScreen');
+    try {
+      console.log('[ChatBot] Navigating to addresses...');
+      navigation.navigate('AddressScreen');
+    } catch (error) {
+      console.error('[ChatBot] Navigation error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
+    }
   };
 
   const sendMessage = async (customText = null) => {
