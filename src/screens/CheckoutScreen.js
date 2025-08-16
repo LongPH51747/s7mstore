@@ -25,7 +25,7 @@ export default function CheckoutScreen() {
   const [orderCreated, setOrderCreated] = useState(false);
   const [appliedVoucher, setAppliedVoucher] = useState(null); // Thêm state cho voucher đã áp dụng
 
-
+  const [id_cart, setIdCart] = useState(route.params?.cartId || null);
   // Function to notify other screens that order was created successfully
   const notifyOrderCreated = () => {
     AsyncStorage.setItem('orderCreated', 'true');
@@ -126,13 +126,13 @@ export default function CheckoutScreen() {
            API_ENDPOINTS.VOUCHER.APPLY_VOUCHER(userInfo._id),
           { 
             code: voucher.code, 
-            subtotal: subTotalPrice 
+            subtotal: subTotalPrice,
           },
           { headers: { 'ngrok-skip-browser-warning': 'true' } }
         );
 
         if (response.status === 200) {
-          const newTotal = response.data; // API trả về tổng tiền mới
+          const newTotal = response.data.discountAmount; // API trả về tổng tiền mới
           console.log("Giá tiền voucher giảm ",response.data)
           console.log("Giá tiền trước khi có voucher: ",subTotalPrice)
           const calculatedDiscount = subTotalPrice + shippingFee - newTotal;
@@ -142,7 +142,7 @@ export default function CheckoutScreen() {
           setTotalAmount(newTotal); // Cập nhật tổng tiền cuối cùng
           Alert.alert('Thành công', 'Voucher đã được áp dụng.');
         } else {
-          Alert.alert('Lỗi', response.data || 'Không thể áp dụng voucher.');
+          Alert.alert('Lỗi', response.data.discountAmount || 'Không thể áp dụng voucher.');
           setAppliedVoucher(null);
           setVoucherAmount(0);
           setTotalAmount(subTotalPrice + shippingFee);
@@ -194,11 +194,14 @@ export default function CheckoutScreen() {
         orderItems,
         id_address: selectedAddress._id,
         payment_method: paymentMethod,
-        id_cart: route.params?.cartId || null,
+        id_cart: id_cart,
         user_note: userNote.trim(),
-        id_voucher: appliedVoucher ? appliedVoucher._id : null, // Thêm ID voucher
+        shipping: shippingFee,
+        code: appliedVoucher ? appliedVoucher.code : null, // Thêm ID voucher
       };
-
+      console.log("ID cart: ", id_cart);
+      console.log("Id_voucher: ", appliedVoucher ? appliedVoucher._id : null);
+      console.log("Code voucher: ", appliedVoucher ? appliedVoucher.code : null);
 
       if(paymentMethod === 'COD'){
         // Call create order API for COD
@@ -221,7 +224,10 @@ export default function CheckoutScreen() {
         const result_cod = await response.json();
         console.log('Order created:', result_cod);
         notifyOrderCreated();
-        navigation.navigate('PaymentSuccessScreen', { orderId: result_cod._id || result_cod.id });
+        navigation.navigate('PaymentSuccessScreen', { orderId: result_cod._id || result_cod.id, 
+          finalAmount: result_cod.total_amount, // Thêm phí vận chuyển vào tổng tiền
+         });
+         console.log("Tổng tiền cuối cùng: ", result_cod.total_amount );
       } else if( paymentMethod === 'MOMO'){
         console.log('Tiến hành thanh toán với MOMO...');
 
@@ -613,6 +619,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
+   
   },
   addAddressText: {
     color: '#007AFF',

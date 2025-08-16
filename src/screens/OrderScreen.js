@@ -3,10 +3,11 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
+import { convertNumberToStatus, getStatusNumbers } from '../utils/orderStatusUtils';
 
 const OrdersScreen = () => {
   const navigation = useNavigation();
-
+  
   const [idUser, setIdUser] = useState(null);
   const [selectedTab, setSelectedTab] = useState('Chờ xác nhận');
   const [orders, setOrders] = useState([]);
@@ -70,8 +71,14 @@ const OrdersScreen = () => {
 
         const data = await response.json();
         
+        // Convert status numbers to text for display
+        const processedData = data.map(order => ({
+          ...order,
+          status: convertNumberToStatus(order.status)
+        }));
+        
         // Debug logs for image data
-        data.forEach(order => {
+        processedData.forEach(order => {
           console.log('Order ID:', order._id);
           order.orderItems.forEach((item, index) => {
             console.log(`Item ${index + 1} image data:`, {
@@ -82,7 +89,7 @@ const OrdersScreen = () => {
           });
         });
 
-        setOrders(data);
+        setOrders(processedData);
       } catch (error) {
         console.error('Lỗi khi lấy danh sách đơn hàng:', error);
         if (error.name === 'AbortError') {
@@ -112,7 +119,11 @@ const OrdersScreen = () => {
     }));
   };
 
-  const filteredOrders = orders ? orders.filter(o => o.status === selectedTab) : [];
+  const filteredOrders = orders ? orders.filter(o => {
+    // Nếu status là số, chuyển đổi sang text trước khi so sánh
+    const orderStatus = typeof o.status === 'number' ? convertNumberToStatus(o.status) : o.status;
+    return orderStatus === selectedTab;
+  }) : [];
 
   return (
     <View style={styles.container}>
@@ -305,7 +316,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     color: '#000',
   },
   tabsContainer: {
@@ -327,10 +338,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     textAlign: 'center',
+    fontFamily: 'Nunito-Medium',
   },
   activeTab: {
     color: '#000',
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
   },
   scrollView: {
     flex: 1,
@@ -339,9 +351,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 14,
     padding: 5,
-    margin: 5,
+    margin: 10,
+    marginHorizontal: 16,
     elevation: 1,
-    shadowColor: '#999',
+    shadowColor: '#080808ff',
     shadowOpacity: 0.06,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
@@ -436,7 +449,7 @@ const styles = StyleSheet.create({
   },
   buttonPrimaryText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontFamily:'Nunito-Black',
     fontSize: 13,
   },
   buttonSecondary: {

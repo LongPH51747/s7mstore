@@ -6,6 +6,7 @@ import { initializeSdks } from './src/utils/initializeSdks';
 
 import { SocketProvider } from './src/contexts/SocketContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import ChatBot from './src/components/ChatBot';
 
 const App: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -57,6 +58,7 @@ const App: React.FC = () => {
         
           <SocketProvider>
             <AppNavigator />
+            <ChatBot/>
           </SocketProvider>
        
       </NavigationContainer>
