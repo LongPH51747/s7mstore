@@ -74,19 +74,11 @@ const App: React.FC = () => {
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-<<<<<<< HEAD
-      <NavigationContainer ref={navigationRef}>
-        <NotificationProvider>
-          <SocketProvider>
-            <AppNavigator />
-            <NotificationPopup />
-=======
       <NavigationContainer linking={linking} fallback={<Text>Loading...</Text>}>
         
           <SocketProvider>
             <AppNavigator />
             <ChatBot/>
->>>>>>> origin/bao1
           </SocketProvider>
         </NotificationProvider>
       </NavigationContainer>
