@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -29,6 +28,7 @@ import UserReviewsScreen from '../screens/UserReviewsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import VoucherScreen from '../screens/VoucherScreen';
 import ReturnRequestScreen from '../screens/ReturnRequestScreen';
+import NotificationScreen from '../screens/NotificationScreen';
 
 const Stack = createStackNavigator();
 
@@ -41,14 +41,24 @@ const Stack = createStackNavigator();
  * - Thiết lập màn hình khởi động
  */
 const AppNavigator = () => {
+  // Export navigation service globally for notification deep linking
+  React.useEffect(() => {
+    global.navigationService = {
+      navigate: (name, params) => {
+        if (global._navigator) {
+          global._navigator.navigate(name, params);
+        }
+      }
+    };
+  }, []);
+  
   return (
-    
-      <Stack.Navigator
-        initialRouteName="HomeScreen"
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
+    <Stack.Navigator
+      initialRouteName="HomeScreen"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
         {/* Màn hình chào mừng */}
         <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
         
@@ -82,17 +92,20 @@ const AppNavigator = () => {
         <Stack.Screen name="OrderScreen" component={OrderScreen} />
         <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
         <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} />
-        <Stack.Screen name="Rating" component={RatingScreen} />
-        <Stack.Screen name='ProfileScreen' component={ProfileScreen}/>
-        <Stack.Screen name='ChatScreen' component={UserChatScreen}/>
-        <Stack.Screen name='ChangePass' component={ChangePasswordScreen}/>
-        <Stack.Screen name='ForgotPass' component={ForgotPasswordScreen}/>
-        <Stack.Screen name='ResetPasswordScreen' component={ResetPasswordScreen}/>
         <Stack.Screen name='Otp' component={OtpScreen}/>
-        <Stack.Screen name='EditProfileScreen' component={EditProfileScreen}/>
         <Stack.Screen name='VoucherScreen' component={VoucherScreen}/>
+        <Stack.Screen name="RatingScreen" component={RatingScreen} />
+        <Stack.Screen name="ProfileScreen" component={ProfileScreen}/>
+        <Stack.Screen name="ChatScreen" component={UserChatScreen}/>
+        {/* Các màn hình bổ sung */}
+        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
+        <Stack.Screen name="OtpScreen" component={OtpScreen} />
+        <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
+        <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
+        <Stack.Screen name="RefundReturnScreen" component={RefundReturnScreen} />
+        <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen}/>
       </Stack.Navigator>
-
   );
 };
 

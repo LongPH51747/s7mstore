@@ -259,7 +259,7 @@ const OrdersScreen = () => {
                     </TouchableOpacity>
                     {order.status === 'Giao thành công' && order.orderItems.some(item => !item.is_review) && (
                       <>
-                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Rating', { order })}>
+                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('RatingScreen', { order })}>
                           <Text style={styles.buttonSecondaryText}>Đánh giá</Text>
                         </TouchableOpacity>
                       </>

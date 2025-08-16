@@ -10,19 +10,27 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  AppState,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import CustomNavBottom from '../components/CustomNavBottom';
 import axios from 'axios';
-import { API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS,  API_BASE_URL  } from '../config/api';
+import { useNotification } from '../contexts/NotificationContext';
+import PushNotification from 'react-native-push-notification';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused(); // Hook để kiểm tra xem màn hình có đang focus không
   const [user, setUser] = useState(null); // State để lưu thông tin người dùng
   const [loading, setLoading] = useState(true); // State để quản lý loading
+  const { getUnreadCount } = useNotification();
+
+
+  
+
 
   // Hàm tải thông tin người dùng từ AsyncStorage
   const fetchUserInfo = useCallback(async () => {
@@ -193,9 +201,20 @@ const ProfileScreen = () => {
        
         <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfileScreen', { user })}>
           <Image
-            style={styles.avatar}
-            source={{ uri: user.avatar || 'https://via.placeholder.com/150' }} 
-          />
+  style={styles.avatar}
+  source={{
+    uri: user?.avatar
+      ? user.avatar.startsWith('http')
+        ? user.avatar
+        : `${API_BASE_URL}/${user.avatar}`
+      : 'https://via.placeholder.com/150',
+  }}
+  onError={(e) => {
+    // Để gỡ lỗi, bạn có thể in ra URL bị lỗi
+    console.error('Lỗi tải ảnh đại diện:', e.nativeEvent.error);
+    console.log('URL bị lỗi:', e.target.source);
+  }}
+/>
           <View style={styles.profileTextContainer}>
          
             <Text style={styles.name}>{user.displayName || user.fullname || 'Tên người dùng'}</Text> 
@@ -262,6 +281,28 @@ const ProfileScreen = () => {
           <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
         </TouchableOpacity>
 
+        <Text style={styles.sectionTitle}>Thông Báo</Text>
+        <TouchableOpacity
+        style={styles.itemRow}
+        onPress={() => navigation.navigate('NotificationScreen')}
+        >
+          <View style={styles.notificationIconContainer}>
+            <Feather name="bell" size={20} color="black" />
+            {(() => {
+              const unreadCount = getUnreadCount();
+              console.log(`🎯 ProfileScreen badge render - Unread count: ${unreadCount}`);
+              return unreadCount > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              ) : null;
+            })()}
+          </View>
+          <Text style={styles.itemText}>Thông báo người dùng</Text>
+          <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
+        </TouchableOpacity>
        
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.supportGrid}>
@@ -534,6 +575,226 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontFamily: 'Nunito-Black',
   },
+  notificationIconContainer: {
+    position: 'relative',
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#ff4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  // ✅ DEBUG TEST BUTTON STYLES
+  debugSection: {
+    marginVertical: 20,
+    padding: 15,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  debugTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#333',
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+  },
+  testButton2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2196F3',
+    padding: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+  },
+  fireTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF4500',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FF6B35',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  directTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8E24AA',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#9C27B0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  diagnosticsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#607D8B',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    justifyContent: 'center',
+  },
+  simpleTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF9800',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFA726',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  permissionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#66BB6A',
+  },
+  requestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF5722',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF7043',
+  },
+  navTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007bff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#6c757d',
+  },
+  onceTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B', // A different color for one-time test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF8E8E',
+  },
+  intervalTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF4136', // A different color for interval test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF6347',
+  },
+  backgroundTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007bff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#6c757d',
+  },
+  statusTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#66BB6A',
+  },
+  abortTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B', // A different color for abort test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF8E8E',
+  },
+  dedupTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B', // A different color for dedup test
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FF8E8E',
+  },
+
 });
 
 export default ProfileScreen;

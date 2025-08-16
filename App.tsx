@@ -1,12 +1,32 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { SafeAreaView, StatusBar, useColorScheme, View, ActivityIndicator, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { initializeSdks } from './src/utils/initializeSdks';
 
 import { SocketProvider } from './src/contexts/SocketContext';
+import { NotificationProvider } from './src/contexts/NotificationContext';
+import NotificationPopup from './src/components/NotificationPopup';
 import AppNavigator from './src/navigation/AppNavigator';
 import ChatBot from './src/components/ChatBot';
+
+// ✅ NAVIGATION SERVICE FOR PUSH NOTIFICATIONS
+let _navigator: any;
+
+export const navigationRef = (ref: any) => {
+  _navigator = ref;
+  // Export globally for notification deep linking
+  global._navigator = ref;
+};
+
+export const navigate = (name: string, params?: any) => {
+  if (_navigator) {
+    console.log('🎯 [NAV] Navigating to:', name, params);
+    _navigator.navigate(name, params);
+  } else {
+    console.warn('⚠️ [NAV] Navigator not ready yet');
+  }
+};
 
 const App: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -54,13 +74,15 @@ const App: React.FC = () => {
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      <NavigationContainer linking={linking} fallback={<Text>Loading...</Text>}>
+      <NavigationContainer ref={navigationRef} linking={linking} fallback={<Text>Loading...</Text>}>
         
+            <ChatBot/>
+        <NotificationProvider>
           <SocketProvider>
             <AppNavigator />
-            <ChatBot/>
+            <NotificationPopup />
           </SocketProvider>
-       
+        </NotificationProvider>
       </NavigationContainer>
     </SafeAreaView>
   );

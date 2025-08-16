@@ -44,6 +44,7 @@ const ProductDetailScreen = () => {
   setAlertData({ title, message, buttons });
   setAlertVisible(true);
 };
+  const [productLoading, setProductLoading] = useState(false);
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -207,11 +208,115 @@ const ProductDetailScreen = () => {
       }
     }, [route.params?.product?._id, fetchProductData])
   );
+  // Fetch product by ID when only productId is provided
+  const fetchProductById = async (productId) => {
+    try {
+      setProductLoading(true);
+      console.log('🔍 Fetching product by ID:', productId);
+      
+      // Try multiple API endpoints to find the working one
+      const endpoints = [
+        API_ENDPOINTS.PRODUCTS.GET_BY_ID_FULL(productId),
+        API_ENDPOINTS.PRODUCTS.GET_BY_ID(productId),
+        `${API_BASE_URL}/api/products/get-products-by-id/id/${productId}`,
+        `${API_BASE_URL}/api/products/get-product-by-id/${productId}`,
+      ];
+      
+      let foundProduct = null;
+      let lastError = null;
+      
+      for (const apiUrl of endpoints) {
+        try {
+          console.log('🔗 Trying API URL:', apiUrl);
+          
+          const response = await fetch(apiUrl, {
+            headers: API_HEADERS,
+          });
+          
+          console.log('📡 Response status:', response.status);
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('📦 API Response:', result);
+            
+            // Extract product from response (try different formats)
+            foundProduct = result.data || result.product || result;
+            
+            if (foundProduct && foundProduct._id) {
+              console.log('✅ Product found with endpoint:', apiUrl);
+              break;
+            }
+          } else {
+            console.log(`❌ Endpoint failed: ${apiUrl} (${response.status})`);
+          }
+        } catch (endpointError) {
+          console.log(`❌ Endpoint error: ${apiUrl}`, endpointError.message);
+          lastError = endpointError;
+        }
+      }
+      
+      if (!foundProduct || !foundProduct._id) {
+        console.log('❌ No working endpoint found');
+        
+        // Fallback: Try to find in all products
+        console.log('🔄 Fallback: Searching in all products...');
+        const allProductsResponse = await fetch(API_ENDPOINTS.PRODUCTS.GET_ALL, {
+          headers: API_HEADERS,
+        });
+        
+        if (allProductsResponse.ok) {
+          const allProducts = await allProductsResponse.json();
+          foundProduct = allProducts.find(p => p._id === productId);
+          
+          if (foundProduct) {
+            console.log('✅ Product found via fallback search');
+          }
+        }
+      }
+      
+      if (!foundProduct || !foundProduct._id) {
+        Alert.alert('Lỗi', 'Không tìm thấy sản phẩm!');
+        navigation.goBack();
+        return;
+      }
+      
+      console.log('✅ Product fetched successfully:', foundProduct.product_name);
+      setProduct(foundProduct);
+      
+    } catch (error) {
+      console.error('❌ Error fetching product:', error);
+      Alert.alert('Lỗi', 'Không thể tải thông tin sản phẩm. Vui lòng thử lại!');
+      navigation.goBack();
+    } finally {
+      setProductLoading(false);
+    }
+  };
 
   useEffect(() => {
+    console.log('🔍 ProductDetailScreen useEffect - route.params:', route.params);
+    
+    // Case 1: Full product object provided (from search, home, etc.)
     if (route.params?.product) {
       const fetchedProduct = route.params.product;
+      console.log('📦 Using provided product object:', fetchedProduct.product_name);
       setProduct(fetchedProduct);
+    }
+    // Case 2: Only productId provided (from notifications)
+    else if (route.params?.productId) {
+      console.log('🔗 Only productId provided, fetching from API...', route.params.productId);
+      fetchProductById(route.params.productId);
+    }
+    // Case 3: No product data
+    else {
+      console.log('❌ No product data provided');
+      Alert.alert('Lỗi', 'Không có thông tin sản phẩm!');
+      navigation.goBack();
+    }
+  }, [route.params]);
+
+  useEffect(() => {
+    if (product) {
+      const fetchedProduct = product;
       
       // Tự động chọn biến thể đầu tiên có sẵn hàng
       if (fetchedProduct.product_variant && fetchedProduct.product_variant.length > 0) {
@@ -265,7 +370,7 @@ const ProductDetailScreen = () => {
         }
       }
     }
-  }, [route.params]);
+  }, [product]);
 
   const handleVariantChange = (variant) => {
     // Kiểm tra xem biến thể có hàng tồn kho không - try multiple field names
@@ -480,11 +585,13 @@ const ProductDetailScreen = () => {
   const isSelectedVariantInStock = selectedVariant && (selectedVariant.variant_stock || selectedVariant.variant_quantity || selectedVariant.stock || selectedVariant.quantity || selectedVariant.inventory || 0) > 0;
   const selectedVariantStock = selectedVariant ? (selectedVariant.variant_stock || selectedVariant.variant_quantity || selectedVariant.stock || selectedVariant.quantity || selectedVariant.inventory || 0) : 0;
 
-  if (!product) {
+  if (!product || productLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text>Loading product details...</Text>
+        <ActivityIndicator size="large" color="#007BFF" />
+        <Text style={styles.loadingText}>
+          {productLoading ? 'Đang tải thông tin sản phẩm...' : 'Loading product details...'}
+        </Text>
       </View>
     );
   }
@@ -846,6 +953,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   header: {
     padding: 10,

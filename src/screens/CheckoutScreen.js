@@ -6,6 +6,7 @@ import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import VoucherScreen from './VoucherScreen'; // Đảm bảo đường dẫn này đúng
+import VoucherModal from './VoucherModal';
 
 
 export default function CheckoutScreen() {
@@ -442,7 +443,7 @@ export default function CheckoutScreen() {
         presentationStyle="fullScreen"
         onRequestClose={() => setIsVoucherModalVisible(false)}
       >
-        <VoucherScreen 
+        <VoucherModal 
           onSelectVoucher={handleVoucherSelect}
           currentSubtotal={subTotalPrice} 
         />
