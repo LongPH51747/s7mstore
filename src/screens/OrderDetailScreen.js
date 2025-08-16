@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { API_BASE_URL, API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { convertStatusToNumber, convertNumberToStatus } from '../utils/orderStatusUtils';
 
 const OrderDetailScreen = ({ route }) => {
   const navigation = useNavigation();
   const { order, onOrderUpdate } = route.params;
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Convert order status to text for display if it's a number
+  const displayOrder = {
+    ...order,
+    status: typeof order.status === 'number' ? convertNumberToStatus(order.status) : order.status
+  };
 
   const handleCancelOrder = () => {
     Alert.alert(
@@ -23,7 +30,7 @@ const OrderDetailScreen = ({ route }) => {
               const response = await fetch(API_ENDPOINTS.ORDERS.UPDATE_STATUS(order._id), {
                 method: 'PATCH',
                 headers: API_HEADERS,
-                body: JSON.stringify({ status: 'Đã hủy' }),
+                body: JSON.stringify({ status: convertStatusToNumber('Đã hủy') }),
               });
 
               if (!response.ok) {
@@ -54,7 +61,7 @@ const OrderDetailScreen = ({ route }) => {
   };
 
   const handleReturnOrder = () => {
-    Alert.alert('Trả hàng', 'Chức năng trả hàng hiện đang được phát triển. Vui lòng quay lại sau.');
+    navigation.navigate('ReturnRequestScreen', { order });
   };
 
   return (
@@ -82,16 +89,27 @@ const OrderDetailScreen = ({ route }) => {
         {/* Trạng thái đơn hàng */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trạng thái đơn hàng</Text>
+<<<<<<< HEAD
           <Text style={styles.statusText}>{order?.status || 'Đang xử lý'}</Text>
+=======
+          <Text style={styles.statusText}>{displayOrder.status}</Text>
+>>>>>>> origin/bao1
         </View>
 
         {/* Thông tin đơn hàng */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
+<<<<<<< HEAD
           <Text style={styles.infoText}>Mã đơn hàng: {order?._id || 'N/A'}</Text>
           <Text style={styles.infoText}>Ngày đặt: {order?.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</Text>
           <Text style={styles.infoText}>Phương thức thanh toán: {order?.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
           <Text style={styles.infoText}>Trạng thái thanh toán: {order?.payment_status || 'Chưa xác định'}</Text>
+=======
+          <Text style={styles.infoText}>Mã đơn hàng: {order._id}</Text>
+          <Text style={styles.infoText}>Ngày đặt: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</Text>
+          <Text style={styles.infoText}>Phương thức thanh toán: {order.payment_method === 'COD' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
+          <Text style={styles.infoText}>Trạng thái thanh toán: {order.payment_status}</Text>
+>>>>>>> origin/bao1
         </View>
 
         {/* Thông tin người nhận */}
@@ -153,6 +171,13 @@ const OrderDetailScreen = ({ route }) => {
             <Text style={styles.totalLabel}>Phí vận chuyển:</Text>
             <Text style={styles.totalValue}>{order.shipping?.toLocaleString('vi-VN')}đ</Text>
           </View>
+
+          {order.discount > 0 && (
+        <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Voucher giảm giá:</Text>
+            <Text style={[styles.totalValue, styles.voucherValue]}>-{order.discount?.toLocaleString('vi-VN')}đ</Text>
+        </View>
+    )}
           <View style={[styles.totalRow, styles.finalTotal]}>
             <Text style={styles.totalLabel}>Tổng cộng:</Text>
             <Text style={styles.totalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
@@ -160,7 +185,7 @@ const OrderDetailScreen = ({ route }) => {
         </View>
       </ScrollView>
 
-      {order.status === 'Chờ xác nhận' && (
+      {displayOrder.status === 'Chờ xác nhận' && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.fullWidthButton, isCancelling && styles.disabledButton]}
@@ -172,7 +197,7 @@ const OrderDetailScreen = ({ route }) => {
         </View>
       )}
 
-      {order.status === 'Giao thành công' && (
+      {displayOrder.status === 'Giao thành công' && (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.halfWidthButtonSecondary} onPress={handleReturnOrder}>
             <Text style={styles.buttonTextSecondary}>Trả hàng</Text>

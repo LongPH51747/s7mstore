@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Image, Style
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
+import { convertNumberToStatus } from '../utils/orderStatusUtils';
 
 const TABS = ['Chưa đánh giá', 'Đã đánh giá'];
 
@@ -40,7 +41,14 @@ const UserReviewsScreen = () => {
       });
       if (!response.ok) throw new Error('Không thể lấy danh sách đơn hàng');
       const data = await response.json();
-      setOrders(data);
+      
+      // Convert status numbers to text for display
+      const processedData = data.map(order => ({
+        ...order,
+        status: convertNumberToStatus(order.status)
+      }));
+      
+      setOrders(processedData);
     } catch (err) {
       setErrorOrders(err.message);
       setOrders([]);

@@ -201,10 +201,10 @@ const UserChatScreen = () => {
         const defaultAvatarUrl = `https://www.gravatar.com/avatar/${msg.sender?.email ? encodeURIComponent(msg.sender.email) : 'default'}?d=mp&s=200`;
         const avatarSource = msg.sender?.avatar ? { uri: msg.sender.avatar } : { uri: defaultAvatarUrl };
         const isMyMessage = msg.sender?._id === user?._id;
-        console.log("msg.sender?._id:", msg.sender?._id);
-    console.log("user?._id:", user?._id);
-    console.log("isMyMessage:", isMyMessage);
-    console.log("Full User Object:", user);
+    //     console.log("msg.sender?._id:", msg.sender?._id);
+    // console.log("user?._id:", user?._id);
+    // console.log("isMyMessage:", isMyMessage);
+    // console.log("Full User Object:", user);
 
         return (
             <View style={{
@@ -266,7 +266,7 @@ const UserChatScreen = () => {
                     <View style={[
                         styles.messageBubble,
                         {
-                            backgroundColor: isAdmin ? '#e2e8f0' : '#9be9ffff',
+                            backgroundColor: isAdmin ? '#E5E7EB' : '#3B82F6',
                             alignSelf: isAdmin ? 'flex-start' : 'flex-end',
                         }
                     ]}>
@@ -363,11 +363,11 @@ const UserChatScreen = () => {
 
                 <View style={styles.inputForm}>
                     <TouchableOpacity style={styles.imagePickerButton} onPress={handleTakePhoto}>
-                        <Icon name="camera-outline" size={24} color="#000000ff" />
+                        <Icon name="aperture-outline" size={24} color="#3B82F6" />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.imagePickerButton} onPress={handleChoosePhoto}>
-                        <Icon name="image-outline" size={24} color="#000000ff" />
+                        <Icon name="images-outline" size={24} color="#3B82F6" />
                     </TouchableOpacity>
                     <TextInput
                         style={styles.textInput}
@@ -386,7 +386,7 @@ const UserChatScreen = () => {
                         onPress={handleSend}
                         disabled={!isSocketReady || (!newMessage.trim() && !selectedImage)}
                     >
-                       <Icon name="send" size={24} color="#22eae3ff" />
+                       <Icon name="send" size={24} color="#2563EB" />
 
                     </TouchableOpacity>
                 </View>
@@ -421,12 +421,12 @@ const UserChatScreen = () => {
 };
 const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#eeeaeaff' },
+    safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
     keyboardAvoidingView: { flex: 1,},
     statusContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f8f8' },
     statusText: { marginTop: 10, fontSize: 16, color: '#4a5568' },
     errorText: { fontSize: 16, color: '#ef4444', textAlign: 'center', paddingHorizontal: 20 },
-    header: { paddingTop: 10, paddingHorizontal: 10, backgroundColor: '#ffffffff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', alignItems: 'center', justifyContent: 'flex-start', flexDirection: 'row' },
+    header: { paddingTop: 10, paddingHorizontal: 10, backgroundColor: '#FFFFFF ', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', alignItems: 'center', justifyContent: 'flex-start', flexDirection: 'row' },
     headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#2c5282', textTransform: 'uppercase', letterSpacing: 0.5 },
     messagesContainer: { paddingVertical: 15, paddingHorizontal: 10, backgroundColor: '#f8f8f8', flexGrow: 1 },
     noMessagesContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -469,11 +469,11 @@ const styles = StyleSheet.create({
         marginBottom: 4,
         fontWeight: 'bold',
     },
-    messageContent: { fontSize: 13, lineHeight: 22 },
+    messageContent: { fontSize: 13, lineHeight: 22, fontFamily: 'Nunito-Medium', },
     myMessageContent: { color: '#ffffff' },
     otherMessageContent: { color: '#e0e1e4ff' },
     messageInfoRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 5 },
-    messageTime: { fontSize: 10 },
+    messageTime: { fontSize: 10, fontFamily: 'Nunito-Medium', },
     myMessageTime: { color: 'rgba(255, 255, 255, 0.7)' },
     otherMessageTime: { color: '#718096' },
     messageStatusContainer: { marginLeft: 5 },
@@ -497,6 +497,7 @@ const styles = StyleSheet.create({
         color: '#4a5568',
         backgroundColor: '#f9fafb',
         marginHorizontal: 5,
+        fontFamily: 'Nunito-Medium',
     },
     sendButton: { marginLeft: 10, paddingVertical: 8,
          paddingHorizontal: 15, borderWidth: 0.5,
@@ -504,14 +505,8 @@ const styles = StyleSheet.create({
           shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
            shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
     sendButtonDisabled: { backgroundColor: '#ffffffff' },
-    sendButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
-    // chatImage: {
-    //     width: 250,
-    //     aspectRatio: 1,
-        
-    //     borderRadius: 15,
-    //     resizeMode: 'cover',
-    // },
+    sendButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16, fontFamily: 'Nunito-Medium' },
+
     previewContainer: {
         flexDirection: 'row',
         padding: 10,
@@ -536,19 +531,7 @@ const styles = StyleSheet.create({
     imagePickerButton: {
         paddingHorizontal: 10,
     },
-    // Style mới cho container của ảnh
-    // adminImageContainer: {
-    //     alignSelf: 'flex-start',
-    //     marginRight: 10, // Khoảng cách với avatar
-    //     maxWidth: '80%', // Tương tự như bubble text
-    //     marginBottom: 5, // Khoảng cách với tin nhắn tiếp theo
-    // },
-    // userImageContainer: {
-    //     alignSelf: 'flex-end',
-    //     maxWidth: '80%',
-    //     marginBottom: 5,
-    // },
-    // Style cho caption của ảnh (nếu có text kèm theo ảnh)
+   
     adminImageCaption: {
         fontSize: 13,
         lineHeight: 20,
@@ -606,7 +589,9 @@ const styles = StyleSheet.create({
     s7m: {
         marginTop: 15,
         fontSize: 15,
-        color: 'black'
+        color: 'black',
+        fontFamily: 'Nunito-Medium',
+        marginLeft: 10,
     }
     
 });

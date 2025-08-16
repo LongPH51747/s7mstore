@@ -19,6 +19,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth, { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import Loading from '../components/Loading';
+import { useSocket } from '../contexts/SocketContext';
 // import { normalizeUserData, logUserInfo } from '../utils/userUtils';
 
 const LoginScreen = () => {
@@ -29,6 +30,7 @@ const LoginScreen = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showForgotPasswordLink, setShowForgotPasswordLink] = useState(false); // State mới để hiển thị link quên mật khẩu
     const navigation = useNavigation();
+    const { loadAuthDataFromAsyncStorage } = useSocket();
 
     useEffect(() => {
         GoogleSignin.configure({
@@ -86,6 +88,8 @@ const LoginScreen = () => {
                 try { await getAuth().signOut(); } catch (e) {} // Đảm bảo signOut Firebase
                 console.log('[LOGIN] Đăng nhập thành công, chuyển sang Home');
                 navigation.replace('HomeScreen');
+                await loadAuthDataFromAsyncStorage(); // GỌI LẠI để cập nhật state xác thực
+                // Sau đó socket sẽ tự động connect lại nhờ useEffect trong SocketContext
             } else {
                 console.log('[LOGIN] Đăng nhập thất bại, response không hợp lệ:', response.data);
                 throw new Error('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
@@ -176,6 +180,8 @@ const LoginScreen = () => {
                     console.log('[GOOGLE] Token VỪA ĐỌC LẠI TỪ AsyncStorage:', tokenJustRead ? tokenJustRead.substring(0, 30) + '...' : 'null');
                     console.log('[GOOGLE] User Info VỪA ĐỌC LẠI TỪ AsyncStorage (parsed ._id):', userInfoJustRead ? JSON.parse(userInfoJustRead)._id : 'null');
                     navigation.replace('HomeScreen');
+                    await loadAuthDataFromAsyncStorage(); // GỌI LẠI để cập nhật state xác thực
+                    // Sau đó socket sẽ tự động connect lại nhờ useEffect trong SocketContext
                 } else {
                     console.log('[GOOGLE] Đăng nhập Google thất bại, response không hợp lệ:', response.data);
                     throw new Error('Không nhận được token từ server');

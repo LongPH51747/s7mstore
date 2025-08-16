@@ -38,15 +38,6 @@ const CustomNavBottom = () => {
         <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
       </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => {
-          setActiveTab('Favorites');
-          // Note: Favorites screen doesn't exist yet, you might want to create it or remove this
-          // navigation.navigate('FavoritesScreen');
-          console.log('Favorites screen not implemented yet');
-        }}>
-        <Icon name={activeTab === 'Favorites' ? 'heart' : 'heart-outline'} size={24} color="#000" />
-      </TouchableOpacity>
 
       <TouchableOpacity
         onPress={() => {
@@ -66,16 +57,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 12,
-    borderTopWidth: 1,
-    borderColor: '#eee',
     backgroundColor: '#fff',
-    // Thêm các thuộc tính position nếu bạn muốn nó luôn ở cuối màn hình
-    // position: 'absolute',
-    // bottom: 0,
-    // left: 0,
-    // right: 0,
+   
   },
-  // heartIcon: { // thuộc tính này đang không được sử dụng
-  //   fontSize: 20,
-  // },
+ 
 });

@@ -38,7 +38,9 @@ const RatingScreen = () => {
       orderId: order._id,
       orderItemsCount: order.orderItems.length,
       orderItems: order.orderItems.map(item => ({
-        id: item.id_product || item._id,
+        id_product: item.id_product,
+        id_variant: item.id_variant,
+        _id: item._id,
         name: item.name_product,
         quantity: item.quantity,
         image: item.image
@@ -51,7 +53,8 @@ const RatingScreen = () => {
     const initialVideos = {};
 
     order.orderItems.forEach((item) => {
-      const itemId = item.id_product || item._id;
+      // Sử dụng id_variant làm key duy nhất cho mỗi item
+      const itemId = item.id_variant || item.id_product || item._id;
       initialRatings[itemId] = 0;
       initialComments[itemId] = '';
       initialImages[itemId] = [];
@@ -59,6 +62,8 @@ const RatingScreen = () => {
       
       console.log('Initialized state for item:', {
         itemId,
+        id_variant: item.id_variant,
+        id_product: item.id_product,
         name: item.name_product,
         initialRating: 0,
         initialComment: '',
@@ -431,7 +436,7 @@ const RatingScreen = () => {
       // Chuẩn bị map itemId -> orderItem để lấy id_variant
       const itemIdToOrderItem = {};
       order.orderItems.forEach(item => {
-        const itemId = item.id_product || item._id;
+        const itemId = item.id_variant || item.id_product || item._id;
         itemIdToOrderItem[itemId] = item;
       });
 
@@ -460,7 +465,7 @@ const RatingScreen = () => {
 
         const reviewData = {
           review_user_id: userInfo._id,
-          review_product_id: itemId,
+          review_product_id: orderItem.id_product || orderItem._id, // Sử dụng id_product thực tế
           review_comment: comment,
           review_image: imageUrls,
           review_video: videoUrl,
@@ -633,6 +638,11 @@ const RatingScreen = () => {
               throw new Error('Token đã hết hạn. Vui lòng đăng nhập lại.');
             }
             
+            // Check for 500 error - inappropriate content
+            if (response.status === 500) {
+              throw new Error('Hình ảnh chứa nội dung không phù hợp');
+            }
+            
             throw new Error(`Server error: ${response.status} - ${errorText}`);
           }
 
@@ -719,7 +729,7 @@ const RatingScreen = () => {
       } else if (error.name === 'AbortError') {
         errorMessage = 'Thời gian gửi đánh giá đã hết. Vui lòng thử lại.';
       } else if (error.message.includes('Server error:')) {
-        errorMessage = `Lỗi server: ${error.message}`;
+        errorMessage = `Ảnh chứa nội dung nhạy cảm, không phù hợp!`;
       } else if (error.message.includes('Network')) {
         errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
       }
@@ -866,9 +876,21 @@ const RatingScreen = () => {
         </View>
 
         {order.orderItems.map((item, index) => {
-          const itemId = item.id_product || item._id;
+          const itemId = item.id_variant || item.id_product || item._id;
           const currentRating = ratings[itemId] || 0;
           const currentComment = comments[itemId] || '';
+          
+          console.log(`Rendering item ${index + 1}:`, {
+            itemId,
+            id_variant: item.id_variant,
+            id_product: item.id_product,
+            _id: item._id,
+            name: item.name_product,
+            currentRating,
+            currentCommentLength: currentComment.length,
+            imagesCount: images[itemId] ? images[itemId].length : 0,
+            videosCount: videos[itemId] ? videos[itemId].length : 0
+          });
 
           return (
             <View key={itemId} style={styles.productCard}>
@@ -915,7 +937,12 @@ const RatingScreen = () => {
               </View>
 
               <View style={styles.commentSection}>
-                <Text style={styles.commentTitle}>Nhận xét của bạn</Text>
+                <View style={styles.commentHeader}>
+                  <Text style={styles.commentTitle}>Nhận xét của bạn</Text>
+                  <Text style={styles.characterCount}>
+                    {currentComment.length}/200
+                  </Text>
+                </View>
                 <TextInput
                   style={styles.commentInput}
                   placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."
@@ -924,6 +951,7 @@ const RatingScreen = () => {
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
+                  maxLength={200}
                 />
               </View>
 
@@ -1065,11 +1093,21 @@ const styles = StyleSheet.create({
   commentSection: {
     marginBottom: 12,
   },
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   commentTitle: {
     fontSize: 15,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 6,
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
   },
   commentInput: {
     borderWidth: 1,

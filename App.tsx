@@ -8,6 +8,7 @@ import { SocketProvider } from './src/contexts/SocketContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import NotificationPopup from './src/components/NotificationPopup';
 import AppNavigator from './src/navigation/AppNavigator';
+import ChatBot from './src/components/ChatBot';
 
 // ✅ NAVIGATION SERVICE FOR PUSH NOTIFICATIONS
 let _navigator: any;
@@ -55,17 +56,37 @@ const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  const linking = {
+  prefixes: ['s7mstore://'], // URL scheme của bạn
+  config: {
+    screens: {
+      // Ánh xạ đường dẫn trong URL với tên màn hình trong Stack Navigator
+      PaymentSuccessScreen: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
+      OrderDetail: 'order/:orderId', // s7mstore://order/123
+      // ... ánh xạ các màn hình khác nếu cần
+    },
+  },
+};
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
+<<<<<<< HEAD
       <NavigationContainer ref={navigationRef}>
         <NotificationProvider>
           <SocketProvider>
             <AppNavigator />
             <NotificationPopup />
+=======
+      <NavigationContainer linking={linking} fallback={<Text>Loading...</Text>}>
+        
+          <SocketProvider>
+            <AppNavigator />
+            <ChatBot/>
+>>>>>>> origin/bao1
           </SocketProvider>
         </NotificationProvider>
       </NavigationContainer>

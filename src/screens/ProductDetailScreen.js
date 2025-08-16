@@ -11,12 +11,13 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Loading from '../components/Loading';
+import CustomAlert from '../components/CustomAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +36,18 @@ const ProductDetailScreen = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
   const [productLoading, setProductLoading] = useState(false);
+=======
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertData, setAlertData] = useState({ title: '', message: '', buttons: [] });
+
+  const showCustomAlert = (title, message, buttons) => {
+  setAlertData({ title, message, buttons });
+  setAlertVisible(true);
+};
+>>>>>>> origin/bao1
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -57,6 +69,92 @@ const ProductDetailScreen = () => {
     }
   }, [navigation]);
 
+  // Function to fetch fresh product data from server
+  const fetchProductData = useCallback(async (productId) => {
+    if (!productId) return;
+    
+    console.log('ProductDetailScreen: Fetching fresh product data for ID:', productId);
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+      
+      const response = await fetch(API_ENDPOINTS.PRODUCTS.GET_BY_ID_FULL(productId), {
+        headers: API_HEADERS,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch product data');
+      }
+      
+      const data = await response.json();
+      if (data && data.product) {
+        console.log('ProductDetailScreen: Received updated product data:', data.product.product_name);
+        setProduct(data.product);
+        
+        // Tự động chọn biến thể đầu tiên có sẵn hàng
+        if (data.product.product_variant && data.product.product_variant.length > 0) {
+          const availableVariant = data.product.product_variant.find(variant => {
+            const stockQuantity = variant.variant_stock || variant.variant_quantity || variant.stock || variant.quantity || variant.inventory || 0;
+            return stockQuantity > 0;
+          });
+          
+          if (availableVariant) {
+            setSelectedVariant(availableVariant);
+            
+            // Cập nhật ảnh hiển thị cho biến thể được chọn
+            if (availableVariant.variant_image_url) {
+              if (typeof availableVariant.variant_image_url === 'string' && availableVariant.variant_image_url.startsWith('/uploads_product/')) {
+                setCurrentDisplayImage(`${API_BASE_URL}${availableVariant.variant_image_url}`);
+              } else {
+                setCurrentDisplayImage(availableVariant.variant_image_url);
+              }
+            } else if (availableVariant.variant_image_base64 && availableVariant.variant_image_type) {
+              setCurrentDisplayImage(`data:${availableVariant.variant_image_type};base64,${availableVariant.variant_image_base64}`);
+            } else {
+              // Nếu biến thể không có ảnh riêng, sử dụng ảnh sản phẩm chính
+              if (data.product.product_image) {
+                if (typeof data.product.product_image === 'string' && data.product.product_image.startsWith('/uploads_product/')) {
+                  setCurrentDisplayImage(`${API_BASE_URL}${data.product.product_image}`);
+                } else {
+                  setCurrentDisplayImage(data.product.product_image);
+                }
+              }
+            }
+          } else {
+            setSelectedVariant(null);
+            // Ảnh lớn mặc định là ảnh sản phẩm chính
+            if (data.product.product_image) {
+              if (typeof data.product.product_image === 'string' && data.product.product_image.startsWith('/uploads_product/')) {
+                setCurrentDisplayImage(`${API_BASE_URL}${data.product.product_image}`);
+              } else {
+                setCurrentDisplayImage(data.product.product_image);
+              }
+            }
+          }
+        } else {
+          setSelectedVariant(null);
+          // Ảnh lớn mặc định là ảnh sản phẩm chính
+          if (data.product.product_image) {
+            if (typeof data.product.product_image === 'string' && data.product.product_image.startsWith('/uploads_product/')) {
+              setCurrentDisplayImage(`${API_BASE_URL}${data.product.product_image}`);
+            } else {
+              setCurrentDisplayImage(data.product.product_image);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching product data:', error);
+      if (error.name === 'AbortError') {
+        console.log('ProductDetailScreen: Request timeout, will retry later');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     getUserInfo();
     const unsubscribe = navigation.addListener('focus', () => {
@@ -65,6 +163,7 @@ const ProductDetailScreen = () => {
     return unsubscribe;
   }, [getUserInfo, navigation]);
 
+<<<<<<< HEAD
   // Fetch product by ID when only productId is provided
   const fetchProductById = async (productId) => {
     try {
@@ -148,6 +247,56 @@ const ProductDetailScreen = () => {
       setProductLoading(false);
     }
   };
+=======
+  // Add useFocusEffect to refresh product data when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.product?._id) {
+        // Refresh product data from server when screen is focused
+        fetchProductData(route.params.product._id);
+        
+        // Check if an order was created recently
+        const checkOrderCreated = async () => {
+          try {
+            const orderCreatedFlag = await AsyncStorage.getItem('orderCreated');
+            if (orderCreatedFlag === 'true') {
+              console.log('ProductDetailScreen: Order created flag found, refreshing product data');
+              // Clear the flag
+              await AsyncStorage.removeItem('orderCreated');
+              // Refresh product data to get updated stock
+              fetchProductData(route.params.product._id);
+            }
+            
+            // Check if returning from payment success
+            const returningFromPaymentSuccess = await AsyncStorage.getItem('returningFromPaymentSuccess');
+            if (returningFromPaymentSuccess === 'true') {
+              console.log('ProductDetailScreen: Returning from payment success, refreshing product data');
+              // Clear the flag
+              await AsyncStorage.removeItem('returningFromPaymentSuccess');
+              // Refresh product data to get updated stock
+              fetchProductData(route.params.product._id);
+              
+              // Reset quantity to 1 after successful payment
+              setQuantity(1);
+              
+              // Show success message
+              Alert.alert(
+                'Thành công',
+                'Đơn hàng đã được thanh toán thành công! Sản phẩm đã được cập nhật.',
+                [{ text: 'OK' }],
+                { cancelable: true }
+              );
+            }
+          } catch (error) {
+            console.error('Error checking order created flag:', error);
+          }
+        };
+        
+        checkOrderCreated();
+      }
+    }, [route.params?.product?._id, fetchProductData])
+  );
+>>>>>>> origin/bao1
 
   useEffect(() => {
     console.log('🔍 ProductDetailScreen useEffect - route.params:', route.params);
@@ -286,6 +435,9 @@ const ProductDetailScreen = () => {
   };
 
   const handleAddToCart = async () => {
+    if (isAddingToCart) return;
+    setIsAddingToCart(true);
+
     setLoading(true);
     // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
     const token = await AsyncStorage.getItem('userToken');
@@ -376,7 +528,15 @@ const ProductDetailScreen = () => {
       }
 
       const responseData = await response.json();
-      Alert.alert('Thành công', `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
+      
+      showCustomAlert(
+    '🎉 Thành công',
+    `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`,
+    [
+      { text: 'Ở lại', style: 'cancel', onPress: () => setAlertVisible(false) },
+      { text: 'Đi đến giỏ hàng', onPress: () => navigation.navigate('CartScreen') }
+    ]
+  );
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -387,6 +547,7 @@ const ProductDetailScreen = () => {
       }
     } finally {
       setLoading(false);
+      setIsAddingToCart(false);
     }
   };
 
@@ -503,7 +664,7 @@ const ProductDetailScreen = () => {
       {/* Các phiên bản sản phẩm - Gộp với phần chọn biến thể */}
       {product?.product_variant && product.product_variant.length > 0 && (
         <View style={{ marginTop: 16, paddingHorizontal: 16 }}>
-          <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 12 }}>Các phiên bản sản phẩm</Text>
+          <Text style={{fontSize: 16, marginBottom: 12, fontFamily:'Nunito-Black' }}>Các phiên bản sản phẩm</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
             {product.product_variant.map((variant) => {
               const isSelected = selectedVariant && selectedVariant._id === variant._id;
@@ -645,6 +806,7 @@ const ProductDetailScreen = () => {
             !isSelectedVariantInStock ? 'Hết hàng' :
             `Thêm vào giỏ hàng - ${selectedVariant.variant_color} ${selectedVariant.variant_size}`}
         </Text>
+       
       </TouchableOpacity>
       {loading && <Loading visible={loading} text="Đang xử lý..." />}
 
@@ -674,12 +836,23 @@ const ProductDetailScreen = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   {user?.avatar && (
                       <Image
-                        source={{
-                          uri: typeof user.avatar === 'string' && user.avatar.startsWith('http')
-                            ? user.avatar
-                            : `${API_BASE_URL}/${(user.avatar || '').replace(/\\/g, '/')}`
-                        }}
+                        source={(() => {
+                          const avatarImg = user.avatar;
+                          if (typeof avatarImg === 'string' && avatarImg.startsWith('uploads_avatar/')) {
+                            return { uri: `${API_BASE_URL}/${avatarImg}` };
+                          } else if (typeof avatarImg === 'string' && (avatarImg.startsWith('http://') || avatarImg.startsWith('https://') || avatarImg.startsWith('data:image'))) {
+                            return { uri: avatarImg };
+                          } else {
+                            return { uri: 'https://via.placeholder.com/150' };
+                          }
+                        })()}
                         style={{ width: 36, height: 36, borderRadius: 18, marginRight: 10 }}
+                        onError={(e) => {
+                          console.error('Review avatar image loading error:', e.nativeEvent.error, 'for URL:', user.avatar);
+                          e.target.setNativeProps({
+                            source: { uri: 'https://via.placeholder.com/150' }
+                          });
+                        }}
                       />
                   )}
                   <View style={{ flex: 1 }}>
@@ -743,6 +916,15 @@ const ProductDetailScreen = () => {
           )}
         </View>
       </Modal>
+
+      <CustomAlert
+  visible={alertVisible}
+  title={alertData.title}
+  message={alertData.message}
+  buttons={alertData.buttons}
+  onClose={() => setAlertVisible(false)}
+/>
+
 
       <Modal
         visible={showLoginModal}
@@ -1017,8 +1199,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   selectedVariantCard: {
-    borderColor: '#2ecc71', // xanh lá nổi bật
-    shadowColor: '#2ecc71',
+    borderColor: '#a4ffcaff', // xanh lá nổi bật
+    shadowColor: '#a2ffc9ff',
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
@@ -1044,22 +1226,23 @@ const styles = StyleSheet.create({
   },
   variantCardText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Medium',
     color: '#333',
     textAlign: 'center',
     marginBottom: 2,
     textTransform: 'capitalize',
   },
   selectedVariantCardText: {
-    color: '#2ecc71',
+    color: '#70f4e2ff',
+    fontFamily: 'Nunito-Medium',
   },
   outOfStockVariantCardText: {
     color: '#999',
   },
   variantCardPrice: {
     fontSize: 13,
-    color: '#e74c3c',
-    fontWeight: 'bold',
+    color: '#DB6A34',
+   fontFamily: 'Nunito-Black',
     textAlign: 'center',
     marginBottom: 2,
   },
@@ -1134,7 +1317,7 @@ stockLimitTextModern: {
     marginLeft: 16,
 },
 addToCartButtonModern: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: '#374151',
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
