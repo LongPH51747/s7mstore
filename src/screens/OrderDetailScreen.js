@@ -89,27 +89,21 @@ const OrderDetailScreen = ({ route }) => {
         {/* Trạng thái đơn hàng */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trạng thái đơn hàng</Text>
-<<<<<<<<< Temporary merge branch 1
           <Text style={styles.statusText}>{order?.status || 'Đang xử lý'}</Text>
-=========
           <Text style={styles.statusText}>{displayOrder.status}</Text>
->>>>>>>>> Temporary merge branch 2
         </View>
 
         {/* Thông tin đơn hàng */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
-<<<<<<<<< Temporary merge branch 1
           <Text style={styles.infoText}>Mã đơn hàng: {order?._id || 'N/A'}</Text>
           <Text style={styles.infoText}>Ngày đặt: {order?.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</Text>
           <Text style={styles.infoText}>Phương thức thanh toán: {order?.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
           <Text style={styles.infoText}>Trạng thái thanh toán: {order?.payment_status || 'Chưa xác định'}</Text>
-=========
           <Text style={styles.infoText}>Mã đơn hàng: {order._id}</Text>
           <Text style={styles.infoText}>Ngày đặt: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</Text>
           <Text style={styles.infoText}>Phương thức thanh toán: {order.payment_method === 'COD' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
           <Text style={styles.infoText}>Trạng thái thanh toán: {order.payment_status}</Text>
->>>>>>>>> Temporary merge branch 2
         </View>
 
         {/* Thông tin người nhận */}

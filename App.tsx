@@ -1,6 +1,14 @@
-import React, { useEffect, useRef } from 'react';
-import { SafeAreaView, StatusBar, useColorScheme, View, ActivityIndicator, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import {
+  SafeAreaView,
+  StatusBar,
+  useColorScheme,
+  Text,
+} from 'react-native';
+import {
+  NavigationContainer,
+  NavigationContainerRef,
+} from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { initializeSdks } from './src/utils/initializeSdks';
 
@@ -11,18 +19,12 @@ import AppNavigator from './src/navigation/AppNavigator';
 import ChatBot from './src/components/ChatBot';
 
 // ✅ NAVIGATION SERVICE FOR PUSH NOTIFICATIONS
-let _navigator: any;
-
-export const navigationRef = (ref: any) => {
-  _navigator = ref;
-  // Export globally for notification deep linking
-  global._navigator = ref;
-};
+export const navigationRef = React.createRef<NavigationContainerRef<any>>();
 
 export const navigate = (name: string, params?: any) => {
-  if (_navigator) {
+  if (navigationRef.current) {
     console.log('🎯 [NAV] Navigating to:', name, params);
-    _navigator.navigate(name, params);
+    navigationRef.current.navigate(name as any, params as any);
   } else {
     console.warn('⚠️ [NAV] Navigator not ready yet');
   }
@@ -57,16 +59,16 @@ const App: React.FC = () => {
   }, []);
 
   const linking = {
-  prefixes: ['s7mstore://'], // URL scheme của bạn
-  config: {
-    screens: {
-      // Ánh xạ đường dẫn trong URL với tên màn hình trong Stack Navigator
-      PaymentSuccessScreen: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
-      OrderDetail: 'order/:orderId', // s7mstore://order/123
-      // ... ánh xạ các màn hình khác nếu cần
+    prefixes: ['s7mstore://'], // URL scheme của bạn
+    config: {
+      screens: {
+        // Ánh xạ đường dẫn trong URL với tên màn hình trong Stack Navigator
+        PaymentSuccessScreen: 'PaymentSuccessScreen', // s7mstore://paymentsuccess
+        OrderDetail: 'order/:orderId', // s7mstore://order/123
+        // ... ánh xạ các màn hình khác nếu cần
+      },
     },
-  },
-};
+  };
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -75,8 +77,7 @@ const App: React.FC = () => {
         backgroundColor={backgroundStyle.backgroundColor}
       />
       <NavigationContainer ref={navigationRef} linking={linking} fallback={<Text>Loading...</Text>}>
-        
-            <ChatBot/>
+        <ChatBot/>
         <NotificationProvider>
           <SocketProvider>
             <AppNavigator />
