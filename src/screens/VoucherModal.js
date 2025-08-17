@@ -3,15 +3,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api';
 import LogoS7MStore from '../assets/LogoS7MStore.png'; 
-import { useNavigation } from '@react-navigation/native';
 
-const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
+const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
   const [allVouchers, setAllVouchers] = useState([]);
   const [filteredVouchers, setFilteredVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterType, setFilterType] = useState('all');
-  const navigation = useNavigation();
 
   // Hàm để gọi API lấy danh sách voucher
   const fetchVouchers = async () => {
@@ -89,13 +87,12 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
           </Text>
         </View>
         <TouchableOpacity 
-          style={[styles.applyButton]}
-          onPress={() => navigation.navigate('HomeScreen')}
-         
+          style={[styles.applyButton, !isApplicable && styles.disabledButton]}
+          onPress={() => isApplicable && onSelectVoucher(item)}
+          disabled={!isApplicable}
         >
           <Text style={styles.applyButtonText}>
-            {/* {isApplicable ? 'Áp dụng' : 'Không đủ điều kiện'} */}
-            Dùng ngay
+            {isApplicable ? 'Áp dụng' : 'Không đủ điều kiện'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -354,4 +351,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default VoucherScreen;
+export default VoucherModal;

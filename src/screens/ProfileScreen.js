@@ -17,7 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import CustomNavBottom from '../components/CustomNavBottom';
 import axios from 'axios';
-import { API_ENDPOINTS, API_HEADERS } from '../config/api';
+import { API_ENDPOINTS, API_HEADERS,  API_BASE_URL  } from '../config/api';
 import { useNotification } from '../contexts/NotificationContext';
 import PushNotification from 'react-native-push-notification';
 
@@ -201,9 +201,20 @@ const ProfileScreen = () => {
        
         <TouchableOpacity style={styles.profileInfo} onPress={() => navigation.navigate('EditProfileScreen', { user })}>
           <Image
-            style={styles.avatar}
-            source={{ uri: user.avatar || 'https://via.placeholder.com/150' }} 
-          />
+  style={styles.avatar}
+  source={{
+    uri: user?.avatar
+      ? user.avatar.startsWith('http')
+        ? user.avatar
+        : `${API_BASE_URL}/${user.avatar}`
+      : 'https://via.placeholder.com/150',
+  }}
+  onError={(e) => {
+    // Để gỡ lỗi, bạn có thể in ra URL bị lỗi
+    console.error('Lỗi tải ảnh đại diện:', e.nativeEvent.error);
+    console.log('URL bị lỗi:', e.target.source);
+  }}
+/>
           <View style={styles.profileTextContainer}>
          
             <Text style={styles.name}>{user.displayName || user.fullname || 'Tên người dùng'}</Text> 

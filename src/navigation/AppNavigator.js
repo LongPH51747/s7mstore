@@ -26,12 +26,9 @@ import ChangePasswordScreen from '../screens/ChangePassword';
 import RefundReturnScreen from '../screens/TraHangScreen';
 import UserReviewsScreen from '../screens/UserReviewsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-<<<<<<< HEAD
 import NotificationScreen from '../screens/NotificationScreen';
-=======
 import VoucherScreen from '../screens/VoucherScreen';
 import ReturnRequestScreen from '../screens/ReturnRequestScreen';
->>>>>>> origin/bao1
 
 const Stack = createStackNavigator();
 
@@ -94,7 +91,6 @@ const AppNavigator = () => {
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="OrderScreen" component={OrderScreen} />
         <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
-<<<<<<< HEAD
         <Stack.Screen name="RatingScreen" component={RatingScreen} />
         <Stack.Screen name="ProfileScreen" component={ProfileScreen}/>
         <Stack.Screen name="ChatScreen" component={UserChatScreen}/>
@@ -104,20 +100,13 @@ const AppNavigator = () => {
         <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
         <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
         <Stack.Screen name="RefundReturnScreen" component={RefundReturnScreen} />
-        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
         <Stack.Screen name="NotificationScreen" component={NotificationScreen}/>
-=======
         <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} />
         <Stack.Screen name="Rating" component={RatingScreen} />
-        <Stack.Screen name='ProfileScreen' component={ProfileScreen}/>
-        <Stack.Screen name='ChatScreen' component={UserChatScreen}/>
         <Stack.Screen name='ChangePass' component={ChangePasswordScreen}/>
         <Stack.Screen name='ForgotPass' component={ForgotPasswordScreen}/>
-        <Stack.Screen name='ResetPasswordScreen' component={ResetPasswordScreen}/>
-        <Stack.Screen name='Otp' component={OtpScreen}/>
-        <Stack.Screen name='EditProfileScreen' component={EditProfileScreen}/>
         <Stack.Screen name='VoucherScreen' component={VoucherScreen}/>
->>>>>>> origin/bao1
       </Stack.Navigator>
   );
 };

@@ -36,9 +36,9 @@ const ProductDetailScreen = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [loading, setLoading] = useState(false);
-<<<<<<< HEAD
+<<<<<<<<< Temporary merge branch 1
   const [productLoading, setProductLoading] = useState(false);
-=======
+=========
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertData, setAlertData] = useState({ title: '', message: '', buttons: [] });
@@ -47,7 +47,7 @@ const ProductDetailScreen = () => {
   setAlertData({ title, message, buttons });
   setAlertVisible(true);
 };
->>>>>>> origin/bao1
+>>>>>>>>> Temporary merge branch 2
 
   // Function to get user info from AsyncStorage
   const getUserInfo = useCallback(async () => {
@@ -163,7 +163,7 @@ const ProductDetailScreen = () => {
     return unsubscribe;
   }, [getUserInfo, navigation]);
 
-<<<<<<< HEAD
+<<<<<<<<< Temporary merge branch 1
   // Fetch product by ID when only productId is provided
   const fetchProductById = async (productId) => {
     try {
@@ -247,7 +247,7 @@ const ProductDetailScreen = () => {
       setProductLoading(false);
     }
   };
-=======
+=========
   // Add useFocusEffect to refresh product data when screen is focused
   useFocusEffect(
     useCallback(() => {
@@ -296,7 +296,7 @@ const ProductDetailScreen = () => {
       }
     }, [route.params?.product?._id, fetchProductData])
   );
->>>>>>> origin/bao1
+>>>>>>>>> Temporary merge branch 2
 
   useEffect(() => {
     console.log('🔍 ProductDetailScreen useEffect - route.params:', route.params);
