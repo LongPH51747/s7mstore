@@ -973,16 +973,19 @@ const styles = StyleSheet.create({
     height: width * 0.9,
   },
   mainImageWrapper: {
-    width: '100%',
+    width: '90%',
     height: 369,
     position: 'relative',
     marginBottom: 10,
+    alignSelf: 'center',
+    alignItems: 'center',
+    
   },
   productMainImageShadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
-
+ borderRadius: 30,
   
     width: '100%',
     height: 369,
@@ -993,11 +996,12 @@ const styles = StyleSheet.create({
   productMainImage: {
     width: '100%',
     height: '100%',
+   
  
   },
   floatingBackButton: {
     position: 'absolute',
-    top: 24,
+    top: 35,
     left: 16,
     width: 40,
     height: 40,
@@ -1017,13 +1021,14 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     marginBottom: 8,
   },
   productPrice: {
     fontSize: 20,
     color: '#2ecc71',
     marginBottom: 16,
+    fontFamily: 'Nunito-Medium',
   },
   variantInfo: {
     fontSize: 16,
@@ -1035,13 +1040,15 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 16,
     lineHeight: 24,
+    fontFamily: 'Nunito-Medium',
   },
   stockInfo: {
     marginBottom: 16,
   },
   stockText: {
     fontSize: 14,
-    fontWeight: '500',
+
+    fontFamily: 'Nunito-Medium',
   },
   inStock: {
     color: '#2ecc71',
@@ -1054,7 +1061,7 @@ const styles = StyleSheet.create({
   },
   variantSelectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     marginBottom: 10,
   },
   variantButtonsWrapper: {
@@ -1336,7 +1343,7 @@ reviewSection: {
     paddingHorizontal: 16,
 },
 reviewTitle: {
-    fontWeight: 'bold',
+   fontFamily: 'Nunito-Black',
     fontSize: 18,
     marginBottom: 8,
     color: '#222',

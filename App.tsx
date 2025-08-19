@@ -75,7 +75,6 @@ const App: React.FC = () => {
         backgroundColor={backgroundStyle.backgroundColor}
       />
       <NavigationContainer ref={navigationRef} linking={linking} fallback={<Text>Loading...</Text>}>
-        
             <ChatBot/>
         <NotificationProvider>
           <SocketProvider>
