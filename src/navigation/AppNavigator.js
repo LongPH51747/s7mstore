@@ -60,51 +60,134 @@ const AppNavigator = () => {
       }}
     >
         {/* Màn hình chào mừng */}
-        <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
+        <Stack.Screen name="WelcomeScreen" component={WelcomeScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
         
         {/* Màn hình đăng nhập */}
-        <Stack.Screen name="LoginScreen" component={LoginScreen} />
-        <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+        <Stack.Screen name="LoginScreen" component={LoginScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="SignUpScreen" component={SignUpScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
         {/* Màn hình trang chủ */}
-        <Stack.Screen name="HomeScreen" component={HomeScreen} />
+        <Stack.Screen name="HomeScreen" component={HomeScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         {/* Màn hình tìm kiếm */}
-        <Stack.Screen name="SearchScreen" component={SearchScreen} />
+        <Stack.Screen name="SearchScreen" component={SearchScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
         {/* Màn hình kết quả tìm kiếm */}
-        <Stack.Screen name="SearchResultsScreen" component={SearchResultsScreen} />
+        <Stack.Screen name="SearchResultsScreen" component={SearchResultsScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         {/* Màn hình chi tiết sản phẩm */}
-        <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
+        <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
         
         {/* Màn hình giỏ hàng */}
-        <Stack.Screen name="CartScreen" component={CartScreen} />
+        <Stack.Screen name="CartScreen" component={CartScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         {/* Màn hình đặt hàng */}
-        <Stack.Screen name="CheckoutScreen" component={CheckoutScreen}/>
+                    <Stack.Screen name="CheckoutScreen" component={CheckoutScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
         {/* Màn hình chọn địa chỉ */}
-        <Stack.Screen name="AddressScreen" component={AddressScreen} />
+        <Stack.Screen name="AddressScreen" component={AddressScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         {/* Màn hình thêm địa chỉ */}
-        <Stack.Screen name="AddAddressScreen" component={AddAddressScreen} />
+        <Stack.Screen name="AddAddressScreen" component={AddAddressScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+         />
         {/* Màn hình sửa địa chỉ */}
-        <Stack.Screen name="UpdateAddressScreen" component={UpdateAddressScreen} />
-        <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen} />
-        <Stack.Screen name="MapScreen" component={MapScreen} />
-        <Stack.Screen name="UserReviewScreen" component={UserReviewsScreen}/>
+        <Stack.Screen name="UpdateAddressScreen" component={UpdateAddressScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
+        <Stack.Screen name="MapScreen" component={MapScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         
         {/* Màn hình đơn hàng */}
-        <Stack.Screen name="OrderScreen" component={OrderScreen} />
-        <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
+                <Stack.Screen name="OrderScreen" component={OrderScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} />
-        <Stack.Screen name='Otp' component={OtpScreen}/>
-        <Stack.Screen name='VoucherScreen' component={VoucherScreen}/>
+        <Stack.Screen name='Otp' component={OtpScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name='VoucherScreen' component={VoucherScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         <Stack.Screen name="RatingScreen" component={RatingScreen} />
-        <Stack.Screen name="ProfileScreen" component={ProfileScreen}/>
-        <Stack.Screen name="ChatScreen" component={UserChatScreen}/>
+        <Stack.Screen name="ProfileScreen" component={ProfileScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="ChatScreen" component={UserChatScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
         {/* Các màn hình bổ sung */}
-        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
-        <Stack.Screen name="OtpScreen" component={OtpScreen} />
-        <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
-        <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
-        <Stack.Screen name="RefundReturnScreen" component={RefundReturnScreen} />
-        <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-        <Stack.Screen name="NotificationScreen" component={NotificationScreen}/>
+        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen}
+        options={{
+          detachPreviousScreen: true
+        }}   />
+        <Stack.Screen name="OtpScreen" component={OtpScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="RefundReturnScreen" component={RefundReturnScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="EditProfileScreen" component={EditProfileScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen}
+        options={{
+          detachPreviousScreen: true
+        }} />
       </Stack.Navigator>
   );
 };
