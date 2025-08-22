@@ -131,6 +131,13 @@ const ChatBot = () => {
     }
   }, [inputText]);
 
+  // Ensure FAB is visible when component mounts
+  useEffect(() => {
+    console.log('[ChatBot] Component mounted, ensuring FAB is visible');
+    fabOpacity.setValue(1);
+    fabScale.setValue(1);
+  }, []);
+
   useEffect(() => {
     console.log('🚀 [SETUP] Bắt đầu setup Voice Recognition');
     setMessages([
@@ -401,6 +408,17 @@ const ChatBot = () => {
   };
 
   const closeModal = () => {
+    console.log('[ChatBot] closeModal called');
+    
+    // Kiểm tra nếu modal đã đóng
+    if (!isVisible) {
+      console.log('[ChatBot] Modal already closed, ensuring FAB is visible');
+      // Đảm bảo FAB hiển thị
+      fabOpacity.setValue(1);
+      fabScale.setValue(1);
+      return;
+    }
+    
     // Calculate final position back to FAB
     const screenWidth = Dimensions.get('window').width;
     const screenHeight = Dimensions.get('window').height;
@@ -430,50 +448,59 @@ const ChatBot = () => {
     const translateX = modalCenterX - initialX;
     const translateY = modalCenterY - initialY;
     
-    Animated.parallel([
-      Animated.timing(backgroundOpacity, {
-        toValue: 0,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalOpacity, {
-        toValue: 0,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(modalScale, {
-        toValue: 0,
-        tension: 50,
-        friction: 12,
-        useNativeDriver: true,
-      }),
-      Animated.spring(modalTranslateX, {
-        toValue: -translateX,
-        tension: 50,
-        friction: 12,
-        useNativeDriver: true,
-      }),
-      Animated.spring(modalTranslateY, {
-        toValue: -translateY,
-        tension: 50,
-        friction: 12,
-        useNativeDriver: true,
-      }),
-      // Show FAB at the same time
-      Animated.timing(fabOpacity, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(fabScale, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    try {
+      Animated.parallel([
+        Animated.timing(backgroundOpacity, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(modalOpacity, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalScale, {
+          toValue: 0,
+          tension: 50,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalTranslateX, {
+          toValue: -translateX,
+          tension: 50,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalTranslateY, {
+          toValue: -translateY,
+          tension: 50,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+        // Show FAB at the same time
+        Animated.timing(fabOpacity, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.spring(fabScale, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setIsVisible(false);
+        console.log('[ChatBot] Modal closed successfully');
+      });
+    } catch (error) {
+      console.error('[ChatBot] Error in closeModal animation:', error);
+      // Fallback: đóng modal ngay lập tức và hiển thị FAB
       setIsVisible(false);
-    });
+      fabOpacity.setValue(1);
+      fabScale.setValue(1);
+    }
   };
 
   // Helper function để xử lý response từ API
@@ -519,33 +546,32 @@ const ChatBot = () => {
       switch (actionNumber) {
         case 1: // Đăng xuất
           await handleLogout();
-          setIsVisible(false); // Đóng modal
           break;
         case 2: // Đổi mật khẩu
           handleChangePassword();
-          setIsVisible(false); // Đóng modal
           break;
         case 3: // Xóa sản phẩm giỏ hàng
           await handleDeleteAllCartItems();
-          setIsVisible(false); // Đóng modal
           break;
         case 4: // Đặt hàng
           await handlePlaceOrder();
-          setIsVisible(false); // Đóng modal
           break;
         case 5: // Xem danh sách đơn hàng
           handleViewOrders();
-          setIsVisible(false); // Đóng modal
           break;
         case 6: // Xem danh sách địa chỉ
           handleViewAddresses();
-          setIsVisible(false); // Đóng modal
           break;
         default:
           console.log('[ChatBot] Unknown action number:', actionNumber);
       }
+      
+      // Đảm bảo modal luôn được đóng sau khi thực hiện action
+      closeModal();
     } catch (error) {
       console.error('[ChatBot] Error executing action:', error);
+      // Đảm bảo FAB hiển thị ngay cả khi có lỗi
+      closeModal();
     }
   };
 
@@ -561,13 +587,19 @@ const ChatBot = () => {
       });
     } catch (error) {
       console.error('[ChatBot] Logout error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
     }
   };
 
   // Function đổi mật khẩu
   const handleChangePassword = () => {
-    console.log('[ChatBot] Navigating to change password...');
-    navigation.navigate('ChangePass');
+    try {
+      console.log('[ChatBot] Navigating to change password...');
+      navigation.navigate('ChangePass');
+    } catch (error) {
+      console.error('[ChatBot] Navigation error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
+    }
   };
 
   // Function xóa tất cả items trong cart
@@ -618,13 +650,18 @@ const ChatBot = () => {
       if (deleteResponse.ok) {
         console.log('[ChatBot] All cart items deleted successfully');
         // Navigate đến CartScreen để user thấy kết quả
-        navigation.navigate('CartScreen');
+        try {
+          navigation.navigate('CartScreen');
+        } catch (navError) {
+          console.error('[ChatBot] Navigation error:', navError);
+        }
       } else {
         console.log('[ChatBot] Failed to delete cart items');
       }
       
     } catch (error) {
       console.error('[ChatBot] Error deleting cart items:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
     }
   };
 
@@ -662,26 +699,41 @@ const ChatBot = () => {
       }
       
       // Navigate to checkout với cart items
-      navigation.navigate('CheckoutScreen', { 
-        cartItems: cartItems,
-        cartId: cartData._id 
-      });
+      try {
+        navigation.navigate('CheckoutScreen', { 
+          cartItems: cartItems,
+          cartId: cartData._id 
+        });
+      } catch (navError) {
+        console.error('[ChatBot] Navigation error:', navError);
+      }
       
     } catch (error) {
       console.error('[ChatBot] Error navigating to checkout:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
     }
   };
 
   // Function xem danh sách đơn hàng
   const handleViewOrders = () => {
-    console.log('[ChatBot] Navigating to orders...');
-    navigation.navigate('OrderScreen');
+    try {
+      console.log('[ChatBot] Navigating to orders...');
+      navigation.navigate('OrderScreen');
+    } catch (error) {
+      console.error('[ChatBot] Navigation error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
+    }
   };
 
   // Function xem danh sách địa chỉ
   const handleViewAddresses = () => {
-    console.log('[ChatBot] Navigating to addresses...');
-    navigation.navigate('AddressScreen');
+    try {
+      console.log('[ChatBot] Navigating to addresses...');
+      navigation.navigate('AddressScreen');
+    } catch (error) {
+      console.error('[ChatBot] Navigation error:', error);
+      // Không throw error để tránh ảnh hưởng đến việc đóng modal
+    }
   };
 
   const sendMessage = async (customText = null) => {
@@ -808,137 +860,138 @@ const ChatBot = () => {
       {/* Chat Modal Overlay */}
       {isVisible && (
         <Animated.View style={[styles.modalOverlay, { opacity: backgroundOpacity }]}>
-          {/* SỬA LỖI: Sử dụng TouchableWithoutFeedback cho nền overlay để đóng modal */}
-          <TouchableWithoutFeedback onPress={closeModal}>
-            <View style={styles.backgroundTouchable}>
-              <Animated.View
-                style={[
-                  styles.modalContainer,
-                  {
-                    opacity: modalOpacity,
-                    transform: [
-                      { scale: modalScale },
-                      { translateX: modalTranslateX },
-                      { translateY: modalTranslateY }
-                    ],
-                  },
-                ]}
-              >
-                {/* SỬA LỖI: Bao bọc nội dung bằng TouchableWithoutFeedback để ngăn chặn sự kiện chạm lan truyền */}
-                <TouchableWithoutFeedback>
-                  <KeyboardAvoidingView
-                    style={styles.modalContent}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          <TouchableOpacity
+            style={styles.backgroundTouchable}
+            activeOpacity={1}
+            onPress={closeModal}
+          />
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                opacity: modalOpacity,
+                transform: [
+                  { scale: modalScale },
+                  { translateX: modalTranslateX },
+                  { translateY: modalTranslateY }
+                ],
+              },
+            ]}
+          >
+              <View style={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.header}>
+                  <View style={styles.headerContent}>
+                    <View style={styles.botInfo}>
+                      <View style={styles.botAvatar}>
+                        <Image 
+                          source={require('../assets/chatbot.png')} 
+                          style={styles.botAvatarIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <View>
+                        <Text style={styles.botName}>S7M AI Assistant</Text>
+                        <Text style={styles.botStatus}>Đang hoạt động</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.closeButton}
+                      onPress={closeModal}
+                    >
+                      <Icon name="close" size={24} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Messages */}
+                <FlatList
+                  ref={flatListRef}
+                  data={messages}
+                  renderItem={renderMessage}
+                  keyExtractor={item => item.id}
+                  style={styles.messagesList}
+                  contentContainerStyle={styles.messagesContent}
+                  showsVerticalScrollIndicator={false}
+                  onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+                  onLayout={() => flatListRef.current?.scrollToEnd()}
+                />
+
+                {/* Loading indicator */}
+                {isLoading && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#FF6B35" />
+                    <Text style={styles.loadingText}>AI đang trả lời...</Text>
+                  </View>
+                )}
+
+                {/* Voice listening indicator */}
+                {isListening && (
+                  <View style={styles.listeningContainer}>
+                    <View style={styles.listeningIndicator}>
+                      <ActivityIndicator size="small" color="white" />
+                    </View>
+                    <Text style={styles.listeningText}>Đang nghe...</Text>
+                  </View>
+                )}
+
+                {/* Input */}
+                <View style={styles.inputContainer}>
+                  {/* Voice Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.voiceButton,
+                      isListening && styles.voiceButtonListening
+                    ]}
+                    onPress={isListening ? stopListening : startListening}
+                    disabled={isLoading}
                   >
-                    {/* Header */}
-                    <View style={styles.header}>
-                      <View style={styles.headerContent}>
-                        <View style={styles.botInfo}>
-                          <View style={styles.botAvatar}>
-                            <Image 
-                              source={require('../assets/chatbot.png')} 
-                              style={styles.botAvatarIcon}
-                              resizeMode="contain"
-                            />
-                          </View>
-                          <View>
-                            <Text style={styles.botName}>S7M AI Assistant</Text>
-                            <Text style={styles.botStatus}>Đang hoạt động</Text>
-                          </View>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.closeButton}
-                          onPress={closeModal}
-                        >
-                          <Icon name="close" size={24} color="#666" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Messages */}
-                    <FlatList
-                      ref={flatListRef}
-                      data={messages}
-                      renderItem={renderMessage}
-                      keyExtractor={item => item.id}
-                      style={styles.messagesList}
-                      contentContainerStyle={styles.messagesContent}
-                      showsVerticalScrollIndicator={false}
-                      onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-                      onLayout={() => flatListRef.current?.scrollToEnd()}
+                    <Icon 
+                      name={isListening ? "mic" : "mic-none"} 
+                      size={24} 
+                      color={isListening ? "white" : "#FF6B35"} 
                     />
+                  </TouchableOpacity>
 
-                    {/* Loading indicator */}
-                    {isLoading && (
-                      <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="small" color="#FF6B35" />
-                        <Text style={styles.loadingText}>AI đang trả lời...</Text>
-                      </View>
-                    )}
-
-                    {/* Voice listening indicator */}
-                    {isListening && (
-                      <View style={styles.listeningContainer}>
-                        <View style={styles.listeningIndicator}>
-                          <ActivityIndicator size="small" color="white" />
-                        </View>
-                        <Text style={styles.listeningText}>Đang nghe...</Text>
-                      </View>
-                    )}
-
-                    {/* Input */}
-                    <View style={styles.inputContainer}>
-                      {/* Voice Button */}
-                      <TouchableOpacity
-                        style={[
-                          styles.voiceButton,
-                          isListening && styles.voiceButtonListening
-                        ]}
-                        onPress={isListening ? stopListening : startListening}
-                        disabled={isLoading}
-                      >
-                        <Icon 
-                          name={isListening ? "mic" : "mic-none"} 
-                          size={24} 
-                          color={isListening ? "white" : "#FF6B35"} 
-                        />
-                      </TouchableOpacity>
-
-                      <TextInput
-                        style={styles.textInput}
-                        value={inputText}
-                        onChangeText={(text) => {
-                          console.log('[ChatBot] TextInput onChangeText:', text);
-                          console.log('[ChatBot] TextInput type:', typeof text);
-                          setInputText(text);
-                        }}
-                        placeholder="Nhập tin nhắn..."
-                        placeholderTextColor="#999"
-                        multiline
-                        maxLength={500}
-                      />
-                      <TouchableOpacity
-                        style={[
-                          styles.sendButton,
-                          !inputText.trim() && styles.sendButtonDisabled
-                        ]}
-                        onPress={() => sendMessage()}
-                        disabled={!inputText.trim() || isLoading}
-                      >
-                        <Icon 
-                          name="send" 
-                          size={20} 
-                          color={inputText.trim() ? "white" : "#ccc"} 
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </KeyboardAvoidingView>
-                </TouchableWithoutFeedback>
-              </Animated.View>
-            </View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
-      )}
+                  <TextInput
+                    style={styles.textInput}
+                    value={inputText}
+                    onChangeText={(text) => {
+                      console.log('[ChatBot] TextInput onChangeText:', text);
+                      console.log('[ChatBot] TextInput type:', typeof text);
+                      setInputText(text);
+                    }}
+                    placeholder="Nhập tin nhắn..."
+                    placeholderTextColor="#999"
+                    multiline
+                    maxLength={500}
+                    autoFocus={false}
+                    blurOnSubmit={false}
+                    returnKeyType="default"
+                    keyboardType="default"
+                    textAlignVertical="top"
+                    onFocus={() => console.log('[ChatBot] TextInput focused')}
+                    onBlur={() => console.log('[ChatBot] TextInput blurred')}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.sendButton,
+                      !inputText.trim() && styles.sendButtonDisabled
+                    ]}
+                    onPress={() => sendMessage()}
+                    disabled={!inputText.trim() || isLoading}
+                  >
+                    <Icon 
+                      name="send" 
+                      size={20} 
+                      color={inputText.trim() ? "white" : "#ccc"} 
+                    />
+                  </TouchableOpacity>
+                                 </View>
+               </View>
+             </Animated.View>
+           </Animated.View>
+         )}
     </>
   );
 };
@@ -1006,6 +1059,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 10,
     position: 'absolute',
+    maxHeight: '80%',
   },
   modalContent: {
     flex: 1,
@@ -1143,6 +1197,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e0e0e0',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+    minHeight: 60,
   },
   voiceButton: {
     width: 40,

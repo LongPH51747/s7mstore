@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     GET_BY_ID_FULL: (id) => `${API_BASE_URL}/api/products/get-products-by-id/id/${id}`,
     GET_BY_CATEGORY: (category) => `${API_BASE_URL}/api/products/getProductByCate?cateId=${category}`,
     GET_NEW_PRODUCTS: `${API_BASE_URL}/api/products/getNewProduct`,
+    SEARCH: `${API_BASE_URL}/api/products/search-product`,
 
   },
   

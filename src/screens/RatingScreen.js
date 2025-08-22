@@ -640,6 +640,7 @@ const RatingScreen = () => {
             
             // Check for 500 error - inappropriate content
             if (response.status === 500) {
+              Alert.alert('Lỗi', 'Hình ảnh chứa nội dung không phù hợp');
               throw new Error('Hình ảnh chứa nội dung không phù hợp');
             }
             
