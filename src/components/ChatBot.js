@@ -863,131 +863,134 @@ const ChatBot = () => {
             style={styles.backgroundTouchable}
             activeOpacity={1}
             onPress={closeModal}
-          >
-            <Animated.View
-                              style={[
-                  styles.modalContainer,
-                  {
-                    opacity: modalOpacity,
-                    transform: [
-                      { scale: modalScale },
-                      { translateX: modalTranslateX },
-                      { translateY: modalTranslateY }
-                    ],
-                  },
-                ]}
-            >
-              <KeyboardAvoidingView
-                style={styles.modalContent}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerContent}>
-                             <View style={styles.botInfo}>
-                 <View style={styles.botAvatar}>
-                   <Image 
-                     source={require('../assets/chatbot.png')} 
-                     style={styles.botAvatarIcon}
-                     resizeMode="contain"
-                   />
-                 </View>
-                 <View>
-                   <Text style={styles.botName}>S7M AI Assistant</Text>
-                   <Text style={styles.botStatus}>Đang hoạt động</Text>
-                 </View>
-               </View>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={closeModal}
-              >
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Messages */}
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={item => item.id}
-            style={styles.messagesList}
-            contentContainerStyle={styles.messagesContent}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-            onLayout={() => flatListRef.current?.scrollToEnd()}
           />
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                opacity: modalOpacity,
+                transform: [
+                  { scale: modalScale },
+                  { translateX: modalTranslateX },
+                  { translateY: modalTranslateY }
+                ],
+              },
+            ]}
+          >
+              <View style={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.header}>
+                  <View style={styles.headerContent}>
+                    <View style={styles.botInfo}>
+                      <View style={styles.botAvatar}>
+                        <Image 
+                          source={require('../assets/chatbot.png')} 
+                          style={styles.botAvatarIcon}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <View>
+                        <Text style={styles.botName}>S7M AI Assistant</Text>
+                        <Text style={styles.botStatus}>Đang hoạt động</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.closeButton}
+                      onPress={closeModal}
+                    >
+                      <Icon name="close" size={24} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-          {/* Loading indicator */}
-          {isLoading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#FF6B35" />
-              <Text style={styles.loadingText}>AI đang trả lời...</Text>
-            </View>
-          )}
+                {/* Messages */}
+                <FlatList
+                  ref={flatListRef}
+                  data={messages}
+                  renderItem={renderMessage}
+                  keyExtractor={item => item.id}
+                  style={styles.messagesList}
+                  contentContainerStyle={styles.messagesContent}
+                  showsVerticalScrollIndicator={false}
+                  onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+                  onLayout={() => flatListRef.current?.scrollToEnd()}
+                />
 
-          {/* Voice listening indicator */}
-          {isListening && (
-            <View style={styles.listeningContainer}>
-              <View style={styles.listeningIndicator}>
-                <ActivityIndicator size="small" color="white" />
-              </View>
-              <Text style={styles.listeningText}>Đang nghe...</Text>
-            </View>
-          )}
+                {/* Loading indicator */}
+                {isLoading && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#FF6B35" />
+                    <Text style={styles.loadingText}>AI đang trả lời...</Text>
+                  </View>
+                )}
 
-          {/* Input */}
-          <View style={styles.inputContainer}>
-            {/* Voice Button */}
-            <TouchableOpacity
-              style={[
-                styles.voiceButton,
-                isListening && styles.voiceButtonListening
-              ]}
-              onPress={isListening ? stopListening : startListening}
-              disabled={isLoading}
-            >
-              <Icon 
-                name={isListening ? "mic" : "mic-none"} 
-                size={24} 
-                color={isListening ? "white" : "#FF6B35"} 
-              />
-            </TouchableOpacity>
+                {/* Voice listening indicator */}
+                {isListening && (
+                  <View style={styles.listeningContainer}>
+                    <View style={styles.listeningIndicator}>
+                      <ActivityIndicator size="small" color="white" />
+                    </View>
+                    <Text style={styles.listeningText}>Đang nghe...</Text>
+                  </View>
+                )}
 
-            <TextInput
-              style={styles.textInput}
-              value={inputText}
-              onChangeText={(text) => {
-                console.log('[ChatBot] TextInput onChangeText:', text);
-                console.log('[ChatBot] TextInput type:', typeof text);
-                setInputText(text);
-              }}
-              placeholder="Nhập tin nhắn..."
-              placeholderTextColor="#999"
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                !inputText.trim() && styles.sendButtonDisabled
-              ]}
-              onPress={() => sendMessage()}
-              disabled={!inputText.trim() || isLoading}
-            >
-              <Icon 
-                name="send" 
-                size={20} 
-                color={inputText.trim() ? "white" : "#ccc"} 
-              />
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-              </Animated.View>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+                {/* Input */}
+                <View style={styles.inputContainer}>
+                  {/* Voice Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.voiceButton,
+                      isListening && styles.voiceButtonListening
+                    ]}
+                    onPress={isListening ? stopListening : startListening}
+                    disabled={isLoading}
+                  >
+                    <Icon 
+                      name={isListening ? "mic" : "mic-none"} 
+                      size={24} 
+                      color={isListening ? "white" : "#FF6B35"} 
+                    />
+                  </TouchableOpacity>
+
+                  <TextInput
+                    style={styles.textInput}
+                    value={inputText}
+                    onChangeText={(text) => {
+                      console.log('[ChatBot] TextInput onChangeText:', text);
+                      console.log('[ChatBot] TextInput type:', typeof text);
+                      setInputText(text);
+                    }}
+                    placeholder="Nhập tin nhắn..."
+                    placeholderTextColor="#999"
+                    multiline
+                    maxLength={500}
+                    autoFocus={false}
+                    blurOnSubmit={false}
+                    returnKeyType="default"
+                    keyboardType="default"
+                    textAlignVertical="top"
+                    onFocus={() => console.log('[ChatBot] TextInput focused')}
+                    onBlur={() => console.log('[ChatBot] TextInput blurred')}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.sendButton,
+                      !inputText.trim() && styles.sendButtonDisabled
+                    ]}
+                    onPress={() => sendMessage()}
+                    disabled={!inputText.trim() || isLoading}
+                  >
+                    <Icon 
+                      name="send" 
+                      size={20} 
+                      color={inputText.trim() ? "white" : "#ccc"} 
+                    />
+                  </TouchableOpacity>
+                                 </View>
+               </View>
+             </Animated.View>
+           </Animated.View>
+         )}
     </>
   );
 };
@@ -1053,6 +1056,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 10,
     position: 'absolute',
+    maxHeight: '80%',
   },
   modalContent: {
     flex: 1,
@@ -1190,6 +1194,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e0e0e0',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+    minHeight: 60,
   },
   voiceButton: {
     width: 40,
