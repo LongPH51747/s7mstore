@@ -42,17 +42,17 @@ const LoginScreen = () => {
 
     // Logic đăng nhập email/password (từ src/screens/LoginScreen.js)
     const handleLogin = async () => {
-        console.log('[LOGIN] Email:', email, 'Password:', password);
+        // console.log('[LOGIN] Email:', email, 'Password:', password);
         setShowForgotPasswordLink(false); // Reset trạng thái hiển thị link khi bắt đầu đăng nhập mới
 
         if (!email || !password) {
             Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email và mật khẩu');
-            console.log('[LOGIN] Thiếu email hoặc password');
+            // console.log('[LOGIN] Thiếu email hoặc password');
             return;
         }
         setLoading(true);
         try {
-            console.log('[LOGIN] Gửi request tới API:', API_ENDPOINTS.AUTH.LOGIN_EMAIL);
+            // console.log('[LOGIN] Gửi request tới API:', API_ENDPOINTS.AUTH.LOGIN_EMAIL);
             const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN_EMAIL, {
                 email,
                 password
@@ -60,7 +60,7 @@ const LoginScreen = () => {
                 timeout: API_TIMEOUT,
                 headers: API_HEADERS,
             });
-            console.log('[LOGIN] Response:', response.data);
+            // console.log('[LOGIN] Response:', response.data);
             if (response.data && response.data.user && response.data.user.access_token) {
                 const backendResponseData = response.data.user;
                 const backendUser = backendResponseData.user || {};
@@ -73,18 +73,18 @@ const LoginScreen = () => {
                     provider: 'local', // Đánh dấu provider là local/email
                     ...backendUser
                 };
-                console.log('[LOGIN - DEBUG] backendResponseData:', backendResponseData); // Xem dữ liệu thô
-                console.log('[LOGIN - DEBUG] backendUser:', backendUser);             // Xem đối tượng user đã tách
-                console.log('[LOGIN - DEBUG] userInfoToStore:', userInfoToStore);
+                // console.log('[LOGIN - DEBUG] backendResponseData:', backendResponseData); // Xem dữ liệu thô
+                // console.log('[LOGIN - DEBUG] backendUser:', backendUser);             // Xem đối tượng user đã tách
+                // console.log('[LOGIN - DEBUG] userInfoToStore:', userInfoToStore);
 
                 await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                 await AsyncStorage.setItem('shouldAutoLogin', 'true');
-                await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
-                console.log('[LOGIN] userInfoToStore:', userInfoToStore); // Log thông tin user vừa lưu
+                // await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
+                // console.log('[LOGIN] userInfoToStore:', userInfoToStore); // Log thông tin user vừa lưu
                 // Thử lưu một giá trị testKey vào AsyncStorage
                 await AsyncStorage.setItem('testKey', 'testValue');
                 const testValue = await AsyncStorage.getItem('testKey');
-                console.log('[LOGIN] testKey value:', testValue);
+                // console.log('[LOGIN] testKey value:', testValue);
                 try { await getAuth().signOut(); } catch (e) {} // Đảm bảo signOut Firebase
                 console.log('[LOGIN] Đăng nhập thành công, chuyển sang Home');
                 navigation.replace('HomeScreen');
@@ -116,7 +116,7 @@ const LoginScreen = () => {
 
     // Hàm xử lý khi nhấn vào link "Quên mật khẩu?"
     const handleForgotPassword = () => {
-        navigation.navigate('ForgotPass'); // Điều hướng đến màn hình ForgotPasswordScreen
+        navigation.navigate('ForgotPasswordScreen'); // Điều hướng đến màn hình ForgotPasswordScreen
     };
 
     // Logic Google Sign-In (ẩn nút, nhưng giữ logic để dùng về sau)

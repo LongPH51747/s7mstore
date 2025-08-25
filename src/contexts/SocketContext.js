@@ -114,7 +114,7 @@ export const SocketProvider = ({ children }) => {
                         finalUserObject = { ...storedUserInfo };
                         console.log("[SocketContext][LoadAuth] Đã tải UserInfo từ AsyncStorage (MongoDB _id):", storedUserInfo._id);
                     } else {
-                        // console.warn("[SocketContext][LoadAuth] UserInfo từ AsyncStorage không hợp lệ (thiếu hoặc sai định dạng MongoDB _id).");
+                       
                         await AsyncStorage.removeItem('userInfo'); // Xóa nếu không hợp lệ
                     }
                 } catch (e) {
@@ -130,7 +130,6 @@ export const SocketProvider = ({ children }) => {
                     finalAccessToken = tokenFromStorage;
                     console.log("[SocketContext][LoadAuth] Đã tải JWT cục bộ từ AsyncStorage.");
                 } else {
-                    // console.warn("[SocketContext][LoadAuth] Token từ AsyncStorage không đúng định dạng JWT. Xóa token.");
                     await AsyncStorage.removeItem('userToken'); // Xóa nếu token không hợp lệ
                 }
             }
@@ -150,7 +149,7 @@ export const SocketProvider = ({ children }) => {
                 console.log("[SocketContext][LoadAuth] Đã cập nhật AsyncStorage với User._id:", finalUserObject._id);
                 console.log("[SocketContext][LoadAuth] Full userInfo saved:", JSON.stringify(finalUserObject, null, 2));
             } else {
-                console.warn("[SocketContext][LoadAuth] Thông tin xác thực không hợp lệ. Xóa dữ liệu cũ trong AsyncStorage.");
+                // console.warn("[SocketContext][LoadAuth] Thông tin xác thực không hợp lệ. Xóa dữ liệu cũ trong AsyncStorage.");
                 await AsyncStorage.multiRemove(['userToken', 'userInfo']); // Xóa nếu không xác thực được
             }
 
@@ -306,7 +305,7 @@ export const SocketProvider = ({ children }) => {
                     });
                     setIsAdmin(backendUserData.userRole === 'admin');
                 } else {
-                    console.warn("[SocketContext] Dữ liệu xác thực từ backend không hợp lệ (thiếu userId hoặc định dạng sai).");
+                    // console.warn("[SocketContext] Dữ liệu xác thực từ backend không hợp lệ (thiếu userId hoặc định dạng sai).");
                     // Ngắt kết nối hoặc xử lý lỗi nếu dữ liệu xác thực không hợp lệ
                     if (newSocket && newSocket.connected) { newSocket.disconnect(); }
                     handleLocalLogout();
@@ -322,7 +321,7 @@ export const SocketProvider = ({ children }) => {
             };
 
             const onUnauthorized = (reason) => {
-                console.warn('[SocketContext] unauthorized:', reason);
+                // console.warn('[SocketContext] unauthorized:', reason);
                 Alert.alert('Phiên đăng nhập hết hạn', 'Vui lòng đăng nhập lại để tiếp tục.', [
                     { text: 'OK', onPress: handleLocalLogout }
                 ]);
@@ -333,7 +332,7 @@ export const SocketProvider = ({ children }) => {
             };
 
             const onDisconnect = (reason) => {
-                console.warn('[SocketContext] Đã disconnect:', reason);
+                // console.warn('[SocketContext] Đã disconnect:', reason);
                 setIsSocketReady(false);
                 isConnecting.current = false;
                 // Nếu disconnect do xác thực thất bại, handleLocalLogout đã được gọi
@@ -402,7 +401,7 @@ export const SocketProvider = ({ children }) => {
                     history = data.messages;
                     chatRoomId = data.chatRoomId;
                 } else {
-                    console.warn("[SocketContext] Dữ liệu chat_history không đúng định dạng:", data);
+                    // console.warn("[SocketContext] Dữ liệu chat_history không đúng định dạng:", data);
                     setMessages([]);
                     setIsLoadingMessages(false);
                     return;
@@ -441,7 +440,7 @@ export const SocketProvider = ({ children }) => {
                 const currentUserId = latestUserRef.current?._id;
 
                 if (!currentUserId || typeof currentUserId !== 'string' || currentUserId.length !== 24 || !chatRoomId || !Array.isArray(messageIds) || messageIds.length === 0) {
-                    console.warn('[SocketContext] onMessageReadStatusUpdate: Dữ liệu không hợp lệ hoặc thiếu. Bỏ qua cập nhật.', data);
+                    // console.warn('[SocketContext] onMessageReadStatusUpdate: Dữ liệu không hợp lệ hoặc thiếu. Bỏ qua cập nhật.', data);
                     return;
                 }
 
@@ -540,18 +539,18 @@ export const SocketProvider = ({ children }) => {
 
         if (!userId || typeof userId !== 'string' || userId.length !== 24 || !socket || !socket.connected || !isSocketReady || loadingAuth) {
             Alert.alert('Lỗi', 'Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối hoặc xác thực.');
-            console.warn('[SocketContext] sendMessage failed: Missing userId, socket not ready, or loadingAuth. User ID:', userId);
+            // console.warn('[SocketContext] sendMessage failed: Missing userId, socket not ready, or loadingAuth. User ID:', userId);
             return;
         }
 
         if (!currentChatRoomId) {
             Alert.alert('Lỗi', 'Chưa chọn phòng chat để gửi tin nhắn.');
-            console.warn('[SocketContext] sendMessage failed: No chat room selected.');
+            // console.warn('[SocketContext] sendMessage failed: No chat room selected.');
             return;
         }
 
         if (messageObject.messageType === 'text' && !messageObject.content?.trim()) {
-            console.warn('Cannot send empty text message');
+            // console.warn('Cannot send empty text message');
             return;
         }
 
@@ -592,7 +591,7 @@ export const SocketProvider = ({ children }) => {
         const socket = socketRef.current;
 
         if (currentUserRole !== 'admin' || !currentUserId || typeof currentUserId !== 'string' || currentUserId.length !== 24) {
-            console.warn("[SocketContext] Người dùng không phải admin hoặc User ID không hợp lệ. Không thể chọn phòng chat.");
+            // console.warn("[SocketContext] Người dùng không phải admin hoặc User ID không hợp lệ. Không thể chọn phòng chat.");
             Alert.alert('Lỗi quyền truy cập', 'Bạn không có quyền truy cập chức năng này.');
             return;
         }
@@ -613,7 +612,7 @@ export const SocketProvider = ({ children }) => {
             setIsLoadingMessages(true);
             socket.emit('request_chat_history_for_admin', { chatRoomId: roomId });
         } else {
-            console.warn("[SocketContext] Không thể yêu cầu lịch sử chat: Socket không sẵn sàng hoặc thiếu/sai định dạng roomId.");
+            // console.warn("[SocketContext] Không thể yêu cầu lịch sử chat: Socket không sẵn sàng hoặc thiếu/sai định dạng roomId.");
             Alert.alert('Lỗi', 'Không thể tải lịch sử chat. Vui lòng thử lại.');
             setIsLoadingMessages(false);
         }
@@ -625,12 +624,12 @@ export const SocketProvider = ({ children }) => {
         const currentUserId = latestUserRef.current?._id;
 
         if (!socket || !socket.connected || !isSocketReady || !currentUserId || typeof currentUserId !== 'string' || currentUserId.length !== 24) {
-            console.warn('[SocketContext] Không thể đánh dấu tin nhắn đã đọc: Socket không sẵn sàng hoặc User ID không hợp lệ.');
+            // console.warn('[SocketContext] Không thể đánh dấu tin nhắn đã đọc: Socket không sẵn sàng hoặc User ID không hợp lệ.');
             return;
         }
 
         if (!chatRoomId || !Array.isArray(messageIdsToMark) || messageIdsToMark.length === 0) {
-            console.warn('[SocketContext] markMessagesAsRead: Dữ liệu không hợp lệ hoặc thiếu.');
+            // console.warn('[SocketContext] markMessagesAsRead: Dữ liệu không hợp lệ hoặc thiếu.');
             return;
         }
 

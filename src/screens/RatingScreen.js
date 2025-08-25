@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import Toast from 'react-native-toast-message';
+import CustomAlertModal from '../components/CustomAlertModal';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +31,22 @@ const RatingScreen = () => {
   const [videos, setVideos] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const [modalVisible, setModalVisible] = useState(false);
+      const [modalTitle, setModalTitle] = useState('');
+      const [modalMessage, setModalMessage] = useState('');
+      const [onConfirm, setOnConfirm] = useState(null);
+      const [showConfirmButton, setShowConfirmButton] = useState(false);
+      const [type, setType] = useState('')
+
+       const showAlert = (title, message, confirmAction = null, showConfirm = false, modalType) => {
+        setModalTitle(title);
+        setModalMessage(message);
+        setOnConfirm(() => confirmAction); // Lưu hàm để gọi khi bấm nút OK
+        setShowConfirmButton(showConfirm);
+        setModalVisible(true);
+        setType(modalType)
+    };
 
   // Initialize ratings for each product
   useEffect(() => {
@@ -393,7 +410,7 @@ const RatingScreen = () => {
       });
       
       if (!isValid) {
-        console.error('Validation failed: No rating for item', itemId);
+        console.log('Validation failed: No rating for item', itemId);
       } else {
         console.log('Item', itemId, 'has valid rating:', rating);
       }
@@ -403,8 +420,8 @@ const RatingScreen = () => {
     const allValid = validationResults.every(result => result.isValid);
     
     if (!allValid) {
-      console.error('Validation failed - showing alert');
-      Alert.alert('Lỗi', 'Vui lòng đánh giá tất cả sản phẩm');
+     
+      showAlert('Lỗi', 'Vui lòng nhập các thông tin đánh giá', null, false, 'error');
       return false;
     }
     
@@ -624,14 +641,14 @@ const RatingScreen = () => {
           console.log(`Review ${i + 1} response headers:`, response.headers);
 
           if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Review ${i + 1} server error:`, errorText);
-            console.error(`Review ${i + 1} full response:`, {
-              status: response.status,
-              statusText: response.statusText,
-              headers: response.headers,
-              body: errorText
-            });
+            // const errorText = await response.text();
+            // console.error(`Review ${i + 1} server error:`, errorText);
+            // console.error(`Review ${i + 1} full response:`, {
+            //   status: response.status,
+            //   statusText: response.statusText,
+            //   headers: response.headers,
+            //   body: errorText
+            // });
             
             // Check if token is expired or invalid
             if (response.status === 403 && errorText.includes('Token không hợp lệ hoặc hết hạn')) {
@@ -640,6 +657,7 @@ const RatingScreen = () => {
             
             // Check for 500 error - inappropriate content
             if (response.status === 500) {
+               showAlert('Lỗi', 'Đánh giá thất bại: Một hoặc nhiều hình ảnh chứa nội dung không phù hợp.', 'error');
               throw new Error('Hình ảnh chứa nội dung không phù hợp');
             }
             
@@ -650,12 +668,6 @@ const RatingScreen = () => {
           console.log(`Review ${i + 1} success response:`, responseData);
           submissionResults.push({ success: true, review });
         } catch (error) {
-          console.error(`Error submitting review ${i + 1}:`, error);
-          console.error(`Review ${i + 1} error details:`, {
-            message: error.message,
-            name: error.name,
-            stack: error.stack
-          });
           
           // If token is expired, stop processing and redirect to login
           if (error.message.includes('Token đã hết hạn') || error.message.includes('Token không hợp lệ')) {
@@ -677,17 +689,17 @@ const RatingScreen = () => {
       });
 
       if (failedReviews.length > 0) {
-        console.error('Failed reviews:', failedReviews);
+        
         
         // Show detailed error information
         failedReviews.forEach((failedReview, index) => {
-          console.error(`Failed review ${index + 1} details:`, {
-            productId: failedReview.review.review_product_id,
-            rating: failedReview.review.review_rate,
-            comment: failedReview.review.review_comment,
-            imageCount: failedReview.review.review_image.length,
-            error: failedReview.error
-          });
+          // console.error(`Failed review ${index + 1} details:`, {
+          //   productId: failedReview.review.review_product_id,
+          //   rating: failedReview.review.review_rate,
+          //   comment: failedReview.review.review_comment,
+          //   imageCount: failedReview.review.review_image.length,
+          //   error: failedReview.error
+          // });
         });
         
         // If some reviews succeeded, show partial success
@@ -700,25 +712,12 @@ const RatingScreen = () => {
 
       console.log('All reviews submitted successfully!');
 
-      Alert.alert(
-        'Thành công',
-        `Đã gửi thành công ${successfulReviews.length} đánh giá!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+     showAlert('Thành công', 'Cảm ơn vì bạn đã góp ý', ()=> navigation.goBack(), false, 'success');
+
     } catch (error) {
-      console.error('Error submitting reviews:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+     
       
-      let errorMessage = 'Không thể gửi đánh giá. Vui lòng thử lại.';
+      let errorMessage = 'Ảnh chứa nội dung nhạy cảm vui lòng thử lại';
       let shouldRedirectToLogin = false;
       
       if (error.message.includes('Token đã hết hạn') || 
@@ -726,32 +725,15 @@ const RatingScreen = () => {
           error.message.includes('token đăng nhập')) {
         errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
         shouldRedirectToLogin = true;
-      } else if (error.name === 'AbortError') {
+      } else if (error.status === '400') {
         errorMessage = 'Thời gian gửi đánh giá đã hết. Vui lòng thử lại.';
-      } else if (error.message.includes('Server error:')) {
+      } else if (error.status === '500') {
         errorMessage = `Ảnh chứa nội dung nhạy cảm, không phù hợp!`;
       } else if (error.message.includes('Network')) {
         errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
       }
       
-      Alert.alert('Lỗi', errorMessage, [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (shouldRedirectToLogin) {
-              // Clear stored data and redirect to login
-              AsyncStorage.multiRemove(['userToken', 'userInfo', 'userPhone', 'shouldAutoLogin'])
-                .then(() => {
-                  navigation.replace('Login');
-                })
-                .catch(clearError => {
-                  console.error('Error clearing storage:', clearError);
-                  navigation.replace('Login');
-                });
-            }
-          }
-        }
-      ]);
+      showAlert('Lỗi', errorMessage, null, false, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -854,6 +836,15 @@ const RatingScreen = () => {
 
   return (
     <View style={styles.container}>
+      <CustomAlertModal
+                      visible={modalVisible}
+                      title={modalTitle}
+                      message={modalMessage}
+                      onClose={() => setModalVisible(false)} // Đóng modal khi bấm
+                      onConfirm={onConfirm}
+                      showConfirmButton={showConfirmButton}
+                      type= {type}
+                  />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
         <Image 

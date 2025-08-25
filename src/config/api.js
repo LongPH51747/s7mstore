@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     GET_BY_ID_FULL: (id) => `${API_BASE_URL}/api/products/get-products-by-id/id/${id}`,
     GET_BY_CATEGORY: (category) => `${API_BASE_URL}/api/products/getProductByCate?cateId=${category}`,
     GET_NEW_PRODUCTS: `${API_BASE_URL}/api/products/getNewProduct`,
+    SEARCH: `${API_BASE_URL}/api/products/search-product`,
 
   },
   
@@ -92,7 +93,7 @@ export const API_ENDPOINTS = {
     CREATE_PAY: () => `${API_BASE_URL}/api/momo/create-payment`
   },
   VOUCHER: {
-    GET_ALL: `${API_BASE_URL}/api/voucher/getVoucherForUser`,
+    GET_ALL: (userId)=> `${API_BASE_URL}/api/voucher/getVoucherForUser/${userId}`,
     GET_BY_ID: (id) => `${API_BASE_URL}/api/voucher/getVoucherById/${id}`,
     GET_VOUCHER_BY_CODE:`${API_BASE_URL}/api/voucher/getVoucherByCode`,
     APPLY_VOUCHER: (userId) => `${API_BASE_URL}/api/voucher/applyVoucher/${userId}`,

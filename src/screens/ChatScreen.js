@@ -23,6 +23,9 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker'; // Import image picker
 import { API_BASE_URL } from '../config/api'; // Import base URL
 import ImageMessage from '../components/ImageMessage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
 
 const UserChatScreen = () => {
     const {
@@ -45,7 +48,7 @@ const UserChatScreen = () => {
     const [selectedImageForViewer, setSelectedImageForViewer] = useState(null); // State cho ảnh đang xem
     const [isImageViewerVisible, setIsImageViewerVisible] = useState(false); // State để điều khiển hiển thị trình xem ảnh
     const navigation = useNavigation();
-
+    const [currentUser, setCurrentUser] = useState(null); 
     // Clear selected image when chat room changes
     useEffect(() => {
         setSelectedImage(null);
@@ -65,6 +68,25 @@ const UserChatScreen = () => {
             return () => {};
         }, [isSocketReady, currentUserChatRoomId, currentUserId, messages, markMessagesAsRead])
     );
+    
+    useFocusEffect(
+    useCallback(() => {
+      const loadUserInfo = async () => {
+        try {
+          const userInfoString = await AsyncStorage.getItem('userInfo');
+          if (userInfoString) {
+            const updatedUser = JSON.parse(userInfoString);
+            setCurrentUser(updatedUser); // Cập nhật state với dữ liệu mới nhất
+            console.log('✅ Đã tải thông tin người dùng mới vào màn hình chat:', updatedUser);
+          }
+        } catch (error) {
+          console.error("Lỗi khi tải thông tin người dùng từ AsyncStorage:", error);
+        }
+      };
+      
+      loadUserInfo();
+    }, [])
+  );
 
     useEffect(() => {
         if (messagesError && messagesError.message) {
@@ -165,47 +187,32 @@ const UserChatScreen = () => {
         setIsImageViewerVisible(true);
     };
 
-    const handleDeleteMessage = useCallback((messageId, senderIdOfMessage) => {
-        if(!user || user._id !== senderIdOfMessage){
-            Alert.alert("Không có quyền", "Bạn chỉ có thể xóa tin nhắn của chính mình.");
-            return; 
-        }
-        Alert.alert(
-            "Xóa tin nhắn", 
-            "Bạn có chắc muốn xóa tin nhắn này không?", 
-            [
-                {text: 'Hủy', style: 'cancel'},
-                {text: 'Xóa', 
-                 onPress: ()=> {
-                    if(socket && user && currentUserChatRoomId){
-                       console.log(`[UserChatScreen] Đang gửi yêu cầu xóa tin nhắn ID: ${messageId} trong phòng ${currentUserChatRoomId}`);
-                        socket.emit('delete_message', { messageId, chatRoomId: currentUserChatRoomId });
-                    }else{
-                        let errorMessage = 'Không thể xóa tin nhắn. ';
-                        if (!socket) errorMessage += 'Socket chưa sẵn sàng. ';
-                        if (!user) errorMessage += 'Người dùng chưa được xác định. ';
-                        if (!currentUserChatRoomId) errorMessage += 'Phòng chat chưa xác định. ';
-                        Alert.alert('Lỗi', errorMessage + 'Vui lòng thử lại.');
-                        console.error('Lỗi xóa tin nhắn (client):', { socketReady: !!socket, userExists: !!user, chatRoomIdExists: !!currentUserChatRoomId });
-                    }
-                 }
-                }
-            ], {cancelable:  true}
-        )
-    }, [socket, user, currentUserChatRoomId])
+   
 
-    const renderMessage = useCallback(({ item: msg, user, handleDeleteMessage, handleImagePress }) => {
+    const renderMessage = useCallback(({ item: msg, user, handleImagePress }) => {
         const isAdmin = msg.sender?.role === 'admin';
         const isUser = !isAdmin;
+                const isMyMessage = msg.sender?._id === currentUser?._id;
         const displayTime = moment(msg.createdAt || msg.timestamp).format('HH:mm DD/MM');
         const defaultAvatarUrl = `https://www.gravatar.com/avatar/${msg.sender?.email ? encodeURIComponent(msg.sender.email) : 'default'}?d=mp&s=200`;
-        const avatarSource = msg.sender?.avatar ? { uri: msg.sender.avatar } : { uri: defaultAvatarUrl };
-        const isMyMessage = msg.sender?._id === user?._id;
-    //     console.log("msg.sender?._id:", msg.sender?._id);
-    // console.log("user?._id:", user?._id);
-    // console.log("isMyMessage:", isMyMessage);
-    // console.log("Full User Object:", user);
+         let avatarSource;
+    if (isMyMessage && currentUser) {
+        // Nếu tin nhắn là của người dùng hiện tại, sử dụng avatar từ state đã được load
+        avatarSource = {
+            uri: currentUser.avatar
+                ? currentUser.avatar.startsWith('http')
+                    ? currentUser.avatar
+                    : `${API_BASE_URL}/${currentUser.avatar}`
+                : 'https://via.placeholder.com/150'
+        };
+    } else {
+        // Nếu tin nhắn là của người khác (admin), sử dụng avatar từ dữ liệu tin nhắn
+        avatarSource = msg.sender?.avatar
+            ? { uri: `https://inkythuatso.com/uploads/thumbnails/800/2023/03/9-anh-dai-dien-trang-inkythuatso-03-15-27-03.jpg` }
+            : { uri: 'https://via.placeholder.com/150' };
+    }
 
+       
         return (
             <View style={{
                 flexDirection: isAdmin ? 'row' : 'row-reverse',
@@ -214,7 +221,7 @@ const UserChatScreen = () => {
                 
                 
             }}>
-                <Image source={avatarSource} style={styles.avatar} />
+                <Image source={avatarSource}  style={styles.avatar} />
                 {/* Logic mới để điều khiển bubble cho text và ảnh */}
                 {msg.messageType === 'image' && msg.mediaUrl ? (
                     // Nếu là tin nhắn ảnh, không áp dụng messageBubble
@@ -223,13 +230,6 @@ const UserChatScreen = () => {
                         style={[styles.image1, {
                             //  flexDirection: isAdmin ? 'row' : 'row-reverse',
                         }]}
-                        onLongPress={() => {
-                            if (isMyMessage) {
-                handleDeleteMessage(msg._id, msg.sender?._id);
-            } else {
-                Alert.alert("Không có quyền", "Bạn chỉ có thể xóa tin nhắn của chính mình.");
-            }
-                        }}
                         onPress={() => handleImagePress(msg.mediaUrl)}>
                            <ImageMessage imageUrl={msg.mediaUrl} /> 
                         </TouchableOpacity>
@@ -296,7 +296,7 @@ const UserChatScreen = () => {
                 )}
             </View>
         );
-    }, [user, handleDeleteMessage, handleImagePress]);
+    }, [user, handleImagePress]);
 
     if (loadingAuth || !isSocketReady) {
         return (
@@ -340,7 +340,7 @@ const UserChatScreen = () => {
                 <FlatList
                     ref={flatListRef}
                     data={messages}
-                   renderItem={({ item }) => renderMessage({ item, user: user, handleDeleteMessage: handleDeleteMessage, handleImagePress: handleImagePress })}
+                   renderItem={({ item }) => renderMessage({ item, user: user, handleImagePress: handleImagePress })}
                     keyExtractor={(item, index) => item._id?.toString() || `index-${index}`}
                     contentContainerStyle={{ paddingHorizontal: 8, paddingVertical: 15 }}
                     onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}

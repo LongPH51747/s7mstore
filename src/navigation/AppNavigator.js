@@ -172,6 +172,11 @@ const AppNavigator = () => {
         options={{
           detachPreviousScreen: true
         }} />
+        <Stack.Screen name="ChangePassScreen" component={ChangePasswordScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
         <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen}
         options={{
           detachPreviousScreen: true

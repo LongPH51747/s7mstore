@@ -104,9 +104,9 @@ const OrderDetailScreen = ({ route }) => {
         {/* Thông tin người nhận */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin người nhận</Text>
-          <Text style={styles.infoText}>Họ tên: {order.id_address.fullName}</Text>
-          <Text style={styles.infoText}>Số điện thoại: {order.id_address.phone_number}</Text>
-          <Text style={styles.infoText}>Địa chỉ: {order.id_address.addressDetail}</Text>
+          <Text style={styles.infoText}>Họ tên: {order.id_address?.fullname}</Text>
+          <Text style={styles.infoText}>Số điện thoại: {order.id_address?.phone_number}</Text>
+          <Text style={styles.infoText}>Địa chỉ: {order.id_address?.addressDetail}</Text>
         </View>
 
         {/* Sản phẩm */}
