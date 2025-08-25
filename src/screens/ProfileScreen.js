@@ -233,7 +233,7 @@ const ProfileScreen = () => {
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.status} onPress={() => handleNavigateToOrders('Giao thành công')}>
                             <Feather name="check-circle" size={24} color="black" />
-                            <Text style={styles.textStatus}>Đã nhận</Text>
+                            <Text style={styles.textStatus}>Đánh giá</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

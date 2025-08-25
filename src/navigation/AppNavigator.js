@@ -98,6 +98,12 @@ const AppNavigator = () => {
           detachPreviousScreen: true
         }}
         />
+
+        <Stack.Screen name="UserReviewScreen" component={UserReviewsScreen}
+        options={{
+          detachPreviousScreen: true
+        }}
+        />
         
         {/* Màn hình giỏ hàng */}
         <Stack.Screen name="CartScreen" component={CartScreen}

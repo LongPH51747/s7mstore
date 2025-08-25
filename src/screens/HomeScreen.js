@@ -7,7 +7,7 @@ import { auth } from '../firebase/firebaseConfig';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import Feather from 'react-native-vector-icons/Feather';
 const numColumns = 2;
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width / numColumns - 24;
@@ -701,32 +701,34 @@ const newProductsPage = newProducts.slice(newPage * NEW_PRODUCTS_PER_PAGE, (newP
       </ScrollView>
       {/* Bottom Navigation: các icon điều hướng nhanh */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Home');
-          navigation.navigate('HomeScreen');
-        }}>
-          <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Search');
-          navigation.navigate('SearchScreen');
-        }}>
-          <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Cart');
-          navigation.navigate('CartScreen');
-        }}>
-          <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-       
-        <TouchableOpacity onPress={() => {
-          setActiveTab('Profile');
-          navigation.navigate('ProfileScreen');
-        }}>
-          <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
+  <TouchableOpacity onPress={() => {
+    setActiveTab('Home');
+    navigation.navigate('HomeScreen');
+  }}>
+    <Feather name="home" size={24} color={activeTab === 'Home' ? '#000' : 'gray'} />
+  </TouchableOpacity>
+
+  <TouchableOpacity onPress={() => {
+    setActiveTab('Cart');
+    navigation.navigate('CartScreen');
+  }}>
+    <Feather name="shopping-cart" size={24} color={activeTab === 'Cart' ? '#000' : 'gray'} />
+  </TouchableOpacity>
+  
+  <TouchableOpacity onPress={() => {
+    setActiveTab('Bell');
+    navigation.navigate('NotificationScreen');
+  }}>
+    <Feather name="bell" size={24} color={activeTab === 'Bell' ? '#000' : 'gray'} />
+  </TouchableOpacity>
+  
+  <TouchableOpacity onPress={() => {
+    setActiveTab('Profile');
+    navigation.navigate('ProfileScreen');
+  }}>
+    <Feather name="user" size={24} color={activeTab === 'Profile' ? '#000' : 'gray'} />
+  </TouchableOpacity>
+</View>
     </SafeAreaView>
   );
 };
