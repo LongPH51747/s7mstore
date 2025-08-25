@@ -730,7 +730,7 @@ const RatingScreen = () => {
       } else if (error.name === 'AbortError') {
         errorMessage = 'Thời gian gửi đánh giá đã hết. Vui lòng thử lại.';
       } else if (error.message.includes('Server error:')) {
-        errorMessage = `Lỗi server: ${error.message}`;
+        errorMessage = `Ảnh chứa nội dung nhạy cảm, không phù hợp!`;
       } else if (error.message.includes('Network')) {
         errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
       }

@@ -27,6 +27,7 @@ import ChangePasswordScreen from '../screens/ChangePassword';
 import RefundReturnScreen from '../screens/TraHangScreen';
 import UserReviewsScreen from '../screens/UserReviewsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import VoucherScreen from '../screens/VoucherScreen';
 import ReturnRequestScreen from '../screens/ReturnRequestScreen';
 
 const Stack = createStackNavigator();
@@ -89,6 +90,7 @@ const AppNavigator = () => {
         <Stack.Screen name='ResetPasswordScreen' component={ResetPasswordScreen}/>
         <Stack.Screen name='Otp' component={OtpScreen}/>
         <Stack.Screen name='EditProfileScreen' component={EditProfileScreen}/>
+        <Stack.Screen name='VoucherScreen' component={VoucherScreen}/>
       </Stack.Navigator>
 
   );

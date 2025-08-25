@@ -238,7 +238,9 @@ const ProfileScreen = () => {
       
         <Text style={styles.sectionTitle}>Activity</Text>
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.activityButton}>
+          <TouchableOpacity
+          onPress={() => navigation.navigate('VoucherScreen')}
+          style={styles.activityButton}>
             <Feather name="gift" size={24} color="white" />
             <Text style={styles.activityText}>Voucher</Text>
           </TouchableOpacity>

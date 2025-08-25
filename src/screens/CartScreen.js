@@ -357,6 +357,7 @@ const handleConfirmDelete = () => {
     }
     
             navigation.navigate('CheckoutScreen', { cartItems: selectedProducts, cartId: cart._id });
+            console.log("Id cart trước khi chuyển sang CheckoutScreen: ", cart._id);
   };
 
   const handleSelectAll = () => {

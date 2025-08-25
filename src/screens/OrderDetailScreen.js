@@ -97,7 +97,7 @@ const OrderDetailScreen = ({ route }) => {
           <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
           <Text style={styles.infoText}>Mã đơn hàng: {order._id}</Text>
           <Text style={styles.infoText}>Ngày đặt: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</Text>
-          <Text style={styles.infoText}>Phương thức thanh toán: {order.payment_method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
+          <Text style={styles.infoText}>Phương thức thanh toán: {order.payment_method === 'COD' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
           <Text style={styles.infoText}>Trạng thái thanh toán: {order.payment_status}</Text>
         </View>
 
@@ -160,6 +160,13 @@ const OrderDetailScreen = ({ route }) => {
             <Text style={styles.totalLabel}>Phí vận chuyển:</Text>
             <Text style={styles.totalValue}>{order.shipping?.toLocaleString('vi-VN')}đ</Text>
           </View>
+
+          {order.discount > 0 && (
+        <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Voucher giảm giá:</Text>
+            <Text style={[styles.totalValue, styles.voucherValue]}>-{order.discount?.toLocaleString('vi-VN')}đ</Text>
+        </View>
+    )}
           <View style={[styles.totalRow, styles.finalTotal]}>
             <Text style={styles.totalLabel}>Tổng cộng:</Text>
             <Text style={styles.totalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
