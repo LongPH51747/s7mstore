@@ -233,7 +233,7 @@ const ProfileScreen = () => {
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.status} onPress={() => handleNavigateToOrders('Giao thành công')}>
                             <Feather name="check-circle" size={24} color="black" />
-                            <Text style={styles.textStatus}>Đánh giá</Text>
+                            <Text style={styles.textStatus}>Đã giao</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -285,7 +285,7 @@ const ProfileScreen = () => {
                 <Text style={styles.sectionTitle}>Support</Text>
                 <View style={styles.supportGrid}>
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('ChangePassScreen')}
+                        onPress={() => navigation.navigate('ChangePass')}
                         style={styles.gridItem}>
                         <Feather name="unlock" size={20} color="black" />
                         <Text style={styles.gridText}>Đổi mật khẩu</Text>
@@ -313,18 +313,20 @@ const ProfileScreen = () => {
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.sectionTitle}>Cài đặt</Text>
+                <Text style={styles.sectionTitle}>Tiện ích</Text>
                 {user.phoneNumber && (
                     <TouchableOpacity style={styles.itemRow} onPress={() => navigation.navigate('ForgotPasswordScreen')}>
                         <Feather name="lock" size={20} color="black" />
                         <Text style={styles.itemText}>Quên mật khẩu</Text>
-                        <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
+                        <Ionicons name="star" size={20} color="#aaa" style={styles.itemRowChevron} />
                     </TouchableOpacity>
                 )}
 
-                <TouchableOpacity style={styles.itemRow}>
-                    <Feather name="globe" size={20} color="black" />
-                    <Text style={styles.itemText}>Vị trí & Ngôn ngữ</Text>
+                <TouchableOpacity
+                onPress={() => navigation.navigate('UserReviewScreen')}
+                style={styles.itemRow}>
+                    <Feather name="star" size={20} color="black" />
+                    <Text style={styles.itemText}>Đánh giá</Text>
                     <Ionicons name="chevron-forward-outline" size={20} color="#aaa" style={styles.itemRowChevron} />
                 </TouchableOpacity>
 

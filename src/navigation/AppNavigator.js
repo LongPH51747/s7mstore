@@ -10,6 +10,7 @@ import SearchResultsScreen from '../screens/SearchResultsScreen';
 import CartScreen from '../screens/CartScreen';
 import OrderScreen from '../screens/OrderScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import AddressScreen from '../screens/AddressScreen';
 import AddAddressScreen from '../screens/AddAddressScreen';
@@ -143,62 +144,20 @@ const AppNavigator = () => {
         }} />
         
         {/* Màn hình đơn hàng */}
-                <Stack.Screen name="OrderScreen" component={OrderScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
+        <Stack.Screen name="OrderScreen" component={OrderScreen} />
+        <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
+        <Stack.Screen name="OrderTrackingScreen" component={OrderTrackingScreen} />
         <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} />
-        <Stack.Screen name='Otp' component={OtpScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name='VoucherScreen' component={VoucherScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name="RatingScreen" component={RatingScreen} />
-        <Stack.Screen name="ProfileScreen" component={ProfileScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name="ChatScreen" component={UserChatScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        {/* Các màn hình bổ sung */}
-        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen}
-        options={{
-          detachPreviousScreen: true
-        }}   />
-        <Stack.Screen name="OtpScreen" component={OtpScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name="ChangePassScreen" component={ChangePasswordScreen}
-        options={{
-          detachPreviousScreen: true
-        }}
-        />
-        <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name="RefundReturnScreen" component={RefundReturnScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name="EditProfileScreen" component={EditProfileScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
-        <Stack.Screen name="NotificationScreen" component={NotificationScreen}
-        options={{
-          detachPreviousScreen: true
-        }} />
+        <Stack.Screen name="Rating" component={RatingScreen} />
+        <Stack.Screen name='ProfileScreen' component={ProfileScreen}/>
+        <Stack.Screen name='ChatScreen' component={UserChatScreen}/>
+        <Stack.Screen name='ChangePass' component={ChangePasswordScreen}/>
+        <Stack.Screen name='ForgotPass' component={ForgotPasswordScreen}/>
+        <Stack.Screen name='ResetPasswordScreen' component={ResetPasswordScreen}/>
+        <Stack.Screen name='Otp' component={OtpScreen}/>
+        <Stack.Screen name='EditProfileScreen' component={EditProfileScreen}/>
+        <Stack.Screen name='VoucherScreen' component={VoucherScreen}/>
+         <Stack.Screen name='NotificationScreen' component={NotificationScreen}/>
       </Stack.Navigator>
   );
 };

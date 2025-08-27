@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
     GET_ORDER_DETAIL: `${API_BASE_URL}/api/order/getOrderDetail`,
     CREATE_ORDER: (userId) => `${API_BASE_URL}/api/order/create/userId/${userId}`,
     UPDATE_STATUS: (orderId) => `${API_BASE_URL}/api/order/updateStatus/${orderId}`,
+    GET_HISTORY_UPDATE: (orderId) => `${API_BASE_URL}/api/history-update/getHistoryUpdateByIdOrder/${orderId}`,
   },
 
   // Return request endpoints

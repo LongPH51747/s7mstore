@@ -141,15 +141,18 @@ const ChatBot = () => {
   useEffect(() => {
     console.log('🚀 [SETUP] Bắt đầu setup Voice Recognition');
     setMessages([
-          {
-            id: '1',
-            text: 'Xin chào! Tôi là trợ lý AI của S7M Store. Bạn cần hỗ trợ gì?',
-            isUser: false,
-            timestamp: new Date(),
-          },
-        ]);
+      {
+        id: '1',
+        text: 'Xin chào! Tôi là trợ lý AI của S7M Store. Bạn cần hỗ trợ gì?',
+        isUser: false,
+        timestamp: new Date(),
+      },
+    ]);
+    
     const initializeVoice = async () => {
       try {
+        console.log('🔍 [SETUP] Đang kiểm tra Voice availability...');
+        
         // Kiểm tra xem Voice có khả dụng không
         const available = await Voice.isAvailable();
         console.log('🔍 [SETUP] Voice available:', available);
@@ -158,6 +161,15 @@ const ChatBot = () => {
         if (!available) {
           console.error('❌ [SETUP] Voice không khả dụng trên thiết bị này');
           return;
+        }
+
+        // Kiểm tra quyền microphone trước
+        if (Platform.OS === 'android') {
+          const permission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+          console.log('🔍 [SETUP] Microphone permission:', permission);
+          if (!permission) {
+            console.log('⚠️ [SETUP] Microphone permission not granted, will request later');
+          }
         }
   
         // QUAN TRỌNG: Đăng ký các event listeners
@@ -169,18 +181,53 @@ const ChatBot = () => {
         
         console.log('✅ [SETUP] Voice listeners đã được đăng ký');
         
+        // Test voice initialization
+        try {
+          await Voice.destroy();
+          console.log('✅ [SETUP] Voice destroy test successful');
+        } catch (testError) {
+          console.log('⚠️ [SETUP] Voice destroy test failed (this is normal):', testError.message);
+        }
+        
       } catch (error) {
         console.error('❌ [SETUP] Lỗi khởi tạo Voice:', error);
         setIsVoiceAvailable(false);
+        
+        // Show user-friendly error
+        if (error.message && error.message.includes('permission')) {
+          Alert.alert(
+            'Quyền truy cập', 
+            'Cần quyền truy cập microphone để sử dụng tính năng nhận dạng giọng nói. Vui lòng cấp quyền trong cài đặt.',
+            [
+              { text: 'Cài đặt', onPress: () => {
+                // Navigate to app settings
+                if (Platform.OS === 'ios') {
+                  // iOS doesn't have a direct way to open settings
+                  Alert.alert('Hướng dẫn', 'Vui lòng vào Cài đặt > S7M Store > Microphone và bật quyền truy cập.');
+                }
+              }},
+              { text: 'Đóng', style: 'cancel' }
+            ]
+          );
+        }
       }
     };
   
-    initializeVoice();
+    // Delay initialization to ensure component is fully mounted
+    const initTimer = setTimeout(initializeVoice, 500);
   
     // Cleanup khi component bị hủy
     return () => {
       console.log('🧹 [CLEANUP] Dọn dẹp Voice listeners');
-      Voice.destroy().then(Voice.removeAllListeners);
+      clearTimeout(initTimer);
+      try {
+        Voice.destroy().then(() => {
+          Voice.removeAllListeners();
+          console.log('✅ [CLEANUP] Voice listeners removed successfully');
+        });
+      } catch (cleanupError) {
+        console.log('⚠️ [CLEANUP] Error during cleanup:', cleanupError.message);
+      }
     };
   }, []);
   // Voice recognition functions
@@ -196,31 +243,74 @@ const ChatBot = () => {
 
   const onSpeechError = (error) => {
     console.log('[Voice] Speech recognition error:', error);
+    console.log('[Voice] Error details:', JSON.stringify(error, null, 2));
     setIsListening(false);
     
     let errorMessage = 'Không thể nhận dạng giọng nói. Vui lòng thử lại.';
+    let shouldRetry = false;
     
     if (error.error) {
       switch (error.error.code) {
         case '13':
         case '11':
           errorMessage = 'Không hiểu được giọng nói. Vui lòng nói rõ ràng hơn.';
+          shouldRetry = true;
           break;
         case '5':
           errorMessage = 'Lỗi kết nối. Vui lòng kiểm tra internet và thử lại.';
+          shouldRetry = true;
           break;
         case '7':
-          errorMessage = 'Không có audio được phát hiện. Vui lòng nói to hơn.';
+          errorMessage = 'Không có audio được phát hiện. Vui lòng:\n• Nói to hơn\n• Đảm bảo microphone không bị che\n• Kiểm tra âm lượng thiết bị';
+          shouldRetry = true;
           break;
         case '9':
-          errorMessage = 'Lỗi permission. Vui lòng cấp quyền microphone.';
+          errorMessage = 'Lỗi permission. Vui lòng cấp quyền microphone trong cài đặt.';
+          break;
+        case '1':
+          errorMessage = 'Lỗi khởi tạo. Vui lòng thử lại sau.';
+          shouldRetry = true;
+          break;
+        case '2':
+          errorMessage = 'Lỗi audio. Vui lòng kiểm tra microphone.';
+          shouldRetry = true;
+          break;
+        case '3':
+          errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+          shouldRetry = true;
+          break;
+        case '4':
+          errorMessage = 'Lỗi network. Vui lòng kiểm tra kết nối.';
+          shouldRetry = true;
+          break;
+        case '6':
+          errorMessage = 'Lỗi timeout. Vui lòng thử lại.';
+          shouldRetry = true;
+          break;
+        case '8':
+          errorMessage = 'Lỗi recognition. Vui lòng thử lại.';
+          shouldRetry = true;
           break;
         default:
           errorMessage = `Lỗi: ${error.error.message || 'Không xác định'}`;
+          shouldRetry = true;
       }
     }
     
-    Alert.alert('Lỗi nhận dạng giọng nói', errorMessage);
+    if (shouldRetry) {
+      Alert.alert(
+        'Lỗi nhận dạng giọng nói', 
+        errorMessage,
+        [
+          { text: 'Thử lại', onPress: () => {
+            setTimeout(() => startListening(), 1000);
+          }},
+          { text: 'Đóng', style: 'cancel' }
+        ]
+      );
+    } else {
+      Alert.alert('Lỗi nhận dạng giọng nói', errorMessage);
+    }
   };
 
   const onSpeechResults = (event) => {
@@ -231,19 +321,28 @@ const ChatBot = () => {
       console.log('[Voice] Extracted text:', text);
       console.log('[Voice] Type of text:', typeof text);
       
-      // Đảm bảo text là string
-      const safeText = typeof text === 'string' ? text : String(text || '');
+      // Đảm bảo text là string và có nội dung
+      const safeText = typeof text === 'string' ? text.trim() : String(text || '').trim();
       console.log('[Voice] Safe text:', safeText);
       
-      setInputText(safeText);
-      
-      // Auto-send after 1.5 seconds of silence
-      setTimeout(() => {
-        console.log('[Voice] Auto-sending message after silence');
-        if (safeText.trim()) {
-          sendMessage(safeText);
-        }
-      }, 1500);
+      if (safeText && safeText.length > 0) {
+        setInputText(safeText);
+        
+        // Auto-send after 2 seconds of silence (increased from 1.5s)
+        setTimeout(() => {
+          console.log('[Voice] Auto-sending message after silence');
+          if (safeText.trim() && !isLoading) {
+            sendMessage(safeText);
+          }
+        }, 2000);
+      } else {
+        console.log('[Voice] Empty text received, not setting input');
+        // Show user feedback for empty results
+        Alert.alert('Không nhận dạng được', 'Không thể nhận dạng giọng nói. Vui lòng thử lại và nói rõ ràng hơn.');
+      }
+    } else {
+      console.log('[Voice] No speech results received');
+      Alert.alert('Không có kết quả', 'Không nhận dạng được giọng nói. Vui lòng thử lại.');
     }
   };
 
@@ -293,29 +392,73 @@ const ChatBot = () => {
         Alert.alert('Quyền truy cập', 'Cần quyền truy cập microphone để sử dụng tính năng nhận dạng giọng nói.');
         return;
       }
-      setIsListening(true);
-      // Stop any existing recognition first
-      await Voice.stop();
-      console.log('[Voice] Stopped any existing recognition');
+
+      // Reset listening state
+      setIsListening(false);
       
-      // Start new recognition with Vietnamese language
+      // Stop any existing recognition first
+      try {
+        await Voice.stop();
+        console.log('[Voice] Stopped any existing recognition');
+        // Wait a bit before starting new recognition
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } catch (stopError) {
+        console.log('[Voice] No existing recognition to stop');
+      }
+      
+      // Set listening state before starting
+      setIsListening(true);
+      
+      // Start new recognition with Vietnamese language and better options
+      const options = {
+        language: 'vi-VN',
+        prompt: 'Hãy nói rõ ràng vào microphone',
+        partialResults: true,
+        maxAlternatives: 1,
+        continuous: false,
+        interimResults: true
+      };
+      
+      console.log('[Voice] Starting with options:', options);
       await Voice.start('vi-VN');
       console.log('[Voice] Voice recognition started successfully');
       
     } catch (error) {
       console.error('[Voice] Error starting voice recognition:', error);
-      Alert.alert('Lỗi', 'Không thể khởi động nhận dạng giọng nói.');
+      setIsListening(false);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Không thể khởi động nhận dạng giọng nói.';
+      if (error.message) {
+        if (error.message.includes('permission')) {
+          errorMessage = 'Cần quyền truy cập microphone. Vui lòng cấp quyền trong cài đặt.';
+        } else if (error.message.includes('audio')) {
+          errorMessage = 'Không thể truy cập microphone. Vui lòng kiểm tra thiết bị.';
+        } else if (error.message.includes('network')) {
+          errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet.';
+        }
+      }
+      
+      Alert.alert('Lỗi nhận dạng giọng nói', errorMessage);
     }
   };
 
   const stopListening = async () => {
     console.log('[Voice] Stopping voice recognition');
     try {
-      await Voice.stop();
       setIsListening(false);
+      await Voice.stop();
       console.log('[Voice] Voice recognition stopped successfully');
+      
+      // Reset input if no text was captured
+      if (!inputText.trim()) {
+        setInputText('');
+        console.log('[Voice] Input reset after stopping');
+      }
     } catch (error) {
       console.error('[Voice] Error stopping voice recognition:', error);
+      // Force reset listening state even if stop fails
+      setIsListening(false);
     }
   };
 
@@ -931,7 +1074,13 @@ const ChatBot = () => {
                     <View style={styles.listeningIndicator}>
                       <ActivityIndicator size="small" color="white" />
                     </View>
-                    <Text style={styles.listeningText}>Đang nghe...</Text>
+                    <Text style={styles.listeningText}>Đang nghe... Hãy nói rõ ràng</Text>
+                    <TouchableOpacity
+                      style={styles.stopListeningButton}
+                      onPress={stopListening}
+                    >
+                      <Icon name="stop" size={16} color="white" />
+                    </TouchableOpacity>
                   </View>
                 )}
 
@@ -1002,19 +1151,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FF6B35',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: 'transparent',
     zIndex: 1000,
-    // Add border for better visibility
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   buttonContent: {
     width: '100%',
@@ -1022,10 +1160,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 28,
+    backgroundColor: 'transparent',
   },
   chatbotIcon: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 36,
   },
   modalOverlay: {
     position: 'absolute',
@@ -1046,33 +1185,33 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   modalContainer: {
-    width: '85%',
-    height: '75%',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 30,
+    width: '90%',
+    height: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 8,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
     position: 'absolute',
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   modalContent: {
     flex: 1,
   },
   header: {
-    backgroundColor: 'white',
-    paddingTop: 20,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
+    backgroundColor: '#F8FAFC',
+    paddingTop: 24,
+    paddingBottom: 20,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderBottomColor: '#E2E8F0',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   headerContent: {
     flexDirection: 'row',
@@ -1085,39 +1224,54 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   botAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    shadowColor: '#6366F1',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  botAvatarIcon: {
+    width: 28,
+    height: 28,
+  },
+  botName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  botStatus: {
+    fontSize: 13,
+    color: '#10B981',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  closeButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  botAvatarIcon: {
-    width: 24,
-    height: 24,
-  },
-  botName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  botStatus: {
-    fontSize: 12,
-    color: '#4CAF50',
-    marginTop: 2,
-  },
-  closeButton: {
-    padding: 5,
   },
   messagesList: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   messagesContent: {
-    padding: 15,
+    padding: 20,
   },
   messageContainer: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   userMessage: {
     alignItems: 'flex-end',
@@ -1127,115 +1281,154 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: width * 0.75,
-    padding: 12,
-    borderRadius: 18,
+    padding: 16,
+    borderRadius: 20,
   },
   userBubble: {
-    backgroundColor: '#FF6B35',
-    borderBottomRightRadius: 4,
+    backgroundColor: '#6366F1',
+    borderBottomRightRadius: 6,
   },
   botBubble: {
-    backgroundColor: 'white',
-    borderBottomLeftRadius: 4,
+    backgroundColor: '#F8FAFC',
+    borderBottomLeftRadius: 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     elevation: 2,
   },
   messageText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '400',
   },
   userText: {
     color: 'white',
   },
   botText: {
-    color: '#333',
+    color: '#1E293B',
   },
   timestamp: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 4,
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 6,
     alignSelf: 'flex-end',
+    fontWeight: '500',
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    marginHorizontal: 20,
+    marginVertical: 8,
+    borderRadius: 16,
   },
   loadingText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 8,
+    fontSize: 13,
+    color: '#64748B',
+    marginLeft: 10,
+    fontWeight: '500',
   },
   listeningContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: '#FF6B35',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#6366F1',
+    marginHorizontal: 20,
+    marginVertical: 8,
+    borderRadius: 16,
   },
   listeningIndicator: {
-    marginRight: 8,
+    marginRight: 10,
   },
   listeningText: {
-    fontSize: 12,
+    fontSize: 13,
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '600',
+    flex: 1,
+  },
+  stopListeningButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 15,
-    backgroundColor: 'white',
+    padding: 20,
+    backgroundColor: '#F8FAFC',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    minHeight: 60,
+    borderTopColor: '#E2E8F0',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    minHeight: 70,
   },
   voiceButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'white',
     borderWidth: 2,
-    borderColor: '#FF6B35',
+    borderColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    shadowColor: '#6366F1',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   voiceButtonListening: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
   },
   textInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    borderColor: '#E2E8F0',
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     maxHeight: 100,
-    fontSize: 14,
-    color: '#333',
-    marginRight: 10,
+    fontSize: 15,
+    color: '#1E293B',
+    marginRight: 12,
+    backgroundColor: 'white',
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FF6B35',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sendButtonDisabled: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#CBD5E1',
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });
 

@@ -113,6 +113,13 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
               Đơn hàng tối thiểu: {item.minOrderValue.toLocaleString('vi-VN')}đ
             </Text>
           )}
+
+           {item.maxDiscount > 0 && (
+                      <Text style={styles.voucherCondition}>
+                        Giảm tối đa: {item.maxDiscount.toLocaleString('vi-VN')}đ
+                      </Text>
+                    )}
+                    
           <Text style={styles.voucherDate}>
             Hết hạn: {formatDate(item.endDate)}
           </Text>

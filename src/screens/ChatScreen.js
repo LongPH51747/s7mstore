@@ -155,7 +155,7 @@ const UserChatScreen = () => {
                 return null;
             }
         } catch (error) {
-            console.error('Upload Error:', error);
+           
             Alert.alert('Lỗi Mạng', 'Không thể kết nối đến máy chủ để tải ảnh lên.');
             return null;
         }

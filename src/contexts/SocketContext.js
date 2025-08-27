@@ -118,7 +118,7 @@ export const SocketProvider = ({ children }) => {
                         await AsyncStorage.removeItem('userInfo'); // Xóa nếu không hợp lệ
                     }
                 } catch (e) {
-                    console.error("[SocketContext][LoadAuth] Lỗi parse userInfo từ AsyncStorage:", e);
+                     or("[SocketContext][LoadAuth] Lỗi parse userInfo từ AsyncStorage:", e);
                     await AsyncStorage.removeItem('userInfo'); // Xóa nếu parse lỗi
                 }
             }

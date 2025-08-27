@@ -20,6 +20,7 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -94,26 +95,55 @@ const SearchScreen = ({ navigation }) => {
     }
   };
 
-  const fetchSuggestions = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_ENDPOINTS.PRODUCTS.SEARCH}?q=${encodeURIComponent(debouncedQuery)}`, {
-        headers: API_HEADERS,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch suggestions');
-      }
+ const fetchSuggestions = async () => {
+  try {
+    setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+const url = `${API_ENDPOINTS.PRODUCTS.SEARCH}?q=${encodeURIComponent(debouncedQuery)}`;
+    console.log('Đang gửi yêu cầu gợi ý tới:', url);
 
-      const data = await response.json();
-      setSuggestions(data.slice(0, 5)); // Limit to 5 suggestions
-    } catch (error) {
-      console.error('Error fetching suggestions:', error);
-      setSuggestions([]);
-    } finally {
-      setLoading(false);
+    const response = await fetch(url, {
+      headers: API_HEADERS,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Không thể lấy gợi ý: ${response.status} ${response.statusText}`);
     }
-  };
+
+    const data = await response.json();
+    console.log('Dữ liệu gợi ý:', data);
+    // Ưu tiên các sản phẩm có tên bắt đầu bằng truy vấn, sau đó chứa truy vấn
+    const normalizedQuery = debouncedQuery.toLowerCase();
+    const sorted = Array.isArray(data)
+      ? [...data].sort((a, b) => {
+          const an = (a?.product_name || '').toLowerCase();
+          const bn = (b?.product_name || '').toLowerCase();
+          const aStarts = an.startsWith(normalizedQuery) ? 1 : 0;
+          const bStarts = bn.startsWith(normalizedQuery) ? 1 : 0;
+          if (aStarts !== bStarts) return bStarts - aStarts;
+          const aIncl = an.includes(normalizedQuery) ? 1 : 0;
+          const bIncl = bn.includes(normalizedQuery) ? 1 : 0;
+          if (aIncl !== bIncl) return bIncl - aIncl;
+          return 0;
+        })
+      : [];
+    setSuggestions(sorted.slice(0, 5));
+  } catch (error) {
+    console.error('Lỗi khi lấy gợi ý:', error);
+    if (error.name === 'AbortError') {
+      Alert.alert('Lỗi', 'Thời gian tìm kiếm đã hết. Vui lòng thử lại.');
+    } else {
+      Alert.alert('Lỗi', `Không thể tải gợi ý tìm kiếm: ${error.message}`);
+    }
+    setSuggestions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -158,7 +188,7 @@ const SearchScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error fetching recommended products:', error);
     } finally {
-      setLoadingRecommended(false);
+setLoadingRecommended(false);
     }
   };
 
@@ -245,7 +275,7 @@ const SearchScreen = ({ navigation }) => {
           <FlatList
             data={searchHistory}
             renderItem={renderHistoryItem}
-            keyExtractor={(item, index) => index.toString()}
+keyExtractor={(item, index) => index.toString()}
           />
         </View>
       )}
@@ -370,7 +400,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
-  suggestionItem: {
+suggestionItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -430,4 +460,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SearchScreen; 
+export default SearchScreen;

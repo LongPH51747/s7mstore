@@ -132,6 +132,13 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
               Đơn hàng tối thiểu: {item.minOrderValue.toLocaleString('vi-VN')}đ
             </Text>
           )}
+
+          {item.maxDiscount > 0 && (
+            <Text style={styles.voucherCondition}>
+              Giảm tối đa: {item.maxDiscount.toLocaleString('vi-VN')}đ
+            </Text>
+          )}
+         
           <Text style={styles.voucherDate}>
             Hết hạn: {formatDate(item.endDate)}
           </Text>
@@ -172,7 +179,7 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Voucher dành cho bạn</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={() => onSelectVoucher(null)}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
           <Text style={styles.closeButtonText}>X</Text>
         </TouchableOpacity>
       </View>

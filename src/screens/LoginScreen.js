@@ -116,7 +116,7 @@ const LoginScreen = () => {
 
     // Hàm xử lý khi nhấn vào link "Quên mật khẩu?"
     const handleForgotPassword = () => {
-        navigation.navigate('ForgotPasswordScreen'); // Điều hướng đến màn hình ForgotPasswordScreen
+        navigation.navigate('ForgotPass'); // Điều hướng đến màn hình ForgotPasswordScreen
     };
 
     // Logic Google Sign-In (ẩn nút, nhưng giữ logic để dùng về sau)

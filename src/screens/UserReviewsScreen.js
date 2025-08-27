@@ -187,7 +187,7 @@ const UserReviewsScreen = () => {
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>{'<'} Quay lại</Text>
+          <Text style={styles.backText}>{'<'} Quaylại </Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Đánh giá của tôi</Text>
         <View style={{ width: 60 }} />
