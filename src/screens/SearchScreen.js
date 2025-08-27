@@ -94,26 +94,41 @@ const SearchScreen = ({ navigation }) => {
     }
   };
 
-  const fetchSuggestions = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_ENDPOINTS.PRODUCTS.SEARCH}?q=${encodeURIComponent(debouncedQuery)}`, {
-        headers: API_HEADERS,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch suggestions');
-      }
+ const fetchSuggestions = async () => {
+  try {
+    setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-      const data = await response.json();
-      setSuggestions(data.slice(0, 5)); // Limit to 5 suggestions
-    } catch (error) {
-      console.error('Error fetching suggestions:', error);
-      setSuggestions([]);
-    } finally {
-      setLoading(false);
+    const url = API_ENDPOINTS.PRODUCTS.SEARCH(debouncedQuery);
+    console.log('Đang gửi yêu cầu gợi ý tới:', url);
+
+    const response = await fetch(url, {
+      headers: API_HEADERS,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Không thể lấy gợi ý: ${response.status} ${response.statusText}`);
     }
-  };
+
+    const data = await response.json();
+    console.log('Dữ liệu gợi ý:', data);
+    setSuggestions(data.slice(0, 5));
+  } catch (error) {
+    console.error('Lỗi khi lấy gợi ý:', error);
+    if (error.name === 'AbortError') {
+      Alert.alert('Lỗi', 'Thời gian tìm kiếm đã hết. Vui lòng thử lại.');
+    } else {
+      Alert.alert('Lỗi', `Không thể tải gợi ý tìm kiếm: ${error.message}`);
+    }
+    setSuggestions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
