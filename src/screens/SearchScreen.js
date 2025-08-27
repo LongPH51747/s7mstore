@@ -20,6 +20,7 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -100,7 +101,7 @@ const SearchScreen = ({ navigation }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-    const url = API_ENDPOINTS.PRODUCTS.SEARCH(debouncedQuery);
+    const url = `${API_ENDPOINTS.PRODUCTS.SEARCH}?q=${encodeURIComponent(debouncedQuery)}`;
     console.log('Đang gửi yêu cầu gợi ý tới:', url);
 
     const response = await fetch(url, {
@@ -116,7 +117,22 @@ const SearchScreen = ({ navigation }) => {
 
     const data = await response.json();
     console.log('Dữ liệu gợi ý:', data);
-    setSuggestions(data.slice(0, 5));
+    // Ưu tiên các sản phẩm có tên bắt đầu bằng truy vấn, sau đó chứa truy vấn
+    const normalizedQuery = debouncedQuery.toLowerCase();
+    const sorted = Array.isArray(data)
+      ? [...data].sort((a, b) => {
+          const an = (a?.product_name || '').toLowerCase();
+          const bn = (b?.product_name || '').toLowerCase();
+          const aStarts = an.startsWith(normalizedQuery) ? 1 : 0;
+          const bStarts = bn.startsWith(normalizedQuery) ? 1 : 0;
+          if (aStarts !== bStarts) return bStarts - aStarts;
+          const aIncl = an.includes(normalizedQuery) ? 1 : 0;
+          const bIncl = bn.includes(normalizedQuery) ? 1 : 0;
+          if (aIncl !== bIncl) return bIncl - aIncl;
+          return 0;
+        })
+      : [];
+    setSuggestions(sorted.slice(0, 5));
   } catch (error) {
     console.error('Lỗi khi lấy gợi ý:', error);
     if (error.name === 'AbortError') {

@@ -2,7 +2,8 @@ import { StyleSheet, Text, View, FlatList, SafeAreaView, ActivityIndicator, Touc
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api';
-import LogoS7MStore from '../assets/LogoS7MStore.png'; 
+import LogoS7MStore from '../assets/LogoS7MStore.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
   const [allVouchers, setAllVouchers] = useState([]);
@@ -10,28 +11,52 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterType, setFilterType] = useState('all');
+  const [userId, setUserId] = useState(null);
+
+  // Hàm để lấy userId từ AsyncStorage
+  const fetchUser = async () => {
+    try {
+      const storedUserData = await AsyncStorage.getItem('userInfo');
+      if (storedUserData) {
+        const userData = JSON.parse(storedUserData);
+        setUserId(userData._id);
+        return userData._id;
+      }
+      return null;
+    } catch (e) {
+      console.error('Lỗi khi lấy người dùng từ AsyncStorage:', e);
+    }
+    return null;
+  };
 
   // Hàm để gọi API lấy danh sách voucher
-  const fetchVouchers = async () => {
+  const fetchVouchers = async (currentUserId) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await axios.get(API_ENDPOINTS.VOUCHER.GET_ALL, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
-      });
 
+      if (!currentUserId) {
+        setError('Không tìm thấy ID người dùng. Vui lòng đăng nhập.');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await axios.get(API_ENDPOINTS.VOUCHER.GET_ALL(currentUserId), {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      });
+      
       if (response.status !== 200) {
         throw new Error('Không thể tải dữ liệu voucher.');
       }
+      
+      // Sửa lỗi: Gộp cả hai mảng public và private thành một mảng duy nhất
+      const allFetchedVouchers = [...(response.data.public || []), ...(response.data.private || [])];
 
-      setAllVouchers(response.data.public);
-      setFilteredVouchers(response.data.public);
+      setAllVouchers(allFetchedVouchers);
+      setFilteredVouchers(allFetchedVouchers);
       
     } catch (err) {
-      console.error("Lỗi khi lấy dữ liệu voucher:", err);
+      console.error("Lỗi khi lấy dữ liệu voucher:", err.response?.data || err.message);
       setError(`Không thể tải voucher. Lỗi: ${err.message}`);
     } finally {
       setLoading(false);
@@ -39,7 +64,11 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
   };
 
   useEffect(() => {
-    fetchVouchers();
+    const initialize = async () => {
+      const currentUserId = await fetchUser();
+      await fetchVouchers(currentUserId);
+    };
+    initialize();
   }, []);
   
   // Logic lọc voucher mỗi khi filterType hoặc allVouchers thay đổi
@@ -47,6 +76,7 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
     if (filterType === 'all') {
       setFilteredVouchers(allVouchers);
     } else {
+      // Sửa lỗi: Lọc theo thuộc tính 'type' thay vì 'isPublic' như trong mã gốc
       const newFilteredVouchers = allVouchers.filter(voucher => voucher.type === filterType);
       setFilteredVouchers(newFilteredVouchers);
     }
@@ -62,6 +92,7 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
     const isPercentage = item.type === 'percentage';
     const valueText = isPercentage ? `${item.value}%` : `${item.value.toLocaleString('vi-VN')}đ`;
     const isApplicable = currentSubtotal >= item.minOrderValue;
+    const isPublicVoucher = item.isPublic;
 
     return (
       <View style={styles.card}>
@@ -88,6 +119,7 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
         </View>
         <TouchableOpacity 
           style={[styles.applyButton, !isApplicable && styles.disabledButton]}
+          // Sửa lỗi: Gọi hàm onSelectVoucher để chọn voucher thay vì điều hướng
           onPress={() => isApplicable && onSelectVoucher(item)}
           disabled={!isApplicable}
         >
@@ -112,7 +144,7 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
     return (
       <SafeAreaView style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={fetchVouchers} style={styles.reloadButton}>
+        <TouchableOpacity onPress={() => fetchVouchers(userId)} style={styles.reloadButton}>
           <Text style={styles.reloadButtonText}>Thử lại</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -123,7 +155,6 @@ const VoucherModal = ({ onSelectVoucher, currentSubtotal }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Voucher dành cho bạn</Text>
-        {/* Nút đóng modal được thay thế bằng Text để tránh lỗi import */}
         <TouchableOpacity style={styles.closeButton} onPress={() => onSelectVoucher(null)}>
           <Text style={styles.closeButtonText}>X</Text>
         </TouchableOpacity>

@@ -2,8 +2,9 @@ import { StyleSheet, Text, View, FlatList, SafeAreaView, ActivityIndicator, Touc
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api';
-import LogoS7MStore from '../assets/LogoS7MStore.png'; 
+import LogoS7MStore from '../assets/LogoS7MStore.png';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
   const [allVouchers, setAllVouchers] = useState([]);
@@ -11,29 +12,62 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterType, setFilterType] = useState('all');
+  const [userId, setUserId] = useState(null);
   const navigation = useNavigation();
 
+  // Hàm để lấy userId từ AsyncStorage
+  const fetchUser = async () => {
+    try {
+      const storedUserData = await AsyncStorage.getItem('userInfo');
+      if (storedUserData) {
+        const userData = JSON.parse(storedUserData);
+        console.log("Fetched user data:", userData);
+        setUserId(userData._id);
+        console.log("User ID:", userData._id);
+        return userData._id;
+      }
+      console.log("No user data found in AsyncStorage.");
+    } catch (e) {
+      console.error('Failed to fetch user from AsyncStorage:', e);
+    }
+    return null;
+  };
+
   // Hàm để gọi API lấy danh sách voucher
-  const fetchVouchers = async () => {
+  const fetchVouchers = async (currentUserId) => {
     try {
       setLoading(true);
       setError(null);
+
+      console.log("Fetching vouchers for userId:", currentUserId);
+
+      if (!currentUserId) {
+        setError('Không tìm thấy ID người dùng. Vui lòng đăng nhập.');
+        setLoading(false);
+        return;
+      }
       
-      const response = await axios.get(API_ENDPOINTS.VOUCHER.GET_ALL, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
+      const response = await axios.get(API_ENDPOINTS.VOUCHER.GET_ALL(currentUserId), {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
       });
+      
+      console.log("API response status:", response.status);
+      console.log("API response data:", response.data);
 
       if (response.status !== 200) {
         throw new Error('Không thể tải dữ liệu voucher.');
       }
+      
+      // Sửa đổi ở đây: Gộp hai mảng public và private thành một mảng duy nhất
+      const allFetchedVouchers = [...(response.data.public || []), ...(response.data.private || [])];
 
-      setAllVouchers(response.data.public);
-      setFilteredVouchers(response.data.public);
+      console.log("Combined and prepared vouchers:", allFetchedVouchers);
+
+      setAllVouchers(allFetchedVouchers);
+      setFilteredVouchers(allFetchedVouchers);
       
     } catch (err) {
-      console.error("Lỗi khi lấy dữ liệu voucher:", err);
+      console.error("Lỗi khi lấy dữ liệu voucher:", err.response?.data || err.message);
       setError(`Không thể tải voucher. Lỗi: ${err.message}`);
     } finally {
       setLoading(false);
@@ -41,20 +75,35 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
   };
 
   useEffect(() => {
-    fetchVouchers();
+    const initialize = async () => {
+      const currentUserId = await fetchUser();
+      await fetchVouchers(currentUserId);
+    };
+    initialize();
   }, []);
   
   // Logic lọc voucher mỗi khi filterType hoặc allVouchers thay đổi
   useEffect(() => {
+    console.log("Filtering vouchers. Filter type:", filterType);
+    console.log("Initial vouchers for filtering:", allVouchers);
+
     if (filterType === 'all') {
       setFilteredVouchers(allVouchers);
     } else {
-      const newFilteredVouchers = allVouchers.filter(voucher => voucher.type === filterType);
+      const newFilteredVouchers = allVouchers.filter(voucher => {
+        if (filterType === 'public' && voucher.isPublic) {
+          return true;
+        }
+        if (filterType === 'private' && !voucher.isPublic) {
+          return true;
+        }
+        return false;
+      });
       setFilteredVouchers(newFilteredVouchers);
     }
+    console.log("Filtered vouchers:", filteredVouchers);
   }, [filterType, allVouchers]);
   
-  // Hàm render từng item trong FlatList
   const renderVoucherItem = ({ item }) => {
     const formatDate = (dateString) => {
       const date = new Date(dateString);
@@ -67,7 +116,6 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
 
     return (
       <View style={styles.card}>
-        {/* Logo thương hiệu mờ ở phía sau */}
         <Image 
           source={LogoS7MStore}
           style={styles.logoBackground}
@@ -91,10 +139,8 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
         <TouchableOpacity 
           style={[styles.applyButton]}
           onPress={() => navigation.navigate('HomeScreen')}
-         
         >
           <Text style={styles.applyButtonText}>
-            {/* {isApplicable ? 'Áp dụng' : 'Không đủ điều kiện'} */}
             Dùng ngay
           </Text>
         </TouchableOpacity>
@@ -115,7 +161,7 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
     return (
       <SafeAreaView style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={fetchVouchers} style={styles.reloadButton}>
+        <TouchableOpacity onPress={() => fetchVouchers(userId)} style={styles.reloadButton}>
           <Text style={styles.reloadButtonText}>Thử lại</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -126,13 +172,11 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Voucher dành cho bạn</Text>
-        {/* Nút đóng modal được thay thế bằng Text để tránh lỗi import */}
         <TouchableOpacity style={styles.closeButton} onPress={() => onSelectVoucher(null)}>
           <Text style={styles.closeButtonText}>X</Text>
         </TouchableOpacity>
       </View>
       
-      {/* Các tab lọc */}
       <View style={styles.tabContainer}>
         <TouchableOpacity 
           style={[styles.tab, filterType === 'all' && styles.activeTab]}
@@ -141,16 +185,16 @@ const VoucherScreen = ({ onSelectVoucher, currentSubtotal }) => {
           <Text style={[styles.tabText, filterType === 'all' && styles.activeTabText]}>Tất cả</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.tab, filterType === 'percentage' && styles.activeTab]}
-          onPress={() => setFilterType('percentage')}
+          style={[styles.tab, filterType === 'public' && styles.activeTab]}
+          onPress={() => setFilterType('public')}
         >
-          <Text style={[styles.tabText, filterType === 'percentage' && styles.activeTabText]}>Giảm theo %</Text>
+          <Text style={[styles.tabText, filterType === 'public' && styles.activeTabText]}>Công khai</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.tab, filterType === 'fixed' && styles.activeTab]}
-          onPress={() => setFilterType('fixed')}
+          style={[styles.tab, filterType === 'private' && styles.activeTab]}
+          onPress={() => setFilterType('private')}
         >
-          <Text style={[styles.tabText, filterType === 'fixed' && styles.activeTabText]}>Giảm theo tiền</Text>
+          <Text style={[styles.tabText, filterType === 'private' && styles.activeTabText]}>Danh cho bạn</Text>
         </TouchableOpacity>
       </View>
 
@@ -314,7 +358,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
-  // Style cho tab lọc
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',

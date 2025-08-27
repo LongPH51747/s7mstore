@@ -670,19 +670,19 @@ const ProductDetailScreen = () => {
     }
     const cartItems = [
       {
-        id_product: product._id || product.id, // Đảm bảo id_product hợp lệ
-        id_variant: selectedVariant._id || selectedVariant.id || '', // Đảm bảo id_variant
+        id_product: product._id || product.id, 
+        id_variant: selectedVariant._id || selectedVariant.id || '', 
         quantity: quantity,
-        name_product: product.product_name || '', // Thêm để hiển thị
-        color: selectedVariant.variant_color || '', // Thêm để hiển thị
-        size: selectedVariant.variant_size || '', // Thêm để hiển thị
-        unit_price_item: selectedVariant.variant_price || product.product_price || 0, // Giá đơn vị
-        total_price_item: (selectedVariant.variant_price || product.product_price || 0) * quantity, // Tổng giá
+        name_product: product.product_name || '', 
+        color: selectedVariant.variant_color || '', 
+        size: selectedVariant.variant_size || '', 
+        unit_price_item: selectedVariant.variant_price || product.product_price || 0, 
+        total_price_item: (selectedVariant.variant_price || product.product_price || 0) * quantity, 
         image: selectedVariant.variant_image_url || 
                (selectedVariant.variant_image_base64 ? 
                 `data:${selectedVariant.variant_image_type};base64,${selectedVariant.variant_image_base64}` : 
-                product.product_image || ''), // Ảnh sản phẩm
-        status: false, // Trạng thái mục
+                product.product_image || ''), 
+        status: false, 
       }
     ];
     if (!cartItems[0].id_product) {

@@ -110,58 +110,85 @@ export default function CheckoutScreen() {
 
   // HÀM MỚI: Xử lý khi người dùng chọn voucher từ VoucherScreen
   const handleVoucherSelect = async (voucher) => {
-    setIsVoucherModalVisible(false);
+  setIsVoucherModalVisible(false);
 
-    // Nếu người dùng chọn voucher
-    if (voucher) {
-      try {
-        const userInfoString = await AsyncStorage.getItem('userInfo');
-        const userInfo = JSON.parse(userInfoString);
-        
-        if (!userInfo || !userInfo._id) {
-          throw new Error('User information not found');
-        }
-
-        // Gọi API apply voucher
-        const response = await axios.post(
-           API_ENDPOINTS.VOUCHER.APPLY_VOUCHER(userInfo._id),
-          { 
-            code: voucher.code, 
-            subtotal: subTotalPrice,
-          },
-          { headers: { 'ngrok-skip-browser-warning': 'true' } }
-        );
-
-        if (response.status === 200) {
-          const newTotal = response.data.discountAmount; // API trả về tổng tiền mới
-          console.log("Giá tiền voucher giảm ",response.data)
-          console.log("Giá tiền trước khi có voucher: ",subTotalPrice)
-          const calculatedDiscount = subTotalPrice + shippingFee - newTotal;
-          console.log("Giá tiền sau khi áp voucher: ",calculatedDiscount)
-          setAppliedVoucher(voucher); // Lưu lại voucher đã áp dụng
-          setVoucherAmount(newTotal); // Cập nhật số tiền giảm giá
-          setTotalAmount(newTotal); // Cập nhật tổng tiền cuối cùng
-          Alert.alert('Thành công', 'Voucher đã được áp dụng.');
-        } else {
-          Alert.alert('Lỗi', response.data.discountAmount || 'Không thể áp dụng voucher.');
-          setAppliedVoucher(null);
-          setVoucherAmount(0);
-          setTotalAmount(subTotalPrice + shippingFee);
-        }
-      } catch (error) {
-        console.error("Lỗi khi áp dụng voucher:", error);
-        Alert.alert('Lỗi', 'Đã xảy ra lỗi trong quá trình áp dụng voucher.');
-        setAppliedVoucher(null);
-        setVoucherAmount(0);
-        setTotalAmount(subTotalPrice + shippingFee);
+  // Nếu người dùng chọn voucher
+  if (voucher) {
+    try {
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      const userInfo = JSON.parse(userInfoString);
+      
+      if (!userInfo || !userInfo._id) {
+        // Ném lỗi nếu không tìm thấy thông tin người dùng
+        throw new Error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
       }
-    } else {
-      // Nếu người dùng đóng modal mà không chọn voucher
+
+      // Gọi API apply voucher
+      const response = await axios.post(
+        API_ENDPOINTS.VOUCHER.APPLY_VOUCHER(userInfo._id),
+        { 
+          code: voucher.code, 
+          subtotal: subTotalPrice,
+        },
+        { headers: { 'ngrok-skip-browser-warning': 'true' } }
+      );
+
+      // Nếu API trả về thành công (status 200)
+      if (response.status === 200) {
+        const newTotal = response.data.discountAmount;
+        console.log("Giá tiền voucher giảm ", response.data);
+        console.log("Giá tiền trước khi có voucher: ", subTotalPrice);
+        const calculatedDiscount = subTotalPrice + shippingFee - newTotal;
+        console.log("Giá tiền sau khi áp voucher: ", calculatedDiscount);
+        setAppliedVoucher(voucher);
+        setVoucherAmount(newTotal);
+        setTotalAmount(newTotal);
+        Alert.alert('Thành công', 'Voucher đã được áp dụng.');
+      }
+    } catch (error) {
+      // Ghi log lỗi đầy đủ để bạn có thể xem cấu trúc lỗi
+      // console.error("Lỗi khi áp dụng voucher:", error.response || error.message);
+      
+      let errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng thử lại sau.';
+      
+      // Kiểm tra phản hồi lỗi từ backend
+      if (error.response && error.response.data) {
+        // Ưu tiên kiểm tra thuộc tính 'error'
+        if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } 
+        // Sau đó kiểm tra thuộc tính 'message'
+        else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } 
+        // Trường hợp backend trả về một chuỗi lỗi đơn giản
+        else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        }
+        // Trường hợp backend trả về một đối tượng có cấu trúc khác
+        else {
+          errorMessage = "Lỗi từ máy chủ: Vui lòng kiểm tra console để biết thêm chi tiết.";
+        }
+      } else if (error.message) {
+        // Trường hợp lỗi mạng hoặc lỗi không liên quan đến phản hồi API
+        errorMessage = `Lỗi kết nối: ${error.message}`;
+      }
+      
+      Alert.alert('Lỗi', errorMessage); // Hiển thị thông báo lỗi chi tiết
+      
       setAppliedVoucher(null);
       setVoucherAmount(0);
       setTotalAmount(subTotalPrice + shippingFee);
     }
-  };
+  } else {
+    // Nếu người dùng đóng modal mà không chọn voucher
+    setAppliedVoucher(null);
+    setVoucherAmount(0);
+    setTotalAmount(subTotalPrice + shippingFee);
+  }
+};
+
+
 
 
   const handlePlaceOrder = async () => {
@@ -198,7 +225,8 @@ export default function CheckoutScreen() {
         id_cart: id_cart,
         user_note: userNote.trim(),
         shipping: shippingFee,
-        code: appliedVoucher ? appliedVoucher.code : null, // Thêm ID voucher
+        id_voucher: appliedVoucher ? appliedVoucher._id : null,
+        code: appliedVoucher ? appliedVoucher.code : null,
       };
       console.log("ID cart: ", id_cart);
       console.log("Id_voucher: ", appliedVoucher ? appliedVoucher._id : null);
@@ -370,7 +398,7 @@ export default function CheckoutScreen() {
         {/* Voucher */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>S7M Voucher</Text>
-          <TouchableOpacity onPress={() => setIsVoucherModalVisible(true)}>
+          <TouchableOpacity style={styles.btnVoucher} onPress={() => setIsVoucherModalVisible(true)}>
             <Text style={styles.editText}>
               {appliedVoucher ? `Đã chọn: ${appliedVoucher.code}` : 'Chọn voucher'}
             </Text>
@@ -496,7 +524,7 @@ const styles = StyleSheet.create({
   },
   section: { 
     marginBottom: 16 ,
-
+    
   },
   sectionTitle: { 
     fontSize: 16, 
@@ -509,7 +537,7 @@ const styles = StyleSheet.create({
     top: 0 
   },
   editText: { 
-    color: '#000',
+    color: '#0026ffff',
     fontSize: 14,
     fontFamily: 'Nunito-Medium',
   },
@@ -687,4 +715,14 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     position: 'absolute',
   },
+  btnVoucher: {
+    borderWidth: 2,
+    paddingVertical: 10, 
+    justifyContent: 'center',
+    width: 110,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    borderColor: 'blue'
+
+  }
 });

@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'react-native-image-picker';
 import Loading from '../components/Loading';
-
+import CustomAlertModal from '../components/CustomAlertModal'; 
 const EditProfileScreen = ({ route }) => {
   const navigation = useNavigation();
   const { user } = route.params || {};
@@ -15,6 +15,22 @@ const EditProfileScreen = ({ route }) => {
   const [avatar, setAvatar] = useState(user?.photoURL || user?.avatar || 'https://via.placeholder.com/150');
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
+
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalTitle, setModalTitle] = useState('');
+    const [modalMessage, setModalMessage] = useState('');
+    const [onConfirm, setOnConfirm] = useState(null);
+    const [showConfirmButton, setShowConfirmButton] = useState(false);
+    const [type, setType] = useState('')
+
+    const showAlert = (title, message, confirmAction = null, showConfirm = false, modalType) => {
+        setModalTitle(title);
+        setModalMessage(message);
+        setOnConfirm(() => confirmAction); // Lưu hàm để gọi khi bấm nút OK
+        setShowConfirmButton(showConfirm);
+        setModalVisible(true);
+        setType(modalType)
+    };
 
   const handlePickAvatar = () => {
     ImagePicker.launchImageLibrary(
@@ -93,10 +109,11 @@ const EditProfileScreen = ({ route }) => {
           displayName: fullname,
         };
         await AsyncStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+         console.log('✅ Đã lưu userInfo mới vào AsyncStorage:', updatedUserInfo);
       }
 
-      Alert.alert('Thành công', 'Cập nhật thông tin thành công!');
-      navigation.goBack();
+      showAlert('Thành công', 'Cập nhật thông tin thành công!', () => navigation.goBack(), false, 'success');
+      
     } catch (error) {
       console.error('Error updating profile:', error);
       Alert.alert('Lỗi', error?.response?.data?.message || 'Cập nhật thất bại');
@@ -158,6 +175,16 @@ const EditProfileScreen = ({ route }) => {
       </TouchableOpacity>
 
       <Loading visible={loading} text={loadingText} />
+
+       <CustomAlertModal
+                visible={modalVisible}
+                title={modalTitle}
+                message={modalMessage}
+                onClose={() => setModalVisible(false)} // Đóng modal khi bấm
+                onConfirm={onConfirm}
+                showConfirmButton={showConfirmButton}
+                type={type}
+            />
     </View>
   );
 };

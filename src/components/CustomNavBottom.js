@@ -1,8 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import React, { useState } from 'react'; // Import useState
-import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook
-
+import Feather from 'react-native-vector-icons/Feather';
 const CustomNavBottom = () => {
   // 1. Định nghĩa state cho activeTab
   const [activeTab, setActiveTab] = useState('Home'); // Mặc định là 'Home'
@@ -12,40 +11,33 @@ const CustomNavBottom = () => {
 
   return (
     <View style={styles.bottomNav}>
-      <TouchableOpacity
-        onPress={() => {
-          setActiveTab('Home');
-          navigation.navigate('HomeScreen');
-        }}>
-        <Icon name={activeTab === 'Home' ? 'home' : 'home-outline'} size={24} color="#000" />
-        {/* Tùy chọn: Thêm Text cho nhãn */}
-        {/* <Text style={{ color: activeTab === 'Home' ? '#007bff' : '#000' }}>Home</Text> */}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => {
-          setActiveTab('Search');
-          navigation.navigate('SearchScreen');
-        }}>
-        <Icon name={activeTab === 'Search' ? 'search' : 'search-outline'} size={24} color="#000" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => {
-          setActiveTab('Cart');
-          navigation.navigate('CartScreen');
-        }}>
-        <Icon name={activeTab === 'Cart' ? 'cart' : 'cart-outline'} size={24} color="#000" />
-      </TouchableOpacity>
-
-
-      <TouchableOpacity
-        onPress={() => {
-          setActiveTab('Profile');
-          navigation.navigate('ProfileScreen');
-        }}>
-        <Icon name={activeTab === 'Profile' ? 'person' : 'person-outline'} size={24} color="#000" />
-      </TouchableOpacity>
+     <TouchableOpacity onPress={() => {
+         setActiveTab('Home');
+         navigation.navigate('HomeScreen');
+       }}>
+         <Feather name="home" size={24} color={activeTab === 'Home' ? '#000' : 'gray'} />
+       </TouchableOpacity>
+     
+       <TouchableOpacity onPress={() => {
+         setActiveTab('Cart');
+         navigation.navigate('CartScreen');
+       }}>
+         <Feather name="shopping-cart" size={24} color={activeTab === 'Cart' ? '#000' : 'gray'} />
+       </TouchableOpacity>
+       
+       <TouchableOpacity onPress={() => {
+         setActiveTab('Bell');
+         navigation.navigate('NotificationScreen');
+       }}>
+         <Feather name="bell" size={24} color={activeTab === 'Bell' ? '#000' : 'gray'} />
+       </TouchableOpacity>
+       
+       <TouchableOpacity onPress={() => {
+         setActiveTab('Profile');
+         navigation.navigate('ProfileScreen');
+       }}>
+         <Feather name="user" size={24} color={activeTab === 'Profile' ? '#000' : 'gray'} />
+       </TouchableOpacity>
     </View>
   );
 };
