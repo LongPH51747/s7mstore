@@ -3,7 +3,7 @@ import { SafeAreaView, StatusBar, useColorScheme, View, ActivityIndicator, Text 
 import { NavigationContainer } from '@react-navigation/native';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import { initializeSdks } from './src/utils/initializeSdks';
-
+import { LogBox } from "react-native";
 import { SocketProvider } from './src/contexts/SocketContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import NotificationPopup from './src/components/NotificationPopup';
@@ -12,7 +12,7 @@ import ChatBot from './src/components/ChatBot';
 
 // ✅ NAVIGATION SERVICE FOR PUSH NOTIFICATIONS
 let _navigator: any;
-
+LogBox.ignoreAllLogs();
 export const navigationRef = (ref: any) => {
   _navigator = ref;
   // Export globally for notification deep linking

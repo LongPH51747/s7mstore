@@ -100,7 +100,8 @@ const SearchScreen = ({ navigation }) => {
     setLoading(true);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-const url = `${API_ENDPOINTS.PRODUCTS.SEARCH}?q=${encodeURIComponent(debouncedQuery)}`;
+
+    const url = `${API_ENDPOINTS.PRODUCTS.SEARCH}?q=${encodeURIComponent(debouncedQuery)}`;
     console.log('Đang gửi yêu cầu gợi ý tới:', url);
 
     const response = await fetch(url, {
