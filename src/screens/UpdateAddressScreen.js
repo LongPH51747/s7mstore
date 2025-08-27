@@ -199,8 +199,9 @@ const UpdateAddressScreen = () => {
       const wardName = wards.find(w => w.id === selectedWard)?.name || '';
       const wardType = wards.find(w => w.id === selectedWard)?.type || '';
       
-      // Địa chỉ chi tiết: {addressDetail}, {wardName} {wardType}, {provinceName}
-      const fullAddress = `${addressDetail}, ${wardName} ${wardType}, ${provinceName}`;
+      // Địa chỉ chi tiết: {addressDetail}, {wardName}, {provinceName}
+      const cleanAddressDetail = addressDetail.trim();
+      const fullAddress = cleanAddressDetail ? `${cleanAddressDetail}, ${wardName}, ${provinceName}` : `${wardName}, ${provinceName}`;
 
       const body = {
         fullName: fullName.trim(),

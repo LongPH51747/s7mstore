@@ -677,7 +677,6 @@ const handleConfirmDelete = () => {
                 </View>
                 <SummaryItem label="Tổng tiền hàng" value={`${totalPrice?.toLocaleString('vi-VN')}đ`} />
                 <SummaryItem label="Giảm giá" value={`-${discount?.toLocaleString('vi-VN')}đ`} isDiscount={true} />
-                <SummaryItem label="Phí vận chuyển" value={shippingFee === 0 ? "Miễn phí 🎉" : `${shippingFee?.toLocaleString('vi-VN')}đ`} />
               </View>
               
               <View style={styles.totalContainer}>
@@ -884,13 +883,13 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     color: "#64748B",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Nunito-Medium',
     flex: 1,
   },
   summaryValue: {
     color: "#1E293B",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Nunito-Medium',
     fontWeight: '600',
     textAlign: "right",
@@ -910,13 +909,13 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     color: "#1E293B",
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Nunito-Black',
     fontWeight: "700",
   },
   totalValue: {
     color: "#1E293B",
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Nunito-Black',
     fontWeight: "700",
   },
@@ -999,7 +998,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   summaryTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Nunito-Black',
     color: '#1E293B',
     marginBottom: 3,

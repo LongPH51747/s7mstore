@@ -71,6 +71,11 @@ const OrderTrackingScreen = ({ route }) => {
           };
         });
         
+        // Đảo ngược thứ tự để trạng thái mới nhất ở trên cùng
+        const reversedTimeline = timeline.reverse();
+        console.log('🔍 [DEBUG] Reversed timeline:', JSON.stringify(reversedTimeline, null, 2));
+        setDeliveryTimeline(reversedTimeline);
+        
         console.log('🔍 [DEBUG] Final timeline:', JSON.stringify(timeline, null, 2));
         setDeliveryTimeline(timeline);
       } else {
@@ -421,7 +426,7 @@ const styles = StyleSheet.create({
   },
   timelineItem: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   timelineLeft: {
     alignItems: 'center',
@@ -437,17 +442,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   timelineDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   timelineLine: {
     width: 2,
-    height: 40,
+    height: 32,
     backgroundColor: '#E0E0E0',
   },
   timelineContent: {

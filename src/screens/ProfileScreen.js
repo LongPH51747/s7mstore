@@ -208,7 +208,7 @@ const ProfileScreen = () => {
                 </TouchableOpacity>
 
                 <View style={{ marginVertical: 12, paddingVertical: 5 }}>
-                    <TouchableOpacity style={styles.orderHistory} onPress={() => handleNavigateToOrders('all')}>
+                    <TouchableOpacity style={styles.orderHistory} onPress={() => handleNavigateToOrders('Giao thành công')}>
                         <Text style={styles.orderHistoryTitle}>Đơn mua</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Text style={styles.orderHistoryLink}>Xem lịch sử mua hàng</Text>
@@ -246,7 +246,7 @@ const ProfileScreen = () => {
                         <Feather name="gift" size={24} color="white" />
                         <Text style={styles.activityText}>Voucher</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.activityButton} onPress={() => handleNavigateToOrders('all')}>
+                    <TouchableOpacity style={styles.activityButton} onPress={() => handleNavigateToOrders('Giao thành công')}>
                         <Feather name="box" size={20} color="#fff" />
                         <Text style={styles.activityText}>Đơn hàng</Text>
                     </TouchableOpacity>

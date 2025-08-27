@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Image, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Image, StyleSheet, ScrollView, SafeAreaView, StatusBar, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { API_ENDPOINTS, API_HEADERS, API_BASE_URL } from '../config/api';
 import { convertNumberToStatus } from '../utils/orderStatusUtils';
+
+const { width, height } = Dimensions.get('window');
 
 const TABS = ['Chưa đánh giá', 'Đã đánh giá'];
 
@@ -95,9 +98,10 @@ const UserReviewsScreen = () => {
         console.log('[UserReviewsScreen] Lỗi parse JSON:', e);
         throw new Error('Lỗi parse JSON: ' + e.message);
       }
+      console.log('[UserReviewsScreen] Reviews data received:', JSON.stringify(data, null, 2));
       setReviews(data);
     } catch (err) {
-      console.log('[UserReviewsScreen] Lỗi fetch review:', err);
+      console.error('[UserReviewsScreen] Error fetching reviews:', err);
       setErrorReviews(err.message);
       setReviews([]);
     } finally {
@@ -106,258 +110,645 @@ const UserReviewsScreen = () => {
   }, [userId]);
 
   useEffect(() => {
-    if (selectedTab === 'Chưa đánh giá') fetchOrders();
-    if (selectedTab === 'Đã đánh giá') fetchReviews();
-  }, [selectedTab, fetchOrders, fetchReviews]);
+    if (userId) {
+      fetchOrders();
+      fetchReviews();
+    }
+  }, [userId, fetchOrders, fetchReviews]);
 
   // Lọc các sản phẩm chưa đánh giá
-  const unratedItems = [];
-  orders.forEach(order => {
-    if (order.orderItems && Array.isArray(order.orderItems)) {
-      order.orderItems.forEach(item => {
-        if (!item.is_review) {
-          unratedItems.push({
-            ...item,
-            orderId: order._id,
-            orderDate: order.createdAt,
-            order,
-          });
-        }
-      });
-    }
-  });
+  const unratedItems = orders
+    .filter(order => order.status === 'Giao thành công')
+    .flatMap(order => 
+      order.orderItems
+        .filter(item => !item.is_review)
+        .map(item => ({
+          ...item,
+          orderId: order._id,
+          orderDate: order.createdAt,
+          orderStatus: order.status,
+          totalAmount: order.total_amount
+        }))
+    );
 
-  // Render từng sản phẩm chưa đánh giá
   const renderUnratedItem = ({ item }) => (
-    <View style={styles.card}>
-      <Image
-        source={item.image && item.image.startsWith('/uploads_product/')
-          ? { uri: `${API_BASE_URL}${item.image}` }
-          : item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image'))
-            ? { uri: item.image }
-            : require('../assets/errorimg.webp')
-        }
-        style={styles.productImage}
-        resizeMode="cover"
-      />
-      <View style={styles.info}>
-        <Text style={styles.productName}>{item.name_product || 'Không rõ tên sản phẩm'}</Text>
-        <Text style={styles.productDetail}>Ngày mua: {item.orderDate ? new Date(item.orderDate).toLocaleDateString('vi-VN') : ''}</Text>
+    <View style={styles.orderCard}>
+      {/* Order Header */}
+      <View style={styles.orderHeader}>
+        <View style={styles.orderInfo}>
+          <Text style={styles.orderId}>#{item.orderId.slice(-8)}</Text>
+          <Text style={styles.orderDate}>
+            {new Date(item.orderDate).toLocaleDateString('vi-VN')}
+          </Text>
+        </View>
+        <View style={styles.statusBadge}>
+          <Text style={styles.statusText}>{item.orderStatus}</Text>
+        </View>
+      </View>
+
+      {/* Product Card */}
+      <View style={styles.productCard}>
+        <Image
+          source={(() => {
+            if (item.image && item.image.startsWith('/uploads_product/')) {
+              return { uri: `${API_BASE_URL}${item.image}` };
+            }
+            if (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image'))) {
+              return { uri: item.image };
+            }
+            return require('../assets/errorimg.webp');
+          })()}
+          style={styles.productImage}
+          resizeMode="cover"
+        />
+        <View style={styles.productInfo}>
+          <Text style={styles.productName} numberOfLines={2}>
+            {item.name_product || 'Không rõ tên sản phẩm'}
+          </Text>
+          <View style={styles.productMeta}>
+            <Text style={styles.productQuantity}>
+              Số lượng: {item.quantity}
+            </Text>
+            <Text style={styles.productPrice}>
+              {item.unit_price_item?.toLocaleString('vi-VN')}đ
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Action Button */}
+      <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={styles.rateButton}
-          onPress={() => navigation.navigate('Rating', { order: item.order })}
+          style={styles.buttonPrimary}
+          onPress={() => navigation.navigate('RatingScreen', { 
+            orderItem: item,
+            orderId: item.orderId 
+          })}
         >
-          <Text style={styles.rateButtonText}>Đánh giá</Text>
+          <Text style={styles.buttonPrimaryText}>Đánh giá ngay</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  // Render từng đánh giá đã thực hiện
-  const renderReviewItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={{ flexDirection: 'column' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-          <Text style={{ color: '#FFD700', fontSize: 16, fontWeight: 'bold', marginRight: 4 }}>{item.review_rate || 0}</Text>
-          <Text style={{ color: '#FFD700', fontSize: 16 }}>{'★'.repeat(item.review_rate || 0)}</Text>
+  const renderReviewItem = ({ item }) => {
+    return (
+      <View style={styles.reviewCard}>
+        {/* Review Header */}
+        <View style={styles.reviewHeader}>
+          <View style={styles.reviewInfo}>
+            <Text style={styles.reviewDate}>
+              {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+            </Text>
+            <View style={styles.ratingContainer}>
+              <Text style={styles.ratingText}>
+                {item.review_rate}/5
+              </Text>
+              <View style={styles.starsContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Icon
+                    key={star}
+                    name={star <= item.review_rate ? "star" : "star-border"}
+                    size={16}
+                    color={star <= item.review_rate ? "#F59E0B" : "#CBD5E1"}
+                    style={styles.starIcon}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
         </View>
-        <Text style={styles.productDetail}>{item.review_comment || ''}</Text>
-        {Array.isArray(item.review_image) && item.review_image.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewImagesRow}>
-            {item.review_image.map((img, idx) => (
+
+        {/* Product Info */}
+        <View style={styles.productCard}>
+          <Image
+            source={(() => {
+              // Get product image from review_product_id
+              const productImage = item.review_product_id?.product_image;
+              
+              if (productImage && productImage.startsWith('/uploads_product/')) {
+                return { uri: `${API_BASE_URL}${productImage}` };
+              }
+              if (productImage && (productImage.startsWith('http://') || productImage.startsWith('https://') || productImage.startsWith('data:image'))) {
+                return { uri: productImage };
+              }
+              return require('../assets/errorimg.webp');
+            })()}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+          <View style={styles.productInfo}>
+            <Text style={styles.productName} numberOfLines={2}>
+              {item.review_product_id?.product_name || 'Không rõ tên sản phẩm'}
+            </Text>
+            <View style={styles.productMeta}>
+              <Text style={styles.productQuantity}>
+                Số lượng: 1
+              </Text>
+              <Text style={styles.productPrice}>
+                Đã mua
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Review Comment */}
+        {item.review_comment && (
+          <View style={styles.commentContainer}>
+            <Text style={styles.commentText}>
+              {item.review_comment}
+            </Text>
+          </View>
+        )}
+
+        {/* Admin Reply */}
+        {item.admin_reply && item.admin_reply.content && (
+          <View style={styles.adminReplyContainer}>
+            <View style={styles.adminReplyHeader}>
+              <Icon name="admin-panel-settings" size={16} color="#6366F1" />
+              <Text style={styles.adminReplyLabel}>Phản hồi từ shop</Text>
+            </View>
+            <Text style={styles.adminReplyText}>
+              {item.admin_reply.content}
+            </Text>
+            {item.admin_reply.createdAt && (
+              <Text style={styles.adminReplyDate}>
+                {new Date(item.admin_reply.createdAt).toLocaleDateString('vi-VN')}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Review Images */}
+        {item.review_image && item.review_image.length > 0 && (
+          <View style={styles.reviewImagesRow}>
+            {item.review_image.map((image, index) => (
               <Image
-                key={idx}
-                source={{ uri: `${API_BASE_URL}${img}` }}
+                key={index}
+                source={{ uri: `${API_BASE_URL}${image}` }}
                 style={styles.reviewImage}
                 resizeMode="cover"
               />
             ))}
-          </ScrollView>
-        )}
-        {item.createdAt && (
-          <Text style={[styles.productDetail, { fontSize: 12, color: '#aaa', marginTop: 8 }]}> 
-            {new Date(item.createdAt).toLocaleDateString('vi-VN')}
-          </Text>
+          </View>
         )}
       </View>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Icon name="star-outline" size={64} color="#CBD5E1" />
+      <Text style={styles.emptyStateTitle}>
+        {selectedTab === 'Chưa đánh giá' 
+          ? 'Bạn đã đánh giá hết các sản phẩm' 
+          : 'Bạn chưa có đánh giá nào'
+        }
+      </Text>
+      <Text style={styles.emptyStateSubtitle}>
+        {selectedTab === 'Chưa đánh giá' 
+          ? 'Hãy mua thêm sản phẩm để có thể đánh giá' 
+          : 'Hãy đánh giá sản phẩm để chia sẻ trải nghiệm của bạn'
+        }
+      </Text>
+    </View>
+  );
+
+  const renderErrorState = (error) => (
+    <View style={styles.emptyState}>
+      <Icon name="error-outline" size={64} color="#EF4444" />
+      <Text style={styles.emptyStateTitle}>Có lỗi xảy ra</Text>
+      <Text style={styles.emptyStateSubtitle}>{error}</Text>
     </View>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      
+      {/* Modern Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>{'<'} Quaylại </Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đánh giá của tôi</Text>
-        <View style={{ width: 60 }} />
-      </View>
-      <View style={styles.tabBar}>
-        {TABS.map(tab => (
+        <View style={styles.headerContent}>
           <TouchableOpacity
-            key={tab}
-            style={[styles.tab, selectedTab === tab && styles.activeTab]}
-            onPress={() => setSelectedTab(tab)}
-          >
-            <Text style={[styles.tabText, selectedTab === tab && styles.activeTabText]}>{tab}</Text>
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-        ))}
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Đánh giá của tôi</Text>
+            <Text style={styles.headerSubtitle}>Quản lý đánh giá sản phẩm</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
+        
+        {/* Modern Tab Navigation */}
+        <View style={styles.tabContainer}>
+          {TABS.map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabButton, selectedTab === tab && styles.activeTabButton]}
+              onPress={() => setSelectedTab(tab)}>
+              <Text style={[styles.tabText, selectedTab === tab && styles.activeTabText]}>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
+
+      {/* Content */}
       {selectedTab === 'Chưa đánh giá' && (
-        <View style={{ flex: 1 }}>
+        <View style={styles.content}>
           {loadingOrders ? (
-            <ActivityIndicator style={{ marginTop: 32 }} size="large" color="#000" />
+            <View style={styles.loadingContainer}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="large" color="#6366F1" />
+                <Text style={styles.loadingText}>Đang tải danh sách sản phẩm...</Text>
+                <Text style={styles.loadingSubtext}>Vui lòng chờ trong giây lát</Text>
+              </View>
+            </View>
           ) : errorOrders ? (
-            <Text style={styles.errorText}>{errorOrders}</Text>
+            renderErrorState(errorOrders)
           ) : unratedItems.length === 0 ? (
-            <Text style={styles.emptyText}>Bạn đã đánh giá hết các sản phẩm.</Text>
+            renderEmptyState()
           ) : (
             <FlatList
               data={unratedItems}
               keyExtractor={(item, idx) => item._id + '_' + idx}
               renderItem={renderUnratedItem}
-              contentContainerStyle={{ padding: 16 }}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
             />
           )}
         </View>
       )}
+      
       {selectedTab === 'Đã đánh giá' && (
-        <View style={{ flex: 1 }}>
+        <View style={styles.content}>
           {loadingReviews ? (
-            <ActivityIndicator style={{ marginTop: 32 }} size="large" color="#000" />
+            <View style={styles.loadingContainer}>
+              <View style={styles.loadingCard}>
+                <ActivityIndicator size="large" color="#6366F1" />
+                <Text style={styles.loadingText}>Đang tải danh sách đánh giá...</Text>
+                <Text style={styles.loadingSubtext}>Vui lòng chờ trong giây lát</Text>
+              </View>
+            </View>
           ) : errorReviews ? (
-            <Text style={styles.errorText}>{errorReviews}</Text>
+            renderErrorState(errorReviews)
           ) : reviews.length === 0 ? (
-            <Text style={styles.emptyText}>Bạn chưa có đánh giá nào.</Text>
+            renderEmptyState()
           ) : (
             <FlatList
               data={reviews}
               keyExtractor={(item, idx) => item._id + '_' + idx}
               renderItem={renderReviewItem}
-              contentContainerStyle={{ padding: 16 }}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
             />
           )}
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   header: {
+    backgroundColor: '#6366F1',
+    paddingTop: StatusBar.currentHeight,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E3E4E5',
-    backgroundColor: '#fff',
+    marginBottom: 20,
   },
-  backText: {
-    fontSize: 15,
-    color: '#007AFF',
-    width: 60,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E3E4E5',
-    backgroundColor: '#F9F9F9',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#000',
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '400',
+  },
+  headerRight: {
+    width: 40,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  activeTabButton: {
+    backgroundColor: 'white',
   },
   tabText: {
-    fontSize: 15,
-    color: '#888',
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   activeTabText: {
-    color: '#000',
-    fontWeight: 'bold',
+    color: '#6366F1',
   },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-    elevation: 1,
-    shadowColor: '#999',
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
+  content: {
+    flex: 1,
   },
-  productImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: '#F9F9F9',
-  },
-  info: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  loadingCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  listContent: {
+    padding: 16,
+  },
+  
+  // Order Card Styles (similar to OrderScreen)
+  orderCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+  },
+  orderInfo: {
+    flex: 1,
+  },
+  orderId: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  orderDate: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  statusBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+  },
+  productCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  productImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    marginRight: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  productInfo: {
+    flex: 1,
   },
   productName: {
     fontSize: 15,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 2,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+    lineHeight: 20,
   },
-  productDetail: {
+  productMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productQuantity: {
     fontSize: 13,
-    color: '#888',
-    marginBottom: 2,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  rateButton: {
-    marginTop: 8,
-    backgroundColor: '#000',
+  productPrice: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  buttonPrimary: {
+    backgroundColor: '#222',
     borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
-  rateButtonText: {
+  buttonPrimaryText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     fontSize: 14,
+    fontWeight: '600',
   },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-    marginTop: 32,
+
+  // Review Card Styles
+  reviewCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  emptyText: {
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 32,
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  reviewInfo: {
+    flex: 1,
+  },
+  reviewDate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
     fontSize: 16,
+    fontWeight: '700',
+    color: '#F59E0B',
+    marginRight: 12,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+  },
+  starIcon: {
+    marginLeft: -2,
+  },
+  commentContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
   reviewImagesRow: {
     flexDirection: 'row',
-    marginTop: 8,
-    marginBottom: 2,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
   reviewImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
-    marginRight: 8,
-    backgroundColor: '#F0F0F0',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    marginRight: 12,
+    backgroundColor: '#F1F5F9',
+  },
+  
+  // Admin Reply Styles
+  adminReplyContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#6366F1',
+  },
+  adminReplyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  adminReplyLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6366F1',
+    marginLeft: 8,
+  },
+  adminReplyText: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  adminReplyDate: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
+    alignSelf: 'flex-end',
+  },
+  
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

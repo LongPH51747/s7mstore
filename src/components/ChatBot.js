@@ -39,14 +39,14 @@ const ChatBot = () => {
   const [isVoiceAvailable, setIsVoiceAvailable] = useState(false);
   const [fabPosition, setFabPosition] = useState({ 
     x: Dimensions.get('window').width - 76, 
-    y: Dimensions.get('window').height - 86 
+    y: Dimensions.get('window').height - 120 
   });
   
   // Animation values for draggable button
   const scale = useRef(new Animated.Value(1)).current;
   const pan = useRef(new Animated.ValueXY({
     x: Dimensions.get('window').width - 76,
-    y: Dimensions.get('window').height - 86
+    y: Dimensions.get('window').height - 120
   })).current;
 
   // Animation values for modal

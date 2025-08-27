@@ -40,8 +40,8 @@ const MapScreen = () => {
   } = route.params || {};
 
   const [region, setRegion] = useState({
-    latitude: 21.028511,
-    longitude: 105.804817,
+    latitude: 21.0300952,
+    longitude: 105.7453428,
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   });
@@ -75,26 +75,35 @@ const MapScreen = () => {
 
     const getLocation = async () => {
       setLoading(true);
-      // 1. Thử với fullAddress
-      const fullAddress = `${addressDetail}, ${wardType} ${wardName}, ${provinceType} ${provinceName}`;
-      console.log('🔍 [DEBUG] Fetching location for:', fullAddress);
-      let geo = await fetchLatLng(fullAddress);
-      // 2. Nếu không có, thử với xã/phường + tỉnh/thành phố
+      
+      // Làm sạch addressDetail - loại bỏ khoảng trắng thừa
+      const cleanAddressDetail = addressDetail?.trim() || '';
+      
+      // 1. Thử với fullAddress (chỉ khi có addressDetail)
+      let geo = null;
+      if (cleanAddressDetail) {
+        const fullAddress = `${cleanAddressDetail}, ${wardName}, ${provinceName}`;
+        console.log('🔍 [DEBUG] Fetching location for full address:', fullAddress);
+        geo = await fetchLatLng(fullAddress);
+      }
+      
+      // 2. Nếu không có hoặc không có addressDetail, thử với xã/phường + tỉnh/thành phố
       if (!geo) {
-        const fallbackAddress = `${wardType} ${wardName}, ${provinceType} ${provinceName}`;
+        const fallbackAddress = `${wardName}, ${provinceName}`;
         console.log('🔍 [DEBUG] Using fallback address:', fallbackAddress);
         geo = await fetchLatLng(fallbackAddress);
       }
+      
       // 3. Nếu vẫn không có, dùng toạ độ mặc định Hà Nội
-      const lat = geo?.lat || 21.028511;
-      const lng = geo?.lon || 105.804817;
+      const lat = geo?.lat || 21.0300952;
+      const lng = geo?.lon || 105.7453428;
       console.log('🔍 [DEBUG] Location set to:', { lat, lng });
       setRegion(r => ({ ...r, latitude: lat, longitude: lng }));
       setLoading(false);
     };
     getLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addressDetail, wardType, wardName, provinceType, provinceName]);
+      }, [addressDetail, wardName, provinceName]);
 
   const handleConfirm = () => {
     console.log('🔍 [DEBUG] handleConfirm called');
