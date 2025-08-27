@@ -363,11 +363,11 @@ const UserChatScreen = () => {
 
                 <View style={styles.inputForm}>
                     <TouchableOpacity style={styles.imagePickerButton} onPress={handleTakePhoto}>
-                        <Icon name="aperture-outline" size={24} color="#3B82F6" />
+                        <Icon name="aperture-outline" size={24} color="#009bfcff" />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.imagePickerButton} onPress={handleChoosePhoto}>
-                        <Icon name="images-outline" size={24} color="#3B82F6" />
+                        <Icon name="images-outline" size={24} color="#009bfcff" />
                     </TouchableOpacity>
                     <TextInput
                         style={styles.textInput}
@@ -386,7 +386,7 @@ const UserChatScreen = () => {
                         onPress={handleSend}
                         disabled={!isSocketReady || (!newMessage.trim() && !selectedImage)}
                     >
-                       <Icon name="send" size={24} color="#2563EB" />
+                       <Icon name="send" size={24} color="#009bfcff" />
 
                     </TouchableOpacity>
                 </View>
@@ -488,16 +488,19 @@ const styles = StyleSheet.create({
     },
     textInput: {
         flex: 1,
-        height: 45,
-        paddingHorizontal: 15,
-        borderWidth: 1,
-        borderColor: '#d1d5db',
-        borderRadius: 25,
-        fontSize: 16,
-        color: '#4a5568',
-        backgroundColor: '#f9fafb',
-        marginHorizontal: 5,
-        fontFamily: 'Nunito-Medium',
+    minHeight: 45, // Thay 'height' bằng 'minHeight' để ô input tự động mở rộng
+    maxHeight: 120, // (Tùy chọn) Giới hạn chiều cao tối đa
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 25,
+    fontSize: 16,
+    color: '#4a5568',
+    backgroundColor: '#f9fafb',
+    marginHorizontal: 5,
+    fontFamily: 'Nunito-Medium',
+    // Thêm dòng này để text có thể xuống dòng khi mở rộng
+    textAlignVertical: 'top',
     },
     sendButton: { marginLeft: 10, paddingVertical: 8,
          paddingHorizontal: 15, borderWidth: 0.5,

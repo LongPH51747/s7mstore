@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   activityButton: {
-    backgroundColor: '#cd803cff',
+    backgroundColor: '#18123dff',
     padding: 15,
     borderRadius: 10,
     flex: 1,

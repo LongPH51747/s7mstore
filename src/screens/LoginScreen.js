@@ -73,14 +73,14 @@ const LoginScreen = () => {
                     provider: 'local', // Đánh dấu provider là local/email
                     ...backendUser
                 };
-                // console.log('[LOGIN - DEBUG] backendResponseData:', backendResponseData); // Xem dữ liệu thô
-                // console.log('[LOGIN - DEBUG] backendUser:', backendUser);             // Xem đối tượng user đã tách
-                // console.log('[LOGIN - DEBUG] userInfoToStore:', userInfoToStore);
+                console.log('[LOGIN - DEBUG] backendResponseData:', backendResponseData); // Xem dữ liệu thô
+                console.log('[LOGIN - DEBUG] backendUser:', backendUser);             // Xem đối tượng user đã tách
+                console.log('[LOGIN - DEBUG] userInfoToStore:', userInfoToStore);
 
                 await AsyncStorage.setItem('userToken', backendResponseData.access_token);
                 await AsyncStorage.setItem('shouldAutoLogin', 'true');
-                // await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
-                // console.log('[LOGIN] userInfoToStore:', userInfoToStore); // Log thông tin user vừa lưu
+                await AsyncStorage.setItem('userInfo', JSON.stringify(userInfoToStore));
+                console.log('[LOGIN] userInfoToStore:', userInfoToStore); // Log thông tin user vừa lưu
                 // Thử lưu một giá trị testKey vào AsyncStorage
                 await AsyncStorage.setItem('testKey', 'testValue');
                 const testValue = await AsyncStorage.getItem('testKey');

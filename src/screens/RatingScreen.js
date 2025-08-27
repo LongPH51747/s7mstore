@@ -947,7 +947,7 @@ const RatingScreen = () => {
               </View>
 
               {renderMediaSection(itemId, 'image')}
-              {renderMediaSection(itemId, 'video')}
+              
             </View>
           );
         })}
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     color: '#000',
   },
   scrollView: {
@@ -1019,7 +1019,7 @@ const styles = StyleSheet.create({
   orderInfoText: {
     fontSize: 14,
     color: '#888',
-    fontWeight: '500',
+    fontFamily: 'Nunito-Black'
   },
   productCard: {
     backgroundColor: '#FFF',
@@ -1049,20 +1049,21 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 15,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     color: '#000',
     marginBottom: 2,
   },
   productQuantity: {
     fontSize: 13,
     color: '#888',
+    fontFamily: 'Nunito-Medium',
   },
   ratingSection: {
     marginBottom: 12,
   },
   ratingTitle: {
     fontSize: 15,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     color: '#000',
     marginBottom: 6,
   },
@@ -1079,6 +1080,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 13,
+    fontFamily: 'Nunito-Black',
     color: '#888',
   },
   commentSection: {
@@ -1092,13 +1094,13 @@ const styles = StyleSheet.create({
   },
   commentTitle: {
     fontSize: 15,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     color: '#000',
   },
   characterCount: {
     fontSize: 12,
     color: '#888',
-    fontWeight: '500',
+    fontFamily: 'Nunito-Medium',
   },
   commentInput: {
     borderWidth: 1,
@@ -1106,6 +1108,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
+    fontFamily: 'Nunito-Medium',
     color: '#000',
     backgroundColor: '#FFF',
     minHeight: 80,
@@ -1121,7 +1124,7 @@ const styles = StyleSheet.create({
   },
   mediaTitle: {
     fontSize: 15,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
     color: '#000',
   },
   mediaButton: {
@@ -1136,7 +1139,7 @@ const styles = StyleSheet.create({
   mediaButtonText: {
     color: '#FFF',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Nunito-Black',
   },
   mediaList: {
     flexDirection: 'row',
@@ -1169,7 +1172,7 @@ const styles = StyleSheet.create({
   removeMediaText: {
     color: '#FFF',
     fontSize: 15,
-    fontWeight: 'bold',
+   fontFamily: 'Nunito-Black',
   },
   submitButton: {
     backgroundColor: '#000',
@@ -1189,7 +1192,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFF',
     fontSize: 16,
-    fontWeight: 'bold',
+   fontFamily: 'Nunito-Black',
   },
   videoThumbnail: {
     width: 70,
