@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Alert, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS, API_HEADERS, API_TIMEOUT, API_BASE_URL } from '../config/api';
 import { convertNumberToStatus, getStatusNumbers } from '../utils/orderStatusUtils';
+
+const { width, height } = Dimensions.get('window');
 
 const OrdersScreen = () => {
   const navigation = useNavigation();
@@ -125,19 +127,49 @@ const OrdersScreen = () => {
     return orderStatus === selectedTab;
   }) : [];
 
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'Chờ xác nhận':
+        return '⏳';
+      case 'Đã xác nhận':
+        return '✅';
+      case 'Chờ giao hàng':
+        return '🚚';
+      case 'Giao thành công':
+        return '🎉';
+      case 'Trả hàng':
+        return '↩️';
+      case 'Đã hủy':
+        return '❌';
+      default:
+        return '📦';
+    }
+  };
+
   return (
     <View style={styles.container}>
+      {/* Modern Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Image 
             source={require('../assets/back.png')} 
-            style={styles.headerIcon} 
+            style={styles.backIcon} 
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đơn hàng của bạn</Text>
-        <View style={{ width: 24, height: 24 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Đơn hàng của bạn</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.headerActionButton}>
+            <Text style={styles.headerActionText}>📋</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Enhanced Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView
           horizontal
@@ -145,124 +177,175 @@ const OrdersScreen = () => {
           contentContainerStyle={styles.tabs}
         >
           {tabs.map((tab, index) => (
-            <TouchableOpacity key={index} onPress={() => setSelectedTab(tab)} style={styles.tabItem}>
-              <Text style={[styles.tabText, selectedTab === tab && styles.activeTab]} numberOfLines={1}>{tab}</Text>
+            <TouchableOpacity 
+              key={index} 
+              onPress={() => setSelectedTab(tab)} 
+              style={[
+                styles.tabItem, 
+                selectedTab === tab && styles.activeTabItem
+              ]}
+            >
+              <Text style={[
+                styles.tabText, 
+                selectedTab === tab && styles.activeTabText
+              ]} numberOfLines={1}>
+                {getStatusIcon(tab)} {tab}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
+      {/* Loading State */}
       {loading ? (
-        <View style={{ flex: 1, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-          <ActivityIndicator size={"large"} color={'black'} />
-          <Text>Đang tải dữ liệu...</Text>
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Đang tải đơn hàng...</Text>
+            <Text style={styles.loadingSubtext}>Vui lòng chờ trong giây lát</Text>
+          </View>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView}>
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {filteredOrders.length === 0 ? (
-            <Text style={styles.noOrdersText}>Không có đơn hàng nào trong trạng thái này.</Text>
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateIcon}>📦</Text>
+              <Text style={styles.emptyStateTitle}>Không có đơn hàng nào</Text>
+              <Text style={styles.emptyStateSubtitle}>
+                Bạn chưa có đơn hàng nào trong trạng thái "{selectedTab}"
+              </Text>
+            </View>
           ) : (
             filteredOrders.map((order) => {
               const isExpanded = expandedOrders[order._id];
 
               return (
-                <View key={order._id} style={styles.cardWrapper}>
-                  <View style={styles.statusRow}>
-                    <Text style={[styles.statusBadge, getStatusBadgeStyle(order.status)]}>{order.status}</Text>
-                  </View>
-                  {order.orderItems.length > 0 && (
-                    <View style={styles.card}>
-                      <Image
-                        source={(() => {
-                          const item = order.orderItems[0];
-                          console.log('OrderScreen - item.image:', item.image);
-                          if (item.image && item.image.startsWith('/uploads_product/')) {
-                            const src = { uri: `${API_BASE_URL}${item.image}` };
-                            console.log('OrderScreen - image source:', src);
-                            return src;
-                          }
-                          if (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image'))) {
-                            const src = { uri: item.image };
-                            console.log('OrderScreen - image source:', src);
-                            return src;
-                          }
-                          console.log('OrderScreen - image source: default');
-                          return require('../assets/errorimg.webp');
-                        })()}
-                        style={styles.productImageInOrder}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.productInfoInOrder}>
-                        <Text style={styles.productTitle} numberOfLines={2}>
-                          {order.orderItems[0].name_product || 'Không rõ tên sản phẩm'}
-                        </Text>
-                        <Text style={styles.quantity}>x{order.orderItems[0].quantity}</Text>
-                        <View style={styles.priceRow}>
-                          <Text style={styles.price}>{order.orderItems[0].unit_price_item?.toLocaleString('vi-VN')}đ</Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-
-                  {isExpanded && order.orderItems.slice(1).map((orderItem, index) => (
-                    <View key={orderItem.id_variant || `item-${index}`} style={styles.card}>
-                      <Image
-                        source={(() => {
-                          console.log('OrderScreen - item.image:', orderItem.image);
-                          if (orderItem.image && orderItem.image.startsWith('/uploads_product/')) {
-                            const src = { uri: `${API_BASE_URL}${orderItem.image}` };
-                            console.log('OrderScreen - image source:', src);
-                            return src;
-                          }
-                          if (orderItem.image && (orderItem.image.startsWith('http://') || orderItem.image.startsWith('https://') || orderItem.image.startsWith('data:image'))) {
-                            const src = { uri: orderItem.image };
-                            console.log('OrderScreen - image source:', src);
-                            return src;
-                          }
-                          console.log('OrderScreen - image source: default');
-                          return require('../assets/errorimg.webp');
-                        })()}
-                        style={styles.productImageInOrder}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.productInfoInOrder}>
-                        <Text style={styles.productTitle} numberOfLines={2}>
-                          {orderItem.name_product || 'Không rõ tên sản phẩm'}
-                        </Text>
-                        <Text style={styles.quantity}>x{orderItem.quantity}</Text>
-                        <View style={styles.priceRow}>
-                          <Text style={styles.price}>{orderItem.unit_price_item?.toLocaleString('vi-VN')}đ</Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-
-                  {order.orderItems.length > 1 && (
-                    <TouchableOpacity onPress={() => toggleExpanded(order._id)}>
-                      <Text style={styles.toggleBtn}>
-                        {isExpanded ? 'Ẩn bớt ▲' : 'Hiện thêm ▼'}
+                <View key={order._id} style={styles.orderCard}>
+                  {/* Order Header */}
+                  <View style={styles.orderHeader}>
+                    <View style={styles.orderInfo}>
+                      <Text style={styles.orderId}>#{order._id.slice(-8)}</Text>
+                      <Text style={styles.orderDate}>
+                        {new Date(order.createdAt).toLocaleDateString('vi-VN')}
                       </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Tổng ({order.orderItems.length} sản phẩm):</Text>
-                    <Text style={styles.totalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
+                    </View>
+                    <View style={[
+                      styles.statusBadge, 
+                      getStatusBadgeStyle(order.status)
+                    ]}>
+                      <Text style={styles.statusText}>{order.status}</Text>
+                    </View>
                   </View>
 
+                  {/* Products List */}
+                  <View style={styles.productsContainer}>
+                    {order.orderItems.length > 0 && (
+                      <View style={styles.productCard}>
+                        <Image
+                          source={(() => {
+                            const item = order.orderItems[0];
+                            if (item.image && item.image.startsWith('/uploads_product/')) {
+                              return { uri: `${API_BASE_URL}${item.image}` };
+                            }
+                            if (item.image && (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:image'))) {
+                              return { uri: item.image };
+                            }
+                            return require('../assets/errorimg.webp');
+                          })()}
+                          style={styles.productImage}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.productInfo}>
+                          <Text style={styles.productName} numberOfLines={2}>
+                            {order.orderItems[0].name_product || 'Không rõ tên sản phẩm'}
+                          </Text>
+                          <View style={styles.productMeta}>
+                            <Text style={styles.productQuantity}>
+                              Số lượng: {order.orderItems[0].quantity}
+                            </Text>
+                            <Text style={styles.productPrice}>
+                              {order.orderItems[0].unit_price_item?.toLocaleString('vi-VN')}đ
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Additional Products */}
+                    {isExpanded && order.orderItems.slice(1).map((orderItem, index) => (
+                      <View key={orderItem.id_variant || `item-${index}`} style={styles.productCard}>
+                        <Image
+                          source={(() => {
+                            if (orderItem.image && orderItem.image.startsWith('/uploads_product/')) {
+                              return { uri: `${API_BASE_URL}${orderItem.image}` };
+                            }
+                            if (orderItem.image && (orderItem.image.startsWith('http://') || orderItem.image.startsWith('https://') || orderItem.image.startsWith('data:image'))) {
+                              return { uri: orderItem.image };
+                            }
+                            return require('../assets/errorimg.webp');
+                          })()}
+                          style={styles.productImage}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.productInfo}>
+                          <Text style={styles.productName} numberOfLines={2}>
+                            {orderItem.name_product || 'Không rõ tên sản phẩm'}
+                          </Text>
+                          <View style={styles.productMeta}>
+                            <Text style={styles.productQuantity}>
+                              Số lượng: {orderItem.quantity}
+                            </Text>
+                            <Text style={styles.productPrice}>
+                              {orderItem.unit_price_item?.toLocaleString('vi-VN')}đ
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+
+                    {/* Expand/Collapse Button */}
+                    {order.orderItems.length > 1 && (
+                      <TouchableOpacity 
+                        style={styles.expandButton}
+                        onPress={() => toggleExpanded(order._id)}
+                      >
+                        <Text style={styles.expandButtonText}>
+                          {isExpanded ? 'Ẩn bớt ▲' : `Hiện thêm ${order.orderItems.length - 1} sản phẩm ▼`}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Order Summary */}
+                  <View style={styles.orderSummary}>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Tổng cộng ({order.orderItems.length} sản phẩm):</Text>
+                      <Text style={styles.summaryValue}>
+                        {order.total_amount?.toLocaleString('vi-VN')}đ
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Action Buttons */}
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
                       style={styles.buttonPrimary}
-                      onPress={() => navigation.navigate('OrderDetailScreen', { order: order, onOrderUpdate: getOrders })}
+                      onPress={() => navigation.navigate('OrderDetailScreen', { order: order })}
                     >
                       <Text style={styles.buttonPrimaryText}>Xem chi tiết</Text>
                     </TouchableOpacity>
+                    
                     {order.status === 'Giao thành công' && order.orderItems.some(item => !item.is_review) && (
-                      <>
-                        <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('Rating', { order })}>
-                          <Text style={styles.buttonSecondaryText}>Đánh giá</Text>
-                        </TouchableOpacity>
-                      </>
+                      <TouchableOpacity 
+                        style={styles.buttonSecondary} 
+                        onPress={() => navigation.navigate('Rating', { order })}
+                      >
+                        <Text style={styles.buttonSecondaryText}>Đánh giá</Text>
+                      </TouchableOpacity>
                     )}
                   </View>
                 </View>
@@ -278,51 +361,91 @@ const OrdersScreen = () => {
 function getStatusBadgeStyle(status) {
   switch (status) {
     case 'Chờ xác nhận':
-      return { backgroundColor: '#E0E0E0', color: '#222' };
+      return { backgroundColor: '#FEF3C7', color: '#92400E' };
     case 'Đã xác nhận':
-      return { backgroundColor: '#BDBDBD', color: '#222' };
+      return { backgroundColor: '#DBEAFE', color: '#1E40AF' };
     case 'Chờ giao hàng':
-      return { backgroundColor: '#9E9E9E', color: '#fff' };
+      return { backgroundColor: '#FCE7F3', color: '#BE185D' };
     case 'Giao thành công':
-      return { backgroundColor: '#616161', color: '#fff' };
+      return { backgroundColor: '#D1FAE5', color: '#065F46' };
     case 'Trả hàng':
-      return { backgroundColor: '#757575', color: '#fff' };
+      return { backgroundColor: '#FEE2E2', color: '#991B1B' };
     case 'Đã hủy':
-      return { backgroundColor: '#424242', color: '#fff' };
+      return { backgroundColor: '#F3F4F6', color: '#374151' };
     default:
-      return { backgroundColor: '#BDBDBD', color: '#222' };
+      return { backgroundColor: '#E5E7EB', color: '#374151' };
   }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#F8FAFC',
   },
+  
+  // Header Styles
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E3E4E5',
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  headerIcon: {
-    width: 24,
-    height: 24,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#475569',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontFamily: 'Nunito-Black',
-    color: '#000',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
   },
-  tabsContainer: {
+  headerRight: {
+    width: 40,
     height: 40,
-    marginBottom: 12,
-    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionText: {
+    fontSize: 18,
+  },
+
+  // Tabs Styles
+  tabsContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   tabs: {
     flexDirection: 'row',
@@ -330,110 +453,218 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   tabItem: {
-    paddingVertical: 5,
-    paddingHorizontal: 16,
-    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  activeTabItem: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
   },
   tabText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+
+  // Loading Styles
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  loadingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#64748B',
     textAlign: 'center',
-    fontFamily: 'Nunito-Medium',
   },
-  activeTab: {
-    color: '#000',
-    fontFamily: 'Nunito-Black',
-  },
+
+  // Scroll Styles
   scrollView: {
     flex: 1,
   },
-  cardWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 5,
-    margin: 10,
+  scrollContent: {
+    paddingVertical: 12,
+  },
+
+  // Empty State Styles
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+
+  // Order Card Styles
+  orderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     marginHorizontal: 16,
-    elevation: 1,
-    shadowColor: '#080808ff',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-  },
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 10,
-    fontSize: 13,
-    fontWeight: 'bold',
+    shadowRadius: 4,
+    elevation: 2,
     overflow: 'hidden',
-    alignSelf: 'flex-end',
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    backgroundColor: '#FEFEFE',
-    padding: 5,
-    marginBottom: 2,
-    elevation: 1,
-    shadowColor: '#999',
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-  },
-  productImageInOrder: {
-    width: 54,
-    height: 54,
-    borderRadius: 8,
-    marginRight: 6,
-    backgroundColor: '#fff',
-  },
-  productInfoInOrder: {
-    flex: 1,
-  },
-  productTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 0,
-  },
-  quantity: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 0,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 0,
-  },
-  price: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    color: '#222',
-  },
-  totalRow: {
+  orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 2,
-    marginBottom: 1,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  totalLabel: {
+  orderInfo: {
+    flex: 1,
+  },
+  orderId: {
     fontSize: 13,
-    color: '#444',
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  orderDate: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  // Products Styles
+  productsContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  productCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 6,
+    marginBottom: 4,
+  },
+  productImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    marginRight: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+    lineHeight: 16,
+  },
+  productMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productQuantity: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  productPrice: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#059669',
+  },
+
+  // Expand Button
+  expandButton: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    marginTop: 2,
+  },
+  expandButtonText: {
+    fontSize: 12,
+    color: '#6366F1',
     fontWeight: '500',
   },
-  totalValue: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: 'bold',
+
+  // Order Summary
+  orderSummary: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
   },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+
+  // Action Buttons
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -465,17 +696,6 @@ const styles = StyleSheet.create({
     color: '#222',
     fontWeight: 'bold',
     fontSize: 13,
-  },
-  toggleBtn: {
-    color: 'black',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  noOrdersText: {
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
-    color: '#888',
   },
 });
 

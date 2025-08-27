@@ -11,6 +11,7 @@ import SearchResultsScreen from '../screens/SearchResultsScreen';
 import CartScreen from '../screens/CartScreen';
 import OrderScreen from '../screens/OrderScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import AddressScreen from '../screens/AddressScreen';
 import AddAddressScreen from '../screens/AddAddressScreen';
@@ -81,6 +82,7 @@ const AppNavigator = () => {
         {/* Màn hình đơn hàng */}
         <Stack.Screen name="OrderScreen" component={OrderScreen} />
         <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
+        <Stack.Screen name="OrderTrackingScreen" component={OrderTrackingScreen} />
         <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} />
         <Stack.Screen name="Rating" component={RatingScreen} />
         <Stack.Screen name='ProfileScreen' component={ProfileScreen}/>

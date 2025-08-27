@@ -6,7 +6,7 @@ import { convertStatusToNumber, convertNumberToStatus } from '../utils/orderStat
 
 const OrderDetailScreen = ({ route }) => {
   const navigation = useNavigation();
-  const { order, onOrderUpdate } = route.params;
+  const { order } = route.params;
   const [isCancelling, setIsCancelling] = useState(false);
 
   // Convert order status to text for display if it's a number
@@ -39,9 +39,6 @@ const OrderDetailScreen = ({ route }) => {
               }
 
               Alert.alert('Thành công', 'Đã hủy đơn hàng thành công.');
-              if (onOrderUpdate) {
-                onOrderUpdate();
-              }
               navigation.goBack(); 
 
             } catch (error) {
@@ -64,8 +61,28 @@ const OrderDetailScreen = ({ route }) => {
     navigation.navigate('ReturnRequestScreen', { order });
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Chờ xác nhận':
+        return '#F59E0B';
+      case 'Đã xác nhận':
+        return '#3B82F6';
+      case 'Chờ giao hàng':
+        return '#8B5CF6';
+      case 'Giao thành công':
+        return '#10B981';
+      case 'Trả hàng':
+        return '#EF4444';
+      case 'Đã hủy':
+        return '#6B7280';
+      default:
+        return '#6B7280';
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Modern Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -77,43 +94,89 @@ const OrderDetailScreen = ({ route }) => {
             resizeMode="contain"
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết đơn hàng</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Chi tiết đơn hàng</Text>
+          <Text style={styles.headerSubtitle}>#{order._id.slice(-8)}</Text>
+        </View>
         <View style={styles.headerRight} />
       </View>
 
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Trạng thái đơn hàng */}
+        {/* Status Section with Enhanced Design */}
+        <TouchableOpacity 
+          style={styles.statusSection}
+          onPress={() => navigation.navigate('OrderTrackingScreen', { order: order })}
+        >
+          <View style={styles.statusHeader}>
+            <View style={styles.statusLeft}>
+              <Text style={styles.statusTitle}>Trạng thái đơn hàng</Text>
+              <Text style={[styles.statusText, { color: getStatusColor(displayOrder.status) }]}>
+                {displayOrder.status}
+              </Text>
+            </View>
+            <View style={styles.trackButton}>
+              <Text style={styles.trackButtonText}>Theo dõi</Text>
+              <Text style={styles.trackArrow}>→</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Order Info Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trạng thái đơn hàng</Text>
-          <Text style={styles.statusText}>{displayOrder.status}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionIcon}>📋</Text>
+            <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
+          </View>
+          <View style={styles.infoGrid}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Ngày đặt</Text>
+              <Text style={styles.infoValue}>
+                {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Thanh toán</Text>
+              <Text style={styles.infoValue}>
+                {order.payment_method === 'COD' ? 'Tiền mặt' : 'Momo'}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Thông tin đơn hàng */}
+        {/* Recipient Info Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông tin đơn hàng</Text>
-          <Text style={styles.infoText}>Mã đơn hàng: {order._id}</Text>
-          <Text style={styles.infoText}>Ngày đặt: {new Date(order.createdAt).toLocaleDateString('vi-VN')}</Text>
-          <Text style={styles.infoText}>Phương thức thanh toán: {order.payment_method === 'COD' ? 'Thanh toán khi nhận hàng' : 'Thanh toán qua Momo'}</Text>
-          <Text style={styles.infoText}>Trạng thái thanh toán: {order.payment_status}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionIcon}>👤</Text>
+            <Text style={styles.sectionTitle}>Thông tin người nhận</Text>
+          </View>
+          <View style={styles.recipientCard}>
+            <View style={styles.recipientRow}>
+              <Text style={styles.recipientLabel}>Họ tên:</Text>
+              <Text style={styles.recipientValue}>{order.id_address.fullName}</Text>
+            </View>
+            <View style={styles.recipientRow}>
+              <Text style={styles.recipientLabel}>Số điện thoại:</Text>
+              <Text style={styles.recipientValue}>{order.id_address.phone_number}</Text>
+            </View>
+            <View style={styles.recipientRow}>
+              <Text style={styles.recipientLabel}>Địa chỉ:</Text>
+              <Text style={styles.recipientValue}>{order.id_address.addressDetail}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Thông tin người nhận */}
+        {/* Products Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông tin người nhận</Text>
-          <Text style={styles.infoText}>Họ tên: {order.id_address.fullName}</Text>
-          <Text style={styles.infoText}>Số điện thoại: {order.id_address.phone_number}</Text>
-          <Text style={styles.infoText}>Địa chỉ: {order.id_address.addressDetail}</Text>
-        </View>
-
-        {/* Sản phẩm */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sản phẩm</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionIcon}>🛍️</Text>
+            <Text style={styles.sectionTitle}>Sản phẩm ({order.orderItems.length})</Text>
+          </View>
           {order.orderItems.map((item, index) => (
-            <View key={item.id_variant || index} style={styles.productItem}>
+            <View key={item.id_variant || index} style={styles.productCard}>
               <Image
                 source={(() => {
                   console.log('OrderDetailScreen - item.image:', item.image);
@@ -139,60 +202,71 @@ const OrderDetailScreen = ({ route }) => {
                 }}
               />
               <View style={styles.productInfo}>
-                <Text style={styles.productName}>{item.name_product}</Text>
-                <Text style={styles.productDetail}>Màu: {item.color}</Text>
-                <Text style={styles.productDetail}>Size: {item.size}</Text>
-                <Text style={styles.productDetail}>Số lượng: {item.quantity}</Text>
+                <Text style={styles.productName} numberOfLines={2}>{item.name_product}</Text>
+                <View style={styles.productSpecs}>
+                  <Text style={styles.productSpec}>Màu: {item.color}</Text>
+                  <Text style={styles.productSpec}>Size: {item.size}</Text>
+                  <Text style={styles.productSpec}>SL: {item.quantity}</Text>
+                </View>
                 <Text style={styles.productPrice}>{item.unit_price_item?.toLocaleString('vi-VN')}đ</Text>
               </View>
             </View>
           ))}
         </View>
 
-        {/* Tổng tiền */}
+        {/* Total Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tổng tiền</Text>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Tạm tính:</Text>
-            <Text style={styles.totalValue}>{order.sub_total_amount?.toLocaleString('vi-VN')}đ</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionIcon}>💰</Text>
+            <Text style={styles.sectionTitle}>Tổng tiền</Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Phí vận chuyển:</Text>
-            <Text style={styles.totalValue}>{order.shipping?.toLocaleString('vi-VN')}đ</Text>
-          </View>
-
-          {order.discount > 0 && (
-        <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Voucher giảm giá:</Text>
-            <Text style={[styles.totalValue, styles.voucherValue]}>-{order.discount?.toLocaleString('vi-VN')}đ</Text>
-        </View>
-    )}
-          <View style={[styles.totalRow, styles.finalTotal]}>
-            <Text style={styles.totalLabel}>Tổng cộng:</Text>
-            <Text style={styles.totalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
+          <View style={styles.totalCard}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Tạm tính:</Text>
+              <Text style={styles.totalValue}>{order.sub_total_amount?.toLocaleString('vi-VN')}đ</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Phí vận chuyển:</Text>
+              <Text style={styles.totalValue}>{order.shipping?.toLocaleString('vi-VN')}đ</Text>
+            </View>
+            {order.discount > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Giảm giá:</Text>
+                <Text style={[styles.totalValue, styles.discountValue]}>
+                  -{order.discount?.toLocaleString('vi-VN')}đ
+                </Text>
+              </View>
+            )}
+            <View style={styles.finalTotalRow}>
+              <Text style={styles.finalTotalLabel}>Tổng cộng:</Text>
+              <Text style={styles.finalTotalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
 
+      {/* Enhanced Footer */}
       {displayOrder.status === 'Chờ xác nhận' && (
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.fullWidthButton, isCancelling && styles.disabledButton]}
+            style={[styles.cancelButton, isCancelling && styles.disabledButton]}
             onPress={handleCancelOrder}
             disabled={isCancelling}
           >
-            <Text style={styles.buttonTextPrimary}>{isCancelling ? 'Đang xử lý...' : 'Hủy đơn hàng'}</Text>
+            <Text style={styles.cancelButtonText}>
+              {isCancelling ? 'Đang xử lý...' : '❌ Hủy đơn hàng'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
 
       {displayOrder.status === 'Giao thành công' && (
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.halfWidthButtonSecondary} onPress={handleReturnOrder}>
-            <Text style={styles.buttonTextSecondary}>Trả hàng</Text>
+          <TouchableOpacity style={styles.returnButton} onPress={handleReturnOrder}>
+            <Text style={styles.returnButtonText}>↩️ Trả hàng</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.halfWidthButtonPrimary} onPress={() => navigation.navigate('Checkout', { cartItems: order.orderItems })}>
-            <Text style={styles.buttonTextPrimary}>Mua lại</Text>
+          <TouchableOpacity style={styles.rebuyButton} onPress={() => navigation.navigate('Checkout', { cartItems: order.orderItems })}>
+            <Text style={styles.rebuyButtonText}>🔄 Mua lại</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -203,170 +277,342 @@ const OrderDetailScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
   },
+  
+  // Header Styles
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    paddingTop: 40,
+    paddingBottom: 8,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E3E4E5',
-    backgroundColor: '#fff',
-    elevation: 2,
+    borderBottomColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    zIndex: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButton: {
-    padding: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backIcon: {
-    width: 24,
-    height: 24,
+    width: 16,
+    height: 16,
+    tintColor: '#475569',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 1,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
   headerRight: {
-    width: 40,
+    width: 32,
   },
+
+  // Scroll Styles
   scrollView: {
     flex: 1,
   },
   scrollViewContent: {
+    paddingVertical: 8,
     paddingBottom: 100,
   },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E3E4E5',
+
+  // Status Section
+  statusSection: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#000',
+  statusHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusLeft: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 3,
+    fontWeight: '500',
   },
   statusText: {
     fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
+    fontWeight: '700',
+    marginBottom: 2,
   },
-  infoText: {
+  trackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  trackButtonText: {
     fontSize: 14,
-    color: '#333',
+    color: '#475569',
+    fontWeight: '600',
+    marginRight: 3,
+  },
+  trackArrow: {
+    fontSize: 16,
+    color: '#475569',
+    fontWeight: '600',
+  },
+
+  // Section Styles
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  productItem: {
+  sectionIcon: {
+    fontSize: 20,
+    marginRight: 6,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+
+  // Info Grid
+  infoGrid: {
     flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#F6F8F9',
-    padding: 12,
+    justifyContent: 'space-between',
+  },
+  infoItem: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+
+  // Recipient Card
+  recipientCard: {
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
+    padding: 8,
+  },
+  recipientRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  recipientLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  recipientValue: {
+    fontSize: 13,
+    color: '#1E293B',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+  },
+
+  // Product Card
+  productCard: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 6,
+    marginBottom: 6,
   },
   productImage: {
-    width: 80,
-    height: 100,
-    borderRadius: 8,
-    marginRight: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    marginRight: 6,
+    backgroundColor: '#FFFFFF',
   },
   productInfo: {
     flex: 1,
   },
   productName: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 3,
+    lineHeight: 18,
   },
-  productDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
+  productSpecs: {
+    marginBottom: 3,
+  },
+  productSpec: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 1,
   },
   productPrice: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#D3180C',
-    marginTop: 4,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#059669',
+  },
+
+  // Total Card
+  totalCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 8,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   totalLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748B',
+    fontWeight: '500',
   },
   totalValue: {
     fontSize: 14,
-    color: '#000',
+    color: '#1E293B',
+    fontWeight: '600',
   },
-  finalTotal: {
-    marginTop: 8,
-    paddingTop: 8,
+  discountValue: {
+    color: '#DC2626',
+  },
+  finalTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: '#E3E4E5',
+    borderTopColor: '#E2E8F0',
   },
+  finalTotalLabel: {
+    fontSize: 16,
+    color: '#1E293B',
+    fontWeight: '700',
+  },
+  finalTotalValue: {
+    fontSize: 18,
+    color: '#059669',
+    fontWeight: '700',
+  },
+
+  // Footer Styles
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E3E4E5',
-    elevation: 5,
+    borderTopColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  fullWidthButton: {
-    flex: 1,
-    backgroundColor: '#D3180C',
-    padding: 14,
+  cancelButton: {
+    backgroundColor: '#EF4444',
     borderRadius: 8,
+    paddingVertical: 10,
     alignItems: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  halfWidthButtonPrimary: {
-    flex: 1,
-    backgroundColor: '#000',
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginLeft: 8,
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  halfWidthButtonSecondary: {
+  returnButton: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#000',
-    marginRight: 8,
+    borderColor: '#6B7280',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginRight: 4,
   },
-  buttonTextPrimary: {
-    color: '#fff',
-    fontWeight: 'bold',
+  returnButtonText: {
+    color: '#6B7280',
     fontSize: 16,
+    fontWeight: '600',
   },
-  buttonTextSecondary: {
-    color: '#000',
-    fontWeight: 'bold',
+  rebuyButton: {
+    flex: 1,
+    backgroundColor: '#059669',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginLeft: 4,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  rebuyButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#9CA3AF',
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });
 

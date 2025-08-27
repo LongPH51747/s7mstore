@@ -8,7 +8,7 @@ const { width, height } = Dimensions.get('window');
 
 const MARKER_WIDTH = 48;
 const MARKER_HEIGHT = 48;
-const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'; // điền key của bạn
+const GOOGLE_API_KEY = 'AIzaSyB7ETOwK6NMmiPXlHUAThIjfDbCxXq_A6c';
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org/search';
 
 const getGeocode = async (address) => {
@@ -48,12 +48,22 @@ const MapScreen = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log('🔍 [DEBUG] MapScreen useEffect triggered - Component mounted');
+    console.log('🔍 [DEBUG] Route params:', route.params);
+    console.log('🔍 [DEBUG] Address details:', {
+      addressDetail,
+      wardType,
+      wardName,
+      provinceType,
+      provinceName,
+      fromScreen
+    });
+    
     const fetchLatLng = async (address) => {
       try {
         const url = `${NOMINATIM_API}?q=${encodeURIComponent(address)}&format=json&limit=1`;
         const response = await fetch(url, { headers: { 'User-Agent': 's7mstore/1.0' } });
         const data = await response.json();
-        console.log('Nominatim API response for', address, ':', data);
         if (data && data.length > 0) {
           return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
         }
@@ -67,15 +77,18 @@ const MapScreen = () => {
       setLoading(true);
       // 1. Thử với fullAddress
       const fullAddress = `${addressDetail}, ${wardType} ${wardName}, ${provinceType} ${provinceName}`;
+      console.log('🔍 [DEBUG] Fetching location for:', fullAddress);
       let geo = await fetchLatLng(fullAddress);
       // 2. Nếu không có, thử với xã/phường + tỉnh/thành phố
       if (!geo) {
         const fallbackAddress = `${wardType} ${wardName}, ${provinceType} ${provinceName}`;
+        console.log('🔍 [DEBUG] Using fallback address:', fallbackAddress);
         geo = await fetchLatLng(fallbackAddress);
       }
       // 3. Nếu vẫn không có, dùng toạ độ mặc định Hà Nội
       const lat = geo?.lat || 21.028511;
       const lng = geo?.lon || 105.804817;
+      console.log('🔍 [DEBUG] Location set to:', { lat, lng });
       setRegion(r => ({ ...r, latitude: lat, longitude: lng }));
       setLoading(false);
     };
@@ -84,14 +97,47 @@ const MapScreen = () => {
   }, [addressDetail, wardType, wardName, provinceType, provinceName]);
 
   const handleConfirm = () => {
-    navigation.navigate({
-      name: fromScreen || 'AddAddress',
-      params: {
-        selectedLat: region.latitude,
-        selectedLng: region.longitude,
-      },
-      merge: true,
+    console.log('🔍 [DEBUG] handleConfirm called');
+    console.log('🔍 [DEBUG] fromScreen:', fromScreen);
+    console.log('🔍 [DEBUG] selected coordinates:', {
+      latitude: region.latitude,
+      longitude: region.longitude
     });
+    
+    // Log tất cả screen names có sẵn
+    console.log('🔍 [DEBUG] Available screen names:', navigation.getState()?.routeNames || 'Unknown');
+    
+    // Thử sử dụng goBack với params
+    if (fromScreen) {
+      console.log('🔍 [DEBUG] Navigating back to:', fromScreen);
+      
+      // Kiểm tra và sửa tên screen nếu cần
+      let screenName = fromScreen;
+      if (fromScreen === 'AddAddress') {
+        screenName = 'AddAddressScreen';
+        console.log('🔍 [DEBUG] Fixed screen name to:', screenName);
+      }
+      
+      navigation.navigate({
+        name: screenName,
+        params: {
+          selectedLat: region.latitude,
+          selectedLng: region.longitude,
+        },
+        merge: true,
+      });
+    } else {
+      console.log('🔍 [DEBUG] No fromScreen, using goBack');
+      // Nếu không có fromScreen, sử dụng goBack với params
+      navigation.goBack();
+      // Gửi event để màn hình trước nhận params
+      if (route.params?.onLocationSelected) {
+        route.params.onLocationSelected({
+          selectedLat: region.latitude,
+          selectedLng: region.longitude,
+        });
+      }
+    }
   };
 
   const handleCurrentLocation = () => {

@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE_URL = 'https://d1b4c77151cf.ngrok-free.app';
+export const API_BASE_URL = 'https://edf052525cbf.ngrok-free.app';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -45,6 +45,7 @@ export const API_ENDPOINTS = {
     GET_ORDER_DETAIL: `${API_BASE_URL}/api/order/getOrderDetail`,
     CREATE_ORDER: (userId) => `${API_BASE_URL}/api/order/create/userId/${userId}`,
     UPDATE_STATUS: (orderId) => `${API_BASE_URL}/api/order/updateStatus/${orderId}`,
+    GET_HISTORY_UPDATE: (orderId) => `${API_BASE_URL}/api/history-update/getHistoryUpdateByIdOrder/${orderId}`,
   },
 
   // Return request endpoints

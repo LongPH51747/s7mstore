@@ -372,9 +372,7 @@ const handleConfirmDelete = () => {
     setSelectedItems(newSelected);
   };
 
-  const renderDivider = () => (
-    <View style={styles.divider} />
-  );
+
 
   // Function to render a product item
   const renderProductItem = (product) => {
@@ -392,61 +390,81 @@ const handleConfirmDelete = () => {
 
     return (
       <Animated.View style={[styles.productContainer, { transform: [{ translateX: animatedValues[product.id_variant] || new Animated.Value(0) }] }]}>
-        <Checkbox
-          status={selectedItems[product.id_variant] ? 'checked' : 'unchecked'}
-          onPress={() => toggleItemSelection(product.id_variant)}
-          style={styles.checkbox}
-        />
-        <Image 
-          source={productImageSource} 
-          style={styles.productImage}
-          onError={(e) => {
-            e.target.setNativeProps({
-              source: require('../assets/errorimg.webp')
-            });
-          }}
-        />
-        <View style={styles.productDetails}>
-          <Text style={styles.productName}>{product.name_product}</Text>
-          <View style={styles.productInfo}>
-            <Text style={styles.productColorLabel}>{"Color:"}  {product.color}</Text>
-            <Text style={styles.productSizeLabel}>{"Size:"}</Text>
-            <Text style={styles.productSize}>{product.size}</Text>
+        <View style={styles.productRow}>
+          <Checkbox
+            status={selectedItems[product.id_variant] ? 'checked' : 'unchecked'}
+            onPress={() => toggleItemSelection(product.id_variant)}
+            style={styles.checkbox}
+            color="#6366F1"
+          />
+          
+          <Image 
+            source={productImageSource} 
+            style={styles.productImage}
+            onError={(e) => {
+              e.target.setNativeProps({
+                source: require('../assets/errorimg.webp')
+              });
+            }}
+          />
+          
+          <View style={styles.productDetails}>
+            <Text style={styles.productName}>{product.name_product}</Text>
+            <View style={styles.productSpecs}>
+              <View style={styles.specItem}>
+                <Text style={styles.specLabel}>🎨 Màu:</Text>
+                <Text style={styles.specValue}>{product.color}</Text>
+              </View>
+              <View style={styles.specItem}>
+                <Text style={styles.specLabel}>📏 Kích thước:</Text>
+                <Text style={styles.specValue}>{product.size}</Text>
+              </View>
+            </View>
+            <View style={styles.productPriceContainer}>
+              <Text style={styles.discountedPrice}>{product.price?.toLocaleString('vi-VN')}đ</Text>
+            </View>
           </View>
-          <View style={styles.productPriceContainer}>
-            <Text style={styles.discountedPrice}>{product.price?.toLocaleString('vi-VN')}đ</Text>
-          </View>
-          <View style={styles.quantityContainer}>
-            <TouchableOpacity onPress={() => handleQuantityChange('minus', product.id_variant)}>
-              <Image source={require('../assets/minus.png')} style={styles.quantityIcon} />
-            </TouchableOpacity>
-            <Text style={styles.quantityText}>{localQuantities[product.id_variant] || product.quantity}</Text>
+          
+          <View style={styles.productControls}>
             <TouchableOpacity 
-              onPress={() => handleQuantityChange('plus', product.id_variant)}
-              disabled={(() => {
-                const maxStock = variantStocks[product.id_variant] ?? 99;
-                return (localQuantities[product.id_variant] || product.quantity) >= maxStock;
-              })()}
+              onPress={() => confirmRemoveItem(product.id_variant)} 
+              style={[
+                styles.deleteButton,
+                isDeletingItems[product.id_variant] && styles.deleteButtonDisabled
+              ]}
+              disabled={isDeletingItems[product.id_variant]}
             >
-              <Image source={require('../assets/plus.png')} style={styles.quantityIcon} />
+              {isDeletingItems[product.id_variant] ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+               <Icon name="trash-outline" size={16} color="#EF4444" />
+              )}
             </TouchableOpacity>
+            
+            <View style={styles.quantityContainer}>
+              <TouchableOpacity 
+                onPress={() => handleQuantityChange('minus', product.id_variant)}
+                style={styles.quantityButton}
+              >
+                <Icon name="remove" size={16} color="#6366F1" />
+              </TouchableOpacity>
+              <Text style={styles.quantityText}>{localQuantities[product.id_variant] || product.quantity}</Text>
+              <TouchableOpacity 
+                onPress={() => handleQuantityChange('plus', product.id_variant)}
+                disabled={(() => {
+                  const maxStock = variantStocks[product.id_variant] ?? 99;
+                  return (localQuantities[product.id_variant] || product.quantity) >= maxStock;
+                })()}
+                style={[styles.quantityButton, (() => {
+                  const maxStock = variantStocks[product.id_variant] ?? 99;
+                  return (localQuantities[product.id_variant] || product.quantity) >= maxStock;
+                })() && styles.quantityButtonDisabled]}
+              >
+                <Icon name="add" size={16} color="#6366F1" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-        {/* Delete Button */}
-        <TouchableOpacity 
-          onPress={() => confirmRemoveItem(product.id_variant)} 
-          style={[
-            styles.deleteButton,
-            isDeletingItems[product.id_variant] && styles.deleteButtonDisabled
-          ]}
-          disabled={isDeletingItems[product.id_variant]}
-        >
-          {isDeletingItems[product.id_variant] ? (
-            <ActivityIndicator size="small" color="#666" />
-          ) : (
-           <Icon name="backspace" size={24} color="#EF4444" />
-          )}
-        </TouchableOpacity>
       </Animated.View>
     );
   };
@@ -616,50 +634,57 @@ const handleConfirmDelete = () => {
           </View>
         ) : (
           <SafeAreaView style={styles.container}>
+            {/* Modern Header */}
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Image 
-                  source={require('../assets/back.png')} 
-                  style={styles.headerIcon} 
-                />
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+                <Icon name="arrow-back" size={24} color="#1E293B" />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>{"Cart"}</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('UserReviewScreen')}>
-               <Icon name="search-outline" size={24} color="black" />
+              <View style={styles.headerCenter}>
+                <Text style={styles.headerTitle}>🛒 Giỏ hàng</Text>
+                <Text style={styles.headerSubtitle}>{cartItem.length} sản phẩm</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('UserReviewScreen')} style={styles.headerButton}>
+                <Icon name="search-outline" size={24} color="#1E293B" />
               </TouchableOpacity>
             </View>
-            <View style={styles.cartTextContainer}>
-              <Text style={styles.cartText}>
-                {"You have"} {cartItem.length} {"products in your Cart"}
-              </Text>
-            </View>
+
+            {/* Select All Section */}
             {cartItem.length >= 2 && (
-              <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 16, marginBottom: 4}}>
+              <View style={styles.selectAllContainer}>
                 <Checkbox
                   status={selectAll ? 'checked' : 'unchecked'}
                   onPress={handleSelectAll}
+                  color="#6366F1"
                 />
-                <Text style={{color: '#222', fontSize: 14, fontFamily: 'Nunito-Medium'}}>Chọn tất cả</Text>
+                <Text style={styles.selectAllText}>Chọn tất cả sản phẩm</Text>
               </View>
             )}
+
+            {/* Products List */}
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
               {cartItem.map(product => (
                 <View key={product.id_variant}>
                   {renderProductItem(product)}
                 </View>
               ))}
-              {renderDivider()}
             </ScrollView>
+
+            {/* Modern Checkout Section */}
             <View style={styles.fixedCheckoutContainer}>
               <View style={styles.summaryContainer}>
-                <SummaryItem label="Total Price" value={`${totalPrice?.toLocaleString('vi-VN')}đ`} />
-                <SummaryItem label="Discount" value={`-${discount?.toLocaleString('vi-VN')}đ`} />
-                <SummaryItem label="Delivery" value={shippingFee === 0 ? "Free" : `${shippingFee?.toLocaleString('vi-VN')}đ`} />
+                <View style={styles.summaryHeader}>
+                  <Text style={styles.summaryTitle}>📋 Tóm tắt đơn hàng</Text>
+                </View>
+                <SummaryItem label="Tổng tiền hàng" value={`${totalPrice?.toLocaleString('vi-VN')}đ`} />
+                <SummaryItem label="Giảm giá" value={`-${discount?.toLocaleString('vi-VN')}đ`} isDiscount={true} />
+                <SummaryItem label="Phí vận chuyển" value={shippingFee === 0 ? "Miễn phí 🎉" : `${shippingFee?.toLocaleString('vi-VN')}đ`} />
               </View>
+              
               <View style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>{"Total:"}</Text>
+                <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
                 <Text style={styles.totalValue}>{`${finalTotal?.toLocaleString('vi-VN')}đ`}</Text>
               </View>
+              
               <TouchableOpacity 
                 style={[
                   styles.checkoutButton,
@@ -668,11 +693,8 @@ const handleConfirmDelete = () => {
                 onPress={handleCheckout}
                 disabled={Object.values(selectedItems).every(value => !value)}
               >
-                <Image 
-                  source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e4f67212-d4f1-4513-bc97-88e16a24676d" }} 
-                  style={styles.checkoutIcon} 
-                />
-                <Text style={styles.checkoutText}>{"Checkout"}</Text>
+                <Icon name="card-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.checkoutText}>Thanh toán ngay</Text>
               </TouchableOpacity>
             </View>
             <Toast />
@@ -684,10 +706,10 @@ const handleConfirmDelete = () => {
 };
 
 // Summary item component
-const SummaryItem = ({ label, value }) => (
+const SummaryItem = ({ label, value, isDiscount = false }) => (
   <View style={styles.summaryItem}>
     <Text style={styles.summaryLabel}>{label}</Text>
-    <Text style={styles.summaryValue}>{value}</Text>
+    <Text style={[styles.summaryValue, isDiscount && styles.discountValue]}>{value}</Text>
   </View>
 );
 
@@ -701,125 +723,135 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-    paddingBottom: 180, // Add padding to account for fixed bottom section
+    paddingBottom: 80, // Add padding to account for fixed bottom section
+    paddingTop: 4,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#FFFFFF",
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E3E4E5',
-  },
-  headerIcon: {
-    width: 20,
-    height: 20,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 18,
-    fontFamily: 'Nunito-Black',
-    color: "#000",
-  },
-  cartTextContainer: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  cartText: {
-    color: "#000000",
-    fontSize: 16,
-    fontFamily: 'Nunito-Black',
-  },
-  divider: {
-    height: 2,
-    backgroundColor: "#F2F3F4",
-    marginBottom: 16,
+    borderBottomColor: '#F1F5F9',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   productContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(237, 234, 242, 1)",
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    marginBottom: 16,
-    position: 'relative',
-    width: '95%',
-    alignSelf: 'center',
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 8,
+    marginBottom: 8,
     borderRadius: 12,
     shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  productRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   productImage: {
-    width: 98,
-    height: 127,
-    marginRight: 16,
-    borderRadius: 12
+    width: 60,
+    height: 75,
+    marginRight: 8,
+    borderRadius: 8,
   },
   productDetails: {
     flex: 1,
-    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginRight: 8,
   },
   productName: {
-    color: "#202325",
+    color: "#1E293B",
     fontSize: 16,
-    marginRight: 36,
-    flex: 1,
-    fontFamily: 'Nunito-Black'
+    fontFamily: 'Nunito-Black',
+    marginBottom: 4,
+    lineHeight: 20,
   },
-  productInfo: {
+  productSpecs: {
+    marginBottom: 4,
+  },
+  specItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 5,
-    color: '#444',
+    marginBottom: 2,
   },
-  productColorLabel: {
-    color: "#444",
-    fontSize: 14,
-    marginRight: 16,
-    fontFamily: 'Nunito-Medium'
+  specLabel: {
+    color: "#64748B",
+    fontSize: 12,
+    fontFamily: 'Nunito-Medium',
+    marginRight: 4,
+    minWidth: 60,
   },
-  productSizeLabel: {
-    color: "#444",
-    fontSize: 14,
-    marginRight: 5,
-    fontFamily: 'Nunito-Medium'
-  },
-  productSize: {
-    color: "#444",
-    fontSize: 14,
-    fontFamily: 'Nunito-Medium'
+  specValue: {
+    color: "#1E293B",
+    fontSize: 12,
+    fontFamily: 'Nunito-Medium',
+    fontWeight: '600',
   },
   productPriceContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 4,
   },
   discountedPrice: {
     color: "#DB6A34",
     fontSize: 16,
-    fontFamily: 'Nunito-Black'
-
+    fontFamily: 'Nunito-Black',
+    fontWeight: '700',
+  },
+  productControls: {
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    height: 75,
+    position: 'relative',
   },
   quantityContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
     flexDirection: "row",
     alignItems: "center",
-    borderColor: "#E3E4E5",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    paddingVertical: 6,
-    marginTop: 13,
+    borderColor: "#E2E8F0",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
   },
-  quantityIcon: {
-    borderRadius: 8,
-    width: 15,
-    height: 15,
-    marginHorizontal: 16,
+  quantityButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 2,
+  },
+  quantityButtonDisabled: {
+    backgroundColor: "#E2E8F0",
+    opacity: 0.5,
   },
   quantityText: {
-    color: "#090A0A",
-    fontSize: 14,
-    fontWeight: "bold",
+    color: "#1E293B",
+    fontSize: 11,
+    fontWeight: "700",
+    minWidth: 16,
+    textAlign: 'center',
   },
   fixedCheckoutContainer: {
     position: 'absolute',
@@ -827,106 +859,154 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderTopWidth: 1,
-    borderTopColor: '#E3E4E5',
+    borderTopColor: '#F1F5F9',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: -2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 4,
   },
   summaryContainer: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   summaryItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 2,
+    alignItems: "center",
+    marginBottom: 3,
+    paddingVertical: 1,
   },
   summaryLabel: {
-    color: "#979C9E",
-    fontSize: 14,
-    marginRight: 4,
-    flex: 1,
+    color: "#64748B",
+    fontSize: 12,
     fontFamily: 'Nunito-Medium',
+    flex: 1,
   },
   summaryValue: {
-    color: "#979C9E",
-    fontSize: 14,
+    color: "#1E293B",
+    fontSize: 12,
+    fontFamily: 'Nunito-Medium',
+    fontWeight: '600',
     textAlign: "right",
     flex: 1,
-    fontFamily: 'Nunito-Medium',
   },
   totalContainer: {
-    backgroundColor: "#F2F3F4",
-    paddingVertical: 6,
-    marginBottom: 8,
+    backgroundColor: "#F8FAFC",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    marginBottom: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   totalLabel: {
-    color: "#090A0A",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 8,
+    color: "#1E293B",
+    fontSize: 14,
+    fontFamily: 'Nunito-Black',
+    fontWeight: "700",
   },
   totalValue: {
-    color: "#090A0A",
+    color: "#1E293B",
     fontSize: 16,
-    fontWeight: "bold",
-    marginRight: 8,
+    fontFamily: 'Nunito-Black',
+    fontWeight: "700",
   },
   checkoutButton: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#090A0A",
+    backgroundColor: "#6366F1",
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 6,
+    shadowColor: "#6366F1",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   checkoutButtonDisabled: {
-    backgroundColor: '#cccccc',
-    opacity: 0.7,
-  },
-  checkoutIcon: {
-    borderRadius: 8,
-    width: 18,
-    height: 18,
-    marginRight: 8,
+    backgroundColor: '#CBD5E1',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   checkoutText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Nunito-Black',
+    fontWeight: "700",
+    marginLeft: 4,
   },
   deleteButton: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    borderRadius: 15,
-    width: 30,
-    height: 30,
+    top: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
-    
-  },
-  deleteIcon: {
-    width: 18,
-    height: 18,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   deleteButtonDisabled: {
     opacity: 0.5,
   },
   checkbox: {
-    marginRight: 8,
-    
+    marginRight: 0,
+  },
+  selectAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+    marginBottom: 8,
+  },
+  selectAllText: {
+    color: '#444',
+    fontSize: 12,
+    marginLeft: 4,
+    fontFamily: 'Nunito-Medium',
+  },
+  headerButton: {
+    padding: 8,
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: 'Nunito-Black',
+    color: '#1E293B',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  summaryHeader: {
+    marginBottom: 3,
+  },
+  summaryTitle: {
+    fontSize: 12,
+    fontFamily: 'Nunito-Black',
+    color: '#1E293B',
+    marginBottom: 3,
+  },
+  discountValue: {
+    color: '#DB6A34',
+    fontFamily: 'Nunito-Black',
   },
 });
 
