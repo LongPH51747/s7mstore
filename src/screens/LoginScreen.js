@@ -101,9 +101,14 @@ const LoginScreen = () => {
                 if (error.response.status === 500 || error.response.data?.message === 'Mật khẩu không đúng') { // Ví dụ: 401 Unauthorized hoặc message cụ thể từ backend
                     message = 'Email hoặc mật khẩu không đúng.';
                     setShowForgotPasswordLink(true); // Hiển thị link quên mật khẩu
-                } else {
+                }
+                else if(error.response.status === 500 ){
+                message = 'Tài khoản của bạn đã bị khóa'
+            }
+                else {
                     message = error.response.data.message || message;
                 }
+                
             } else {
                 message = error.message || message;
             }
