@@ -7,7 +7,8 @@ import {
   SafeAreaView, 
   TouchableOpacity, 
   Image,
-  Dimensions
+  Dimensions,
+  Modal
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
@@ -15,7 +16,7 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const { width, height } = Dimensions.get('window');
 
-const OrderTrackingScreen = ({ route }) => {
+  const OrderTrackingScreen = ({ route }) => {
   console.log('🔍 [DEBUG] OrderTrackingScreen rendering...');
   
   const navigation = useNavigation();
@@ -23,6 +24,46 @@ const OrderTrackingScreen = ({ route }) => {
   const scrollViewRef = useRef(null);
   const [deliveryTimeline, setDeliveryTimeline] = useState([]);
   const [isLoadingTimeline, setIsLoadingTimeline] = useState(true);
+  const [showImageModal, setShowImageModal] = useState(false);
+
+  // Log khi showImageModal thay đổi
+  useEffect(() => {
+    console.log('🔍 [DEBUG] showImageModal changed to:', showImageModal);
+  }, [showImageModal]);
+
+  // Function để xử lý URL ảnh
+  const getFullImageUrl = (imagePath) => {
+    if (!imagePath) {
+      console.log('🔍 [DEBUG] Image path is null/undefined');
+      return null;
+    }
+    
+    // Kiểm tra nếu là string rỗng
+    if (typeof imagePath === 'string' && imagePath.trim() === '') {
+      console.log('🔍 [DEBUG] Image path is empty string');
+      return null;
+    }
+    
+    // Nếu đã là URL đầy đủ (bắt đầu bằng http/https)
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      console.log('🔍 [DEBUG] Image already has full URL:', imagePath);
+      return imagePath;
+    }
+    
+    // Nếu là đường dẫn tương đối, thêm base URL
+    // Đảm bảo không có dấu / thừa
+    const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    const fullUrl = `${API_BASE_URL}${cleanPath}`;
+    console.log('🔍 [DEBUG] Converting relative path to full URL:', imagePath, '->', fullUrl);
+    return fullUrl;
+  };
+
+  // Log thông tin order để debug
+  console.log('🔍 [DEBUG] Order data:', JSON.stringify(order, null, 2));
+  console.log('🔍 [DEBUG] Order status:', order.status, 'type:', typeof order.status);
+  console.log('🔍 [DEBUG] Order image_success:', order.image_success, 'type:', typeof order.image_success);
+  console.log('🔍 [DEBUG] Order image_success exists:', !!order.image_success);
+  console.log('🔍 [DEBUG] Order image_success length:', order.image_success?.length || 0);
 
 
   // Function để lấy delivery timeline từ API
@@ -58,6 +99,10 @@ const OrderTrackingScreen = ({ route }) => {
           const statusColor = isCurrentStatus ? '#2196F3' : statusInfo.color;
           console.log('🔍 [DEBUG] Final color:', statusColor, '(highlighted:', isCurrentStatus, ')');
           
+          // Log để debug isFinal
+          const isFinal = item.status_order === 7 || item.status_order === 8;
+          console.log('🔍 [DEBUG] Item isFinal:', isFinal, 'for status_order:', item.status_order);
+          
           return {
             id: index + 1,
             date: formatDate(new Date(item.history_update)),
@@ -65,7 +110,7 @@ const OrderTrackingScreen = ({ route }) => {
             status: statusInfo.text,
             description: statusInfo.description,
             isCompleted: true,
-            isFinal: item.status_order === 7 || item.status_order === 8,
+            isFinal: isFinal,
             color: statusColor,
             isCurrentStatus: isCurrentStatus
           };
@@ -341,19 +386,87 @@ const OrderTrackingScreen = ({ route }) => {
                         {item.description}
                       </Text>
                     )}
-                    {item.isFinal && (
-                      <TouchableOpacity>
+                    {item.isFinal && order.image_success && (
+                      <TouchableOpacity onPress={() => {
+                        console.log('🔍 [DEBUG] Opening image modal for order:', order._id);
+                        console.log('🔍 [DEBUG] Original image path:', order.image_success);
+                        console.log('🔍 [DEBUG] Full image URL:', getFullImageUrl(order.image_success));
+                        setShowImageModal(true);
+                      }}>
                         <Text style={styles.viewImageLink}>
                           Xem hình ảnh giao hàng
                         </Text>
                       </TouchableOpacity>
                     )}
+                    {/* Debug log cho việc hiển thị text */}
+                    {console.log('🔍 [DEBUG] Rendering timeline item:', {
+                      itemId: item.id,
+                      isFinal: item.isFinal,
+                      orderStatus: order.status,
+                      hasImageSuccess: !!order.image_success,
+                      imageSuccessValue: order.image_success,
+                      shouldShowImageLink: item.isFinal && order.image_success
+                    })}
                   </View>
             </View>
           ))
           )}
         </ScrollView>
       </View>
+
+      {/* Modal hiển thị ảnh giao hàng */}
+      <Modal
+        visible={showImageModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            console.log('🔍 [DEBUG] Closing image modal by overlay tap');
+            setShowImageModal(false);
+          }}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Ảnh giao hàng thành công</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => {
+                  console.log('🔍 [DEBUG] Closing image modal by close button');
+                  setShowImageModal(false);
+                }}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {(() => {
+              const imageUrl = getFullImageUrl(order.image_success);
+              console.log('🔍 [DEBUG] Rendering image with URL:', imageUrl);
+              return order.image_success && imageUrl ? (
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.deliveryImage}
+                  resizeMode="contain"
+                  onError={(error) => {
+                    console.log('❌ [ERROR] Image loading error:', error.nativeEvent);
+                  }}
+                  onLoad={() => {
+                    console.log('✅ [SUCCESS] Image loaded successfully');
+                  }}
+                />
+              ) : null;
+            })()}
+            
+            <Text style={styles.modalDescription}>
+              Ảnh xác nhận giao hàng thành công
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -484,6 +597,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4CAF50',
     textDecorationLine: 'underline',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    margin: 20,
+    maxWidth: width - 40,
+    maxHeight: height - 80,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 8,
+    marginLeft: 16,
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  deliveryImage: {
+    width: '100%',
+    height: 300,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   // Timeline Section - 2/3 màn hình phía dưới
   timelineSection: {
