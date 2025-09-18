@@ -1,6 +1,5 @@
-import Geolocation from '@react-native-community/geolocation';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Button, Dimensions, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Button, Dimensions, Image, ActivityIndicator } from 'react-native';
 import MapView from 'react-native-maps';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -149,25 +148,6 @@ const MapScreen = () => {
     }
   };
 
-  const handleCurrentLocation = () => {
-    setLoading(true);
-    Geolocation.getCurrentPosition(
-      pos => {
-        setRegion(r => ({
-          ...r,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        }));
-        setLoading(false);
-      },
-      err => {
-        console.log('Lỗi khi lấy vị trí hiện tại:', err);
-        Alert.alert('Lỗi', 'Không lấy được vị trí hiện tại.');
-        setLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
-    );
-  };
 
   return (
     <View style={styles.container}>
@@ -175,6 +155,10 @@ const MapScreen = () => {
         style={styles.map}
         region={region}
         onRegionChangeComplete={setRegion}
+        showsUserLocation={true}
+        showsMyLocationButton={true}
+        showsCompass={true}
+        showsScale={true}
       />
       {/* Marker.png luôn ở trung tâm, điểm nhọn là điểm chọn */}
       <View pointerEvents="none" style={styles.centerMarkerWrapper}>
@@ -192,8 +176,6 @@ const MapScreen = () => {
         <Button title="Hủy" onPress={() => navigation.goBack()} color="#888" />
         <View style={{ width: 20 }} />
         <Button title="Xác nhận" onPress={handleConfirm} color="#2196F3" />
-        <View style={{ width: 20 }} />
-        <Button title="Chọn vị trí hiện tại của tôi" onPress={handleCurrentLocation} color="#4CAF50" />
       </View>
     </View>
   );
